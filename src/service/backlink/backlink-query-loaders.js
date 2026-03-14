@@ -195,11 +195,78 @@ function sortSiblingBlocks(blockArray = []) {
   });
 }
 
+function getSiblingParentId(backlinkBlock) {
+  if (backlinkBlock?.parentBlockType === "i") {
+    return backlinkBlock.parentListItemParentId;
+  }
+  return backlinkBlock?.parent_id;
+}
+
+function getSiblingCurrentBlockId(backlinkBlock) {
+  if (backlinkBlock?.parentBlockType === "i") {
+    return backlinkBlock.parent_id;
+  }
+  return backlinkBlock?.id;
+}
+
+async function enrichSiblingListItemBlocks(siblingBlockArray = [], deps) {
+  const {
+    generateGetListItemtSubMarkdownArraySql,
+    sql,
+    isStrNotBlank,
+  } = deps;
+
+  const listItemIdSet = new Set();
+  for (const siblingBlock of siblingBlockArray) {
+    if (siblingBlock?.type === "i") {
+      listItemIdSet.add(siblingBlock.id);
+    }
+  }
+  if (listItemIdSet.size <= 0 || !generateGetListItemtSubMarkdownArraySql) {
+    return;
+  }
+
+  const subMarkdownSql = generateGetListItemtSubMarkdownArraySql(
+    Array.from(listItemIdSet),
+  );
+  if (!isStrNotBlank?.(subMarkdownSql)) {
+    return;
+  }
+
+  const subMarkdownArray = (await sql(subMarkdownSql)) || [];
+  const parentInAttrMap = new Map();
+  const subMarkdownMap = new Map();
+  const subInAttrMap = new Map();
+
+  for (const parentListItemBlock of subMarkdownArray) {
+    parentInAttrMap.set(
+      parentListItemBlock.parent_id,
+      parentListItemBlock.parentInAttrConcat,
+    );
+    subMarkdownMap.set(parentListItemBlock.parent_id, parentListItemBlock.subMarkdown);
+    subInAttrMap.set(
+      parentListItemBlock.parent_id,
+      parentListItemBlock.subInAttrConcat,
+    );
+  }
+
+  for (const siblingBlock of siblingBlockArray) {
+    if (siblingBlock?.type !== "i") {
+      continue;
+    }
+    siblingBlock.parentInAttrConcat = parentInAttrMap.get(siblingBlock.id);
+    siblingBlock.subMarkdown = subMarkdownMap.get(siblingBlock.id);
+    siblingBlock.subInAttrConcat = subInAttrMap.get(siblingBlock.id);
+  }
+}
+
 export async function getSiblingBlockGroupArray(queryParams, deps) {
   const {
     generateGetBacklinkSiblingBlockArraySql,
+    generateGetListItemtSubMarkdownArraySql,
     sql,
     isArrayEmpty,
+    isStrNotBlank,
   } = deps;
 
   if (!queryParams || isArrayEmpty(queryParams.backlinkBlocks)) {
@@ -211,6 +278,12 @@ export async function getSiblingBlockGroupArray(queryParams, deps) {
   if (isArrayEmpty(siblingBlockArray)) {
     return [];
   }
+
+  await enrichSiblingListItemBlocks(siblingBlockArray, {
+    generateGetListItemtSubMarkdownArraySql,
+    sql,
+    isStrNotBlank,
+  });
 
   const parentSiblingMap = new Map();
   for (const siblingBlock of siblingBlockArray) {
@@ -232,12 +305,14 @@ export async function getSiblingBlockGroupArray(queryParams, deps) {
 
   const backlinkSiblingBlockGroupArray = [];
   for (const backlinkBlock of queryParams.backlinkBlocks) {
-    const siblingList = parentSiblingMap.get(backlinkBlock.parent_id);
+    const siblingParentId = getSiblingParentId(backlinkBlock);
+    const siblingCurrentBlockId = getSiblingCurrentBlockId(backlinkBlock);
+    const siblingList = parentSiblingMap.get(siblingParentId);
     if (isArrayEmpty(siblingList) || siblingList.length <= 1) {
       continue;
     }
 
-    const currentIndex = siblingList.findIndex((item) => item.id === backlinkBlock.id);
+    const currentIndex = siblingList.findIndex((item) => item.id === siblingCurrentBlockId);
     if (currentIndex < 0) {
       continue;
     }

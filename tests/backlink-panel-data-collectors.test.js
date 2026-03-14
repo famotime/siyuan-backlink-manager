@@ -301,3 +301,68 @@ test("collectSiblingBlocks ignores null sibling blocks", () => {
     "next ((def-next 'next'))",
   );
 });
+
+test("collectSiblingBlocks uses list item subtree markdown for sibling list items", () => {
+  const context = createCollectorContext();
+  context.backlinkBlockMap["block-a"] = {
+    block: { id: "block-a", root_id: "doc-a", created: "11", updated: "22" },
+    includeRelatedDefBlockIds: new Set(),
+    includeDirectDefBlockIds: new Set(),
+    previousSiblingMarkdown: "",
+    nextSiblingMarkdown: "",
+  };
+
+  collectSiblingBlocks({
+    backlinkSiblingBlockGroupArray: [
+      {
+        backlinkBlockId: "block-a",
+        previousSiblingBlock: {
+          id: "item-prev",
+          type: "i",
+          markdown: "",
+          subMarkdown: "prev item ((def-current 'current'))",
+          parentInAttrConcat: " parent-prev",
+          subInAttrConcat: " child-prev",
+          name: "",
+          alias: "",
+          memo: "",
+        },
+        nextSiblingBlock: {
+          id: "item-next",
+          type: "i",
+          markdown: "",
+          subMarkdown: "next item ((def-next 'next'))",
+          parentInAttrConcat: " parent-next",
+          subInAttrConcat: " child-next",
+          name: "",
+          alias: "",
+          memo: "",
+        },
+      },
+    ],
+    getRefBlockId: (markdown) => {
+      if (markdown.includes("def-current")) {
+        return ["def-current"];
+      }
+      if (markdown.includes("def-next")) {
+        return ["def-next"];
+      }
+      return [];
+    },
+    updateDynamicAnchorMap: () => {},
+    updateStaticAnchorMap: () => {},
+    updateMaxValueMap: (map, key, value) => map.set(key, value),
+    updateMapCount: (map, key, initialValue = 1) =>
+      map.set(key, map.has(key) ? map.get(key) + 1 : initialValue),
+    context,
+  });
+
+  assert.equal(
+    context.backlinkBlockMap["block-a"].previousSiblingMarkdown,
+    "prev item ((def-current 'current')) parent-prev child-prev",
+  );
+  assert.equal(
+    context.backlinkBlockMap["block-a"].nextSiblingMarkdown,
+    "next item ((def-next 'next')) parent-next child-next",
+  );
+});

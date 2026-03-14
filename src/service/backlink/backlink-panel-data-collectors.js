@@ -272,6 +272,18 @@ export function collectParentBlocks({
 
 function buildSiblingMarkdown(siblingBlock = {}) {
   const safeSiblingBlock = siblingBlock || {};
+  if (safeSiblingBlock.type === "i") {
+    return [
+      safeSiblingBlock.markdown || "",
+      safeSiblingBlock.subMarkdown || "",
+      safeSiblingBlock.parentInAttrConcat || "",
+      safeSiblingBlock.subInAttrConcat || "",
+      safeSiblingBlock.name || "",
+      safeSiblingBlock.alias || "",
+      safeSiblingBlock.memo || "",
+    ].join("");
+  }
+
   return [
     safeSiblingBlock.markdown || "",
     safeSiblingBlock.name || "",

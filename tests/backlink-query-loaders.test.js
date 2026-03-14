@@ -145,3 +145,98 @@ test("getSiblingBlockGroupArray groups immediate previous and next siblings by p
     },
   ]);
 });
+
+test("getSiblingBlockGroupArray uses sibling list items when backlink block is inside a list item", async () => {
+  const result = await getSiblingBlockGroupArray(
+    {
+      backlinkBlocks: [
+        {
+          id: "block-in-item-b",
+          parent_id: "item-b",
+          parentBlockType: "i",
+          parentListItemParentId: "list-root",
+        },
+      ],
+    },
+    {
+      generateGetBacklinkSiblingBlockArraySql: () => "SIBLING_SQL",
+      generateGetListItemtSubMarkdownArraySql: () => "SUB_MARKDOWN_SQL",
+      sql: async (query) => {
+        if (query === "SIBLING_SQL") {
+          return [
+            { id: "item-c", type: "i", parent_id: "list-root", sort: 30, path: "/c" },
+            { id: "item-a", type: "i", parent_id: "list-root", sort: 10, path: "/a" },
+            { id: "item-b", type: "i", parent_id: "list-root", sort: 20, path: "/b" },
+          ];
+        }
+        return [
+          { parent_id: "item-a", subMarkdown: "prev item", subInAttrConcat: "", parentInAttrConcat: "" },
+          { parent_id: "item-b", subMarkdown: "current item", subInAttrConcat: "", parentInAttrConcat: "" },
+          { parent_id: "item-c", subMarkdown: "next item", subInAttrConcat: "", parentInAttrConcat: "" },
+        ];
+      },
+      isArrayEmpty: (value) => !value || value.length === 0,
+      isStrNotBlank: (value) => value !== "",
+    },
+  );
+
+  assert.deepEqual(result, [
+    {
+      backlinkBlockId: "block-in-item-b",
+      previousSiblingBlock: {
+        id: "item-a",
+        type: "i",
+        parent_id: "list-root",
+        sort: 10,
+        path: "/a",
+        parentInAttrConcat: "",
+        subMarkdown: "prev item",
+        subInAttrConcat: "",
+      },
+      nextSiblingBlock: {
+        id: "item-c",
+        type: "i",
+        parent_id: "list-root",
+        sort: 30,
+        path: "/c",
+        parentInAttrConcat: "",
+        subMarkdown: "next item",
+        subInAttrConcat: "",
+      },
+    },
+  ]);
+});
+
+test("getSiblingBlockGroupArray queries list item sibling containers instead of the current list item id", async () => {
+  const sqlCalls = [];
+
+  await getSiblingBlockGroupArray(
+    {
+      backlinkBlocks: [
+        {
+          id: "block-in-item-b",
+          parent_id: "item-b",
+          parentBlockType: "i",
+          parentListItemParentId: "list-root",
+        },
+      ],
+    },
+    {
+      generateGetBacklinkSiblingBlockArraySql: (queryParams) => {
+        const parentIds = queryParams.backlinkBlocks.map((block) =>
+          block.parentBlockType === "i" ? block.parentListItemParentId : block.parent_id,
+        );
+        return parentIds.join(",");
+      },
+      generateGetListItemtSubMarkdownArraySql: () => "",
+      sql: async (query) => {
+        sqlCalls.push(query);
+        return [];
+      },
+      isArrayEmpty: (value) => !value || value.length === 0,
+      isStrNotBlank: (value) => value !== "",
+    },
+  );
+
+  assert.deepEqual(sqlCalls, ["list-root"]);
+});

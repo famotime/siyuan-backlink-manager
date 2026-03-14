@@ -210,7 +210,8 @@ export function generateGetBacklinkListItemBlockArraySql(
 
     let sql = `
     SELECT b.*, 
-    p1.type AS parentBlockType
+    p1.type AS parentBlockType,
+    p1.parent_id AS parentListItemParentId
 
     FROM blocks b
     LEFT JOIN blocks p1 ON b.parent_id = p1.id
@@ -240,7 +241,11 @@ export function generateGetBacklinkSiblingBlockArraySql(
     let parentBlockIds = Array.from(
         new Set(
             backlinkBlocks
-                .map(block => block?.parent_id)
+                .map(block =>
+                    block?.parentBlockType === 'i'
+                        ? block?.parentListItemParentId
+                        : block?.parent_id,
+                )
                 .filter(parentId => !isStrBlank(parentId)),
         ),
     );

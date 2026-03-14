@@ -398,8 +398,10 @@ export async function getBacklinkPanelData(
         backlinkBlockQueryParams,
         {
             generateGetBacklinkSiblingBlockArraySql,
+            generateGetListItemtSubMarkdownArraySql,
             sql,
             isArrayEmpty,
+            isStrNotBlank,
         },
     );
 

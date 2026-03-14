@@ -18,6 +18,7 @@ type BacklinkChildBlock = DefBlock & {
 type BacklinkBlock = DefBlock & {
     parentBlockType: string;
     parentListItemMarkdown: string;
+    parentListItemParentId: string;
 };
 
 

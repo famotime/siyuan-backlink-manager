@@ -60,6 +60,12 @@
         getCyclicBacklinkIndex,
         groupBacklinksByDocument,
     } from "./backlink-document-navigation.js";
+    import {
+        buildBacklinkDocumentRenderOptions,
+        getBacklinkDocumentClickAction,
+        getBacklinkDocumentTargetRole,
+        shouldHandleBacklinkDocumentClick,
+    } from "./backlink-document-interaction.js";
 
     export let rootId: string;
     export let focusBlockId: string;
@@ -92,6 +98,7 @@
     let queryCurDocDefBlockRange: string;
     // 用来保存当前页面反链渲染区的展开折叠状态
     let backlinkDocumentFoldMap: Map<string, boolean> = new Map();
+    let backlinkDocumentShowFullMap: Map<string, boolean> = new Map();
     let backlinkProtyleItemFoldMap: Map<string, Set<string>> = new Map();
     let backlinkProtyleHeadingExpandMap: Map<string, boolean> = new Map();
     let backlinkDocumentActiveIndexMap: Map<string, number> = new Map();
@@ -171,13 +178,30 @@
 
     function clickBacklinkDocumentLiElement(event: MouseEvent) {
         const target = event.currentTarget as HTMLElement;
-        if (event.ctrlKey) {
+        const targetRole = getBacklinkDocumentTargetRole(event.target);
+        if (!shouldHandleBacklinkDocumentClick({ targetRole })) {
+            return;
+        }
+        const action = getBacklinkDocumentClickAction({
+            ctrlKey: event.ctrlKey,
+            targetRole,
+        });
+
+        if (action === "open-block") {
             let rootId = target.getAttribute("data-node-id");
             let blockId = target.getAttribute("data-backlink-block-id");
             openBlockTab(rootId, blockId);
             return;
         }
-        toggleBacklinkDocument(target);
+
+        if (action === "toggle-fold") {
+            toggleBacklinkDocument(target);
+            return;
+        }
+
+        if (action === "show-full-document") {
+            showFullBacklinkDocument(target);
+        }
     }
 
     function contextmenuBacklinkDocumentLiElement(event: MouseEvent) {
@@ -211,6 +235,31 @@
         documentLiElement
             .querySelector(".b3-list-item__arrow")
             .classList.remove("b3-list-item__arrow--open");
+    }
+
+    function showFullBacklinkDocument(documentLiElement: HTMLElement) {
+        if (!documentLiElement) {
+            return;
+        }
+
+        const documentId = documentLiElement.getAttribute("data-node-id");
+        const editorElement = documentLiElement.nextElementSibling as HTMLElement;
+        if (!documentId || !editorElement) {
+            return;
+        }
+
+        backlinkDocumentShowFullMap.set(documentId, true);
+        backlinkDocumentFoldMap.delete(documentId);
+        expandBacklinkDocument(documentLiElement);
+
+        const documentGroup = backlinkDocumentGroupArray.find(
+            (group) => group.documentId === documentId,
+        );
+        renderBacklinkDocumentGroup(
+            documentGroup,
+            documentLiElement,
+            editorElement,
+        );
     }
 
     function expandAllBacklinkDocument(event: MouseEvent) {
@@ -765,18 +814,23 @@
 
         editorElement.innerHTML = "";
         const activeBacklink = documentGroup.activeBacklink;
-        const editor = new Protyle(EnvConfig.ins.app, editorElement, {
-            blockId: documentGroup.documentId,
-            backlinkData: [activeBacklink],
-            render: {
-                background: false,
-                title: false,
-                gutter: true,
-                scroll: false,
-                breadcrumb: false,
-            },
-        });
-        afterCreateBacklinkProtyle(activeBacklink, documentLiElement, editor);
+        const showFullDocument =
+            backlinkDocumentShowFullMap.get(documentGroup.documentId) === true;
+        const editor = new Protyle(
+            EnvConfig.ins.app,
+            editorElement,
+            buildBacklinkDocumentRenderOptions({
+                documentId: documentGroup.documentId,
+                activeBacklink,
+                showFullDocument,
+            }),
+        );
+        afterCreateBacklinkProtyle(
+            activeBacklink,
+            documentLiElement,
+            editor,
+            showFullDocument,
+        );
 
         editor.protyle.notebookId = activeBacklink.backlinkBlock.box;
         backlinkDocumentEditorMap.set(documentGroup.documentId, editor);
@@ -787,6 +841,7 @@
         backlinkData: IBacklinkData,
         documentLiElement: HTMLElement,
         protyle: Protyle,
+        showFullDocument: boolean = false,
     ) {
         // 手动发送一下加载 Protyle 事件，实验方法，仅对自己的插件起效
         EnvConfig.ins.plugin.app.plugins.forEach((item) => {
@@ -803,35 +858,44 @@
         let backlinkRootId = backlinkData.backlinkBlock.root_id;
 
         // 是否折叠反链文档
-        if (backlinkDocumentFoldMap.get(backlinkRootId) === true) {
+        if (showFullDocument) {
+            expandBacklinkDocument(documentLiElement);
+        } else if (backlinkDocumentFoldMap.get(backlinkRootId) === true) {
             collapseBacklinkDocument(documentLiElement);
         }
 
-        // 展开列表项，首先判断有没有历史记录，存在历史记录则用记录
-        let foldIdSet = backlinkProtyleItemFoldMap.get(backlinkBlockId);
-        if (foldIdSet) {
-            foldListItemNodeByIdSet(protyleContentElement, foldIdSet);
+        if (showFullDocument) {
+            expandAllListItemNode(protyleContentElement);
+            expandBacklinkHeadingMore(protyleContentElement);
         } else {
-            let defaultExpandedListItemLevel =
-                SettingService.ins.SettingConfig.defaultExpandedListItemLevel;
-            if (defaultExpandedListItemLevel > 0) {
-                expandListItemNodeByDepth(
-                    protyleContentElement,
-                    defaultExpandedListItemLevel,
-                );
+            // 展开列表项，首先判断有没有历史记录，存在历史记录则用记录
+            let foldIdSet = backlinkProtyleItemFoldMap.get(backlinkBlockId);
+            if (foldIdSet) {
+                foldListItemNodeByIdSet(protyleContentElement, foldIdSet);
+            } else {
+                let defaultExpandedListItemLevel =
+                    SettingService.ins.SettingConfig.defaultExpandedListItemLevel;
+                if (defaultExpandedListItemLevel > 0) {
+                    expandListItemNodeByDepth(
+                        protyleContentElement,
+                        defaultExpandedListItemLevel,
+                    );
+                }
+            }
+
+            // 展开大纲下的子内容
+            let expandHeadingMore =
+                backlinkProtyleHeadingExpandMap.get(backlinkBlockId);
+
+            if (expandHeadingMore) {
+                expandBacklinkHeadingMore(protyleContentElement);
             }
         }
 
-        // 展开大纲下的子内容
-        let expandHeadingMore =
-            backlinkProtyleHeadingExpandMap.get(backlinkBlockId);
-
-        if (expandHeadingMore) {
-            expandBacklinkHeadingMore(protyleContentElement);
+        // 全文模式下不再施加反链内容裁剪
+        if (!showFullDocument) {
+            hideOtherListItemElement(backlinkData, protyle);
         }
-
-        // 隐藏筛选条件中不相干的列表项，
-        hideOtherListItemElement(backlinkData, protyle);
 
         // 高亮搜索内容
         let keywordArray = splitKeywordStringToArray(
@@ -1006,6 +1070,14 @@ ${documentName}
                 contextmenuBacklinkDocumentLiElement(event);
             },
         );
+
+        documentLiElement
+            .querySelector(".b3-list-item__toggle")
+            .addEventListener("click", (event: MouseEvent) => {
+                event.preventDefault();
+                event.stopPropagation();
+                toggleBacklinkDocument(documentLiElement);
+            });
 
         documentLiElement.addEventListener("mousedown", (event: MouseEvent) => {
             if (event.button !== 1) {

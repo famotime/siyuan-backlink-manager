@@ -350,6 +350,7 @@ export interface IBacklinkFilterPanelData {
 export interface IPanelRenderBacklinkQueryParams {
     pageNum: number;
     pageSize: number;
+    backlinkContextVisibilityLevel?: BacklinkContextVisibilityLevel;
     backlinkCurDocDefBlockType: string;
     backlinkBlockSortMethod: BlockSortMethod;
     backlinkKeywordStr: string;

@@ -2,6 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  applyBacklinkContextVisibility,
+  applyBacklinkContextVisibilityToNodes,
   buildBacklinkContextBundle,
   hydrateBacklinkContextBundles,
   matchBacklinkContextBundle,
@@ -152,4 +154,72 @@ test("matchBacklinkContextBundle records matched fragments, primary source, and 
   assert.equal(bundle.primaryMatchSourceType, "parent");
   assert.equal(bundle.matchSummaryList.length, 1);
   assert.match(bundle.matchSummaryList[0], /父级/);
+});
+
+test("applyBacklinkContextVisibility exposes fragments by visibility level", () => {
+  const bundle = buildBacklinkContextBundle(
+    {
+      block: {
+        id: "block-a",
+        root_id: "doc-a",
+        markdown: "self",
+      },
+      documentBlock: {
+        id: "doc-a",
+        root_id: "doc-a",
+        markdown: "doc title",
+      },
+      parentMarkdown: "parent context",
+      headlineChildMarkdown: "headline child",
+      previousSiblingMarkdown: "previous sibling",
+      nextSiblingMarkdown: "next sibling",
+      includeCurBlockDefBlockIds: new Set(),
+      includeDirectDefBlockIds: new Set(),
+      includeRelatedDefBlockIds: new Set(),
+      parentListItemTreeNode: null,
+    },
+    createBundleDeps(),
+  );
+  bundle.fragments.push({
+    id: "block-a:expanded:99",
+    sourceType: "expanded",
+    visibilityLevel: "extended",
+    defaultVisible: false,
+    searchable: false,
+  });
+
+  applyBacklinkContextVisibility(bundle, "core");
+  assert.deepEqual(
+    bundle.visibleFragments.map((fragment) => fragment.sourceType),
+    ["self", "document"],
+  );
+
+  applyBacklinkContextVisibility(bundle, "nearby");
+  assert.deepEqual(
+    bundle.visibleFragments.map((fragment) => fragment.sourceType),
+    ["self", "document", "parent", "child_headline", "sibling_prev", "sibling_next"],
+  );
+
+  applyBacklinkContextVisibility(bundle, "extended");
+  assert.equal(bundle.visibleFragments.at(-1).sourceType, "expanded");
+});
+
+test("applyBacklinkContextVisibilityToNodes updates every node bundle in place", () => {
+  const backlinkBlockNodeArray = [
+    {
+      contextBundle: {
+        fragments: [
+          { sourceType: "self", visibilityLevel: "core", defaultVisible: true },
+          { sourceType: "parent", visibilityLevel: "nearby", defaultVisible: false },
+        ],
+      },
+    },
+  ];
+
+  applyBacklinkContextVisibilityToNodes(backlinkBlockNodeArray, "nearby");
+
+  assert.deepEqual(
+    backlinkBlockNodeArray[0].contextBundle.visibleFragments.map((fragment) => fragment.sourceType),
+    ["self", "parent"],
+  );
 });

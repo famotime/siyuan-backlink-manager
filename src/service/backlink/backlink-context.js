@@ -43,6 +43,13 @@ const SOURCE_RULES = {
   },
 };
 
+const VISIBILITY_LEVEL_ORDER = {
+  core: 1,
+  nearby: 2,
+  extended: 3,
+  full: 4,
+};
+
 const MATCH_SOURCE_PRIORITY = {
   self: 1,
   sibling_prev: 2,
@@ -262,6 +269,28 @@ export function buildBacklinkContextBundle(backlinkBlockNode, deps) {
 export function hydrateBacklinkContextBundles(backlinkBlockNodeArray = [], deps) {
   for (const backlinkBlockNode of backlinkBlockNodeArray) {
     buildBacklinkContextBundle(backlinkBlockNode, deps);
+  }
+}
+
+export function applyBacklinkContextVisibility(bundle, visibilityLevel = "core") {
+  const levelOrder = VISIBILITY_LEVEL_ORDER[visibilityLevel] || VISIBILITY_LEVEL_ORDER.core;
+  bundle.visibleFragments = (bundle.fragments || []).filter((fragment) => {
+    const fragmentLevelOrder =
+      VISIBILITY_LEVEL_ORDER[fragment.visibilityLevel] || VISIBILITY_LEVEL_ORDER.full;
+    return fragmentLevelOrder <= levelOrder;
+  });
+  return bundle;
+}
+
+export function applyBacklinkContextVisibilityToNodes(
+  backlinkBlockNodeArray = [],
+  visibilityLevel = "core",
+) {
+  for (const backlinkBlockNode of backlinkBlockNodeArray) {
+    if (!backlinkBlockNode.contextBundle) {
+      continue;
+    }
+    applyBacklinkContextVisibility(backlinkBlockNode.contextBundle, visibilityLevel);
   }
 }
 

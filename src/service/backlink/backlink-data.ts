@@ -80,7 +80,10 @@ import {
     getParentBlockArray,
     getSiblingBlockGroupArray,
 } from "./backlink-query-loaders.js";
-import { hydrateBacklinkContextBundles } from "./backlink-context.js";
+import {
+    applyBacklinkContextVisibilityToNodes,
+    hydrateBacklinkContextBundles,
+} from "./backlink-context.js";
 
 
 export async function getBacklinkPanelRenderData(
@@ -118,6 +121,10 @@ export async function getBacklinkPanelRenderData(
         validBacklinkBlockNodeArray,
         queryParams.backlinkBlockSortMethod,
         { getDefBlockSortFun },
+    );
+    applyBacklinkContextVisibilityToNodes(
+        validBacklinkBlockNodeArray,
+        queryParams.backlinkContextVisibilityLevel || "core",
     );
     let pagination = paginateBacklinkBlocksByDocument(validBacklinkBlockNodeArray, pageNum, pageSize);
     let pageBacklinkBlockArray = pagination.pageBacklinkBlockArray;

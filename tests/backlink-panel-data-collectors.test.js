@@ -1,0 +1,199 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+
+import {
+  collectBacklinkBlocks,
+  collectHeadlineChildBlocks,
+  collectListItemTreeNodes,
+  collectParentBlocks,
+} from "../src/service/backlink/backlink-panel-data-collectors.js";
+
+function createCollectorContext() {
+  return {
+    curDocDefBlockIdArray: ["def-current"],
+    backlinkBlockMap: {},
+    relatedDefBlockCountMap: new Map(),
+    backlinkDocumentCountMap: new Map(),
+    relatedDefBlockDynamicAnchorMap: new Map(),
+    relatedDefBlockStaticAnchorMap: new Map(),
+    backlinkBlockCreatedMap: new Map(),
+    backlinkBlockUpdatedMap: new Map(),
+  };
+}
+
+test("collectBacklinkBlocks builds backlink nodes and updates related/document counters", async () => {
+  const context = createCollectorContext();
+
+  await collectBacklinkBlocks({
+    backlinkBlockArray: [
+      {
+        id: "block-a",
+        root_id: "doc-a",
+        parent_id: "parent-a",
+        markdown:
+          "content ((20240101010101-abcdefg 'dyn-anchor')) ((20240101010102-bcdefgh \"static-anchor\"))",
+        content: "content",
+        created: "11",
+        updated: "22",
+        type: "p",
+      },
+    ],
+    curDocDefBlockArray: [],
+    getBacklinkEmbedBlockInfo: async () => ({
+      embedBlockmarkdown: "",
+      relatedDefBlockIdArray: [],
+    }),
+    createBacklinkBlockNode: (backlinkBlock) => ({
+      block: { ...backlinkBlock, refCount: null },
+      documentBlock: null,
+      parentMarkdown: "",
+      listItemChildMarkdown: "",
+      headlineChildMarkdown: "",
+      includeDirectDefBlockIds: new Set(),
+      includeRelatedDefBlockIds: new Set(),
+      includeCurBlockDefBlockIds: new Set(),
+      includeParentDefBlockIds: new Set(),
+      dynamicAnchorMap: new Map(),
+      staticAnchorMap: new Map(),
+    }),
+    updateDynamicAnchorMap: (map, markdown) => {
+      map.set("20240101010101-abcdefg", new Set([markdown.includes("dyn-anchor") ? "dyn-anchor" : ""]));
+    },
+    updateStaticAnchorMap: (map, markdown) => {
+      map.set("20240101010102-bcdefgh", new Set([markdown.includes("static-anchor") ? "static-anchor" : ""]));
+    },
+    getRefBlockId: (markdown) =>
+      markdown.includes("20240101010101-abcdefg")
+        ? ["20240101010101-abcdefg", "20240101010102-bcdefgh"]
+        : [],
+    updateMaxValueMap: (map, key, value) => map.set(key, value),
+    updateMapCount: (map, key, initialValue = 1) =>
+      map.set(key, map.has(key) ? map.get(key) + 1 : initialValue),
+    context,
+  });
+
+  assert.equal(Object.keys(context.backlinkBlockMap).length, 1);
+  assert.equal(context.relatedDefBlockCountMap.get("20240101010101-abcdefg"), 1);
+  assert.equal(context.relatedDefBlockCountMap.get("20240101010102-bcdefgh"), 1);
+  assert.equal(context.backlinkDocumentCountMap.get("doc-a"), 1);
+  assert.deepEqual(
+    [...context.backlinkBlockMap["block-a"].includeCurBlockDefBlockIds],
+    ["20240101010101-abcdefg", "20240101010102-bcdefgh"],
+  );
+});
+
+test("collectHeadlineChildBlocks appends markdown and only counts new related ids", () => {
+  const context = createCollectorContext();
+  context.backlinkBlockMap["block-a"] = {
+    block: {
+      id: "block-a",
+      root_id: "doc-a",
+      created: "11",
+      updated: "22",
+    },
+    includeRelatedDefBlockIds: new Set(),
+    includeDirectDefBlockIds: new Set(),
+    includeParentDefBlockIds: new Set(),
+    headlineChildMarkdown: "",
+  };
+
+  collectHeadlineChildBlocks({
+    headlinkBacklinkChildBlockArray: [
+      {
+        markdown: "headline ((def-current 'current')) ((def-new 'new'))",
+        subInAttrConcat: " extra",
+        parentIdPath: "block-a->headline",
+      },
+    ],
+    relatedDefBlockIdSet: new Set(["def-existing"]),
+    getRefBlockId: () => ["def-current", "def-new"],
+    updateDynamicAnchorMap: () => {},
+    updateStaticAnchorMap: () => {},
+    updateMaxValueMap: (map, key, value) => map.set(key, value),
+    updateMapCount: (map, key, initialValue = 1) =>
+      map.set(key, map.has(key) ? map.get(key) + 1 : initialValue),
+    context,
+  });
+
+  assert.equal(
+    context.backlinkBlockMap["block-a"].headlineChildMarkdown,
+    "headline ((def-current 'current')) ((def-new 'new')) extra",
+  );
+  assert.ok(context.backlinkBlockMap["block-a"].includeDirectDefBlockIds.has("def-current"));
+  assert.equal(context.relatedDefBlockCountMap.get("def-new"), 1);
+});
+
+test("collectListItemTreeNodes attaches tree nodes and updates related/document counters", () => {
+  const context = createCollectorContext();
+  context.backlinkBlockMap["block-a"] = {
+    block: {
+      id: "block-a",
+      parent_id: "list-a",
+      root_id: "doc-a",
+      markdown: "root markdown",
+      created: "11",
+      updated: "22",
+    },
+    includeRelatedDefBlockIds: new Set(),
+    includeDirectDefBlockIds: new Set(),
+  };
+  const treeNode = {
+    id: "list-a",
+    getAllMarkdown() {
+      return "root markdown ((def-new 'new'))";
+    },
+  };
+
+  collectListItemTreeNodes({
+    listItemTreeNodeArray: [treeNode],
+    getRefBlockId: () => ["def-new"],
+    updateDynamicAnchorMap: () => {},
+    updateStaticAnchorMap: () => {},
+    updateMaxValueMap: (map, key, value) => map.set(key, value),
+    updateMapCount: (map, key, initialValue = 1) =>
+      map.set(key, map.has(key) ? map.get(key) + 1 : initialValue),
+    context,
+  });
+
+  assert.strictEqual(context.backlinkBlockMap["block-a"].parentListItemTreeNode, treeNode);
+  assert.ok(context.backlinkBlockMap["block-a"].includeRelatedDefBlockIds.has("def-new"));
+  assert.equal(context.relatedDefBlockCountMap.get("def-new"), 1);
+  assert.equal(context.backlinkDocumentCountMap.get("doc-a"), 1);
+});
+
+test("collectParentBlocks appends parent markdown and tracks parent def block ids", () => {
+  const context = createCollectorContext();
+  context.backlinkBlockMap["block-a"] = {
+    block: { id: "block-a", root_id: "doc-a" },
+    includeRelatedDefBlockIds: new Set(),
+    includeParentDefBlockIds: new Set(),
+    includeDirectDefBlockIds: new Set(),
+    parentMarkdown: "",
+  };
+
+  collectParentBlocks({
+    backlinkParentBlockArray: [
+      {
+        markdown: "parent ((def-current 'current')) ((def-parent 'parent'))",
+        inAttrConcat: " extra",
+        type: "p",
+        childIdPath: "block-a->child",
+      },
+    ],
+    relatedDefBlockIdSet: new Set(),
+    getRefBlockId: () => ["def-current", "def-parent"],
+    updateDynamicAnchorMap: () => {},
+    updateStaticAnchorMap: () => {},
+    updateMapCount: (map, key, initialValue = 1) =>
+      map.set(key, map.has(key) ? map.get(key) + 1 : initialValue),
+    context,
+  });
+
+  assert.equal(
+    context.backlinkBlockMap["block-a"].parentMarkdown,
+    "parent ((def-current 'current')) ((def-parent 'parent')) extra",
+  );
+  assert.ok(context.backlinkBlockMap["block-a"].includeDirectDefBlockIds.has("def-current"));
+  assert.ok(context.backlinkBlockMap["block-a"].includeParentDefBlockIds.has("def-parent"));
+  assert.equal(context.relatedDefBlockCountMap.get("def-parent"), 1);
+});

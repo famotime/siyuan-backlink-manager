@@ -31,6 +31,7 @@
 | RF-005 | P2 | 仓库文档基线补齐 | `docs/project-structure.md`、`README.md` | 在获批重构项完成后，补齐仓库结构文档和顶层说明文档；当前仓库两者均不存在，需新建 | 低 | - [x] 文档刷新前核对最终模块结构；- [x] 核对测试命令、构建命令、主要能力与限制 | 两份文档均已创建并与当前实现一致 | done |
 | RF-006 | P1 | 继续缩减反链面板组件与数据服务 | `src/components/panel/backlink-filter-panel-page.svelte`、`src/service/backlink/backlink-data.ts`，必要时新增 `src/components/panel/*`、`src/service/backlink/*` helper | 将筛选条件状态变更、已保存条件应用、定义块排序/筛选等纯逻辑继续从大文件中抽离，降低局部状态写入重复与排序分支复杂度，保持筛选、保存条件、排序、分页和渲染结果行为不变 | 中 | - [x] `node --test tests/backlink-panel-query-params.test.js tests/backlink-def-blocks.test.js tests/backlink-markdown.test.js`；- [x] `node --test tests/*.test.js`；- [x] `npm run build` | `docs/project-structure.md` 已补充新增 helper；`README.md` 已更新 panel/data helper 说明 | done |
 | RF-007 | P1 | 继续拆分反链基线数据装配 | `src/service/backlink/backlink-data.ts`，必要时新增 `src/service/backlink/*` helper | 将 `buildBacklinkPanelData` 中的当前文档锚文本回填、关联定义块物化、来源文档物化、文档块回挂等纯装配逻辑拆到独立 builder helper，降低单函数体积并补足核心输出单测 | 中 | - [x] `node --test tests/backlink-panel-base-data-builder.test.js`；- [x] `node --test tests/*.test.js`；- [x] `npm run build` | `docs/project-structure.md` 已补充新增 builder helper；`README.md` 已同步数据层结构说明 | done |
+| RF-008 | P1 | 继续拆分反链数据 collector | `src/service/backlink/backlink-data.ts`，必要时新增 `src/service/backlink/*` helper | 将 `buildBacklinkPanelData` 中的反链块初始聚合、标题子块聚合、列表子树聚合、父块聚合拆成 collector helper，进一步压缩单函数并补足输入遍历逻辑单测 | 中 | - [x] `node --test tests/backlink-panel-data-collectors.test.js`；- [x] `node --test tests/*.test.js`；- [x] `npm run build` | `docs/project-structure.md` 已补充新增 collector helper；`README.md` 已同步数据层结构说明 | done |
 
 优先级说明：
 - `P0`：价值和风险都最高，优先执行
@@ -55,22 +56,23 @@
 | RF-005 | 2026-03-14 | 2026-03-14 | 文档核对；`node --test tests/*.test.js`；`npm run build` | pass | `docs/project-structure.md`、`README.md` | 新建仓库结构文档和顶层 README，内容已对齐当前重构后的模块边界与开发命令 |
 | RF-006 | 2026-03-14 | 2026-03-14 | `node --test tests/backlink-panel-query-params.test.js tests/backlink-def-blocks.test.js tests/backlink-markdown.test.js`；`node --test tests/*.test.js`；`npm run build` | pass | `docs/project-structure.md`、`README.md` | 新增 `backlink-panel-query-params.js`、`backlink-def-blocks.js`、`backlink-markdown.js`，将面板筛选条件重置/恢复、定义块排序筛选、markdown 引用解析从大文件中拆出；`backlink-filter-panel-page.svelte` 约从 83.9 KB 缩减到 80.1 KB，`backlink-data.ts` 约从 62.5 KB 缩减到 50.0 KB |
 | RF-007 | 2026-03-14 | 2026-03-14 | `node --test tests/backlink-panel-base-data-builder.test.js`；`node --test tests/*.test.js`；`npm run build` | pass | `docs/project-structure.md`、`README.md` | 新增 `backlink-panel-base-data-builder.js` 与对应单测，将当前文档锚文本回填、关联块物化、来源文档物化、文档块回挂从 `buildBacklinkPanelData` 抽离；`backlink-data.ts` 约从 50.0 KB 缩减到 46.0 KB |
+| RF-008 | 2026-03-14 | 2026-03-14 | `node --test tests/backlink-panel-data-collectors.test.js`；`node --test tests/*.test.js`；`npm run build` | pass | `docs/project-structure.md`、`README.md` | 新增 `backlink-panel-data-collectors.js` 与对应单测，将 `buildBacklinkPanelData` 内部四段 collector 遍历逻辑抽离；`backlink-data.ts` 约从 46.0 KB 缩减到 40.6 KB |
 
 ## 5. 决策与确认
 
-- 用户批准的条目：`RF-001`、`RF-002`、`RF-003`、`RF-004`、`RF-005`、`RF-006`、`RF-007`
+- 用户批准的条目：`RF-001`、`RF-002`、`RF-003`、`RF-004`、`RF-005`、`RF-006`、`RF-007`、`RF-008`
 - 延后的条目：
 - 阻塞条目及原因：
 - 备注：按技能要求，未获批前不进入任何重构实现
 
 ## 6. 文档刷新
 
-- `docs/project-structure.md`：已更新，补充基线数据 builder helper 与测试入口
+- `docs/project-structure.md`：已更新，补充 collector helper 与测试入口
 - `README.md`：已更新，同步数据层结构说明
-- 最终同步检查：已完成，文档内容与 `RF-007` 后的代码结构一致
+- 最终同步检查：已完成，文档内容与 `RF-008` 后的代码结构一致
 
 ## 7. 下一步
 
-1. 若继续缩减 `backlink-data.ts`，下一步可考虑把 `buildBacklinkPanelData` 内部三段输入遍历逻辑继续拆成 `backlink block / child block / parent block` 三类 collector。
+1. 若继续缩减 `backlink-data.ts`，下一步可考虑把 `getBacklinkBlockArray`、`getHeadlineChildBlockArray`、`getListItemChildBlockArray`、`getParentBlockArray` 这几段查询准备逻辑再拆成 query helper。
 2. 后续若继续缩减 `backlink-filter-panel-page.svelte`，可考虑把 Protyle DOM 折叠/展开编排继续抽成独立 helper。
 3. 若需要对 Dock/Tab/文档底部宿主补更强的集成测试，可在后续增加 DOM/host 级测试夹具。

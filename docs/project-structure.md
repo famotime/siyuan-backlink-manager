@@ -74,6 +74,8 @@ docs/                              Product and maintenance docs
   Markdown ref parsing, anchor extraction, and search-syntax helpers shared by backlink data assembly and models.
 - `src/service/backlink/backlink-panel-base-data-builder.js`
   Base-data builder helpers for current-document anchor enrichment, related-block materialization, source-document materialization, and backlink-node document attachment.
+- `src/service/backlink/backlink-panel-data-collectors.js`
+  Collector helpers for backlink blocks, headline child blocks, list-item trees, and parent blocks inside the base-data assembly flow.
 - `src/service/backlink/backlink-sql.ts`
   SQL builders used by the backlink queries.
 
@@ -111,6 +113,7 @@ Current automated tests are in `tests/` and cover:
 - backlink filtering helpers
 - backlink markdown parsing helpers
 - backlink panel base-data builder helpers
+- backlink panel data collector helpers
 - panel host lifecycle helpers
 - panel query-parameter helpers
 - setting config resolution helpers

@@ -55,6 +55,12 @@ import {
     createBacklinkBlockNode,
     getBlockIds,
 } from "./backlink-panel-base-data-builder.js";
+import {
+    collectBacklinkBlocks,
+    collectHeadlineChildBlocks,
+    collectListItemTreeNodes,
+    collectParentBlocks,
+} from "./backlink-panel-data-collectors.js";
 
 
 export async function getBacklinkPanelRenderData(
@@ -753,140 +759,66 @@ async function buildBacklinkPanelData(
     // 整个活，把关联的块的时间修改为反链块的时间。 map 的键是关联块的id
     let backlinkBlockCreatedMap = new Map<string, string>();
     let backlinkBlockUpdatedMap = new Map<string, string>();
+    const collectContext = {
+        curDocDefBlockIdArray,
+        backlinkBlockMap,
+        relatedDefBlockCountMap,
+        backlinkDocumentCountMap,
+        relatedDefBlockDynamicAnchorMap,
+        relatedDefBlockStaticAnchorMap,
+        backlinkBlockCreatedMap,
+        backlinkBlockUpdatedMap,
+    };
 
-    for (const backlinkBlock of paramObj.backlinkBlockArray) {
-        let backlinkBlockNode: IBacklinkBlockNode = createBacklinkBlockNode(backlinkBlock);
-
-        let relatedDefBlockIdArray: string[] = [];
-        if (backlinkBlock.type == "query_embed") {
-            let result = await getBacklinkEmbedBlockInfo(backlinkBlock, paramObj.curDocDefBlockArray);
-            backlinkBlock.markdown = result.embedBlockmarkdown;
-            backlinkBlockNode.block.markdown = result.embedBlockmarkdown;
-            relatedDefBlockIdArray.push(...result.relatedDefBlockIdArray)
-        }
-
-        let markdown = backlinkBlock.markdown;
-        relatedDefBlockIdArray.push(...getRefBlockId(markdown));
-
-        for (const relatedDefBlockId of relatedDefBlockIdArray) {
-            backlinkBlockNode.includeRelatedDefBlockIds.add(relatedDefBlockId)
-            backlinkBlockNode.includeCurBlockDefBlockIds.add(relatedDefBlockId)
-            if (curDocDefBlockIdArray.includes(relatedDefBlockId)) {
-                backlinkBlockNode.includeDirectDefBlockIds.add(relatedDefBlockId);
-            } else {
-                updateMaxValueMap(backlinkBlockCreatedMap, relatedDefBlockId, backlinkBlock.created);
-                updateMaxValueMap(backlinkBlockUpdatedMap, relatedDefBlockId, backlinkBlock.updated);
-                updateMapCount(relatedDefBlockCountMap, relatedDefBlockId);
-            }
-        }
-
-        updateDynamicAnchorMap(backlinkBlockNode.dynamicAnchorMap, backlinkBlock.markdown);
-        updateStaticAnchorMap(backlinkBlockNode.staticAnchorMap, backlinkBlock.markdown);
-
-        updateMaxValueMap(backlinkBlockCreatedMap, backlinkBlock.root_id, backlinkBlock.created);
-        updateMaxValueMap(backlinkBlockUpdatedMap, backlinkBlock.root_id, backlinkBlock.updated);
-        updateMapCount(backlinkDocumentCountMap, backlinkBlock.root_id);
-        // 更新所有关联块的动静态锚文本
-        updateDynamicAnchorMap(relatedDefBlockDynamicAnchorMap, markdown);
-        updateStaticAnchorMap(relatedDefBlockStaticAnchorMap, markdown);
-        backlinkBlockMap[backlinkBlockNode.block.id] = backlinkBlockNode;
-    }
+    await collectBacklinkBlocks({
+        backlinkBlockArray: paramObj.backlinkBlockArray,
+        curDocDefBlockArray: paramObj.curDocDefBlockArray,
+        getBacklinkEmbedBlockInfo,
+        createBacklinkBlockNode,
+        updateDynamicAnchorMap,
+        updateStaticAnchorMap,
+        getRefBlockId,
+        updateMaxValueMap,
+        updateMapCount,
+        context: collectContext,
+    });
     // 这里必须再生成一个关联块ID Set，用来区分下面父级关联块 markdown 中存在该关联块，防止set里的关联块重新计数
     let relatedDefBlockIdSet = new Set(relatedDefBlockCountMap.keys());
 
-    for (const childBlock of paramObj.headlinkBacklinkChildBlockArray) {
-        let markdown = childBlock.markdown;
-        let backlnikChildDefBlockIdArray = getRefBlockId(markdown);
-        markdown += childBlock.subInAttrConcat;
-        let backlinkBlockId = childBlock.parentIdPath.split("->")[0];
-        let backlinkBlockNode = backlinkBlockMap[backlinkBlockId];
-        if (backlinkBlockNode) {
-            for (const childDefBlockId of backlnikChildDefBlockIdArray) {
-                backlinkBlockNode.includeRelatedDefBlockIds.add(childDefBlockId);
-                // backlinkBlockNode.includeChildDefBlockIds.add((childDefBlockId))
-                if (curDocDefBlockIdArray.includes(childDefBlockId)) {
-                    backlinkBlockNode.includeDirectDefBlockIds.add(childDefBlockId);
-                } else if (!relatedDefBlockIdSet.has(childDefBlockId)) {
-                    updateMaxValueMap(backlinkBlockCreatedMap, childDefBlockId, backlinkBlockNode.block.created);
-                    updateMaxValueMap(backlinkBlockUpdatedMap, childDefBlockId, backlinkBlockNode.block.updated);
-                    updateMapCount(relatedDefBlockCountMap, childDefBlockId);
-                }
-            }
-            backlinkBlockNode.headlineChildMarkdown += markdown;
-            updateDynamicAnchorMap(relatedDefBlockDynamicAnchorMap, markdown);
-            updateStaticAnchorMap(relatedDefBlockStaticAnchorMap, markdown);
-        }
-    }
+    collectHeadlineChildBlocks({
+        headlinkBacklinkChildBlockArray: paramObj.headlinkBacklinkChildBlockArray,
+        relatedDefBlockIdSet,
+        getRefBlockId,
+        updateDynamicAnchorMap,
+        updateStaticAnchorMap,
+        updateMaxValueMap,
+        updateMapCount,
+        context: collectContext,
+    });
 
 
     if (isArrayNotEmpty(paramObj.listItemBacklinkChildBlockArray)) {
         let listItemTreeNodeArray = ListItemTreeNode.buildTree(paramObj.listItemBacklinkChildBlockArray);
-        for (const treeNode of listItemTreeNodeArray) {
-            let listItemBlockId = treeNode.id;
-            let backlinkBlockNode: IBacklinkBlockNode;
-            for (const node of Object.values(backlinkBlockMap)) {
-                if (node.block.parent_id == listItemBlockId) {
-                    backlinkBlockNode = node
-                    break;
-                }
-            }
-            if (!backlinkBlockNode) {
-                continue;
-            }
-            backlinkBlockNode.parentListItemTreeNode = treeNode;
-            let backlinkBlock = backlinkBlockNode.block;
-            let markdown = treeNode.getAllMarkdown();
-            markdown = markdown.replace(backlinkBlock.markdown, " ");
-            let childDefBlockIdArray = getRefBlockId(markdown);
-
-            for (const childDefBlockId of childDefBlockIdArray) {
-                backlinkBlockNode.includeRelatedDefBlockIds.add(childDefBlockId)
-                // backlinkBlockNode.includeChildDefBlockIds.add(defBlockId);
-                if (curDocDefBlockIdArray.includes(childDefBlockId)) {
-                    backlinkBlockNode.includeDirectDefBlockIds.add(childDefBlockId);
-                } else {
-                    updateMaxValueMap(backlinkBlockCreatedMap, childDefBlockId, backlinkBlock.created);
-                    updateMaxValueMap(backlinkBlockUpdatedMap, childDefBlockId, backlinkBlock.updated);
-                    updateMapCount(relatedDefBlockCountMap, childDefBlockId);
-                }
-            }
-            updateMaxValueMap(backlinkBlockCreatedMap, backlinkBlock.root_id, backlinkBlock.created);
-            updateMaxValueMap(backlinkBlockUpdatedMap, backlinkBlock.root_id, backlinkBlock.updated);
-            updateMapCount(backlinkDocumentCountMap, backlinkBlock.root_id);
-            updateDynamicAnchorMap(relatedDefBlockDynamicAnchorMap, markdown);
-            updateStaticAnchorMap(relatedDefBlockStaticAnchorMap, markdown);
-        }
+        collectListItemTreeNodes({
+            listItemTreeNodeArray,
+            getRefBlockId,
+            updateDynamicAnchorMap,
+            updateStaticAnchorMap,
+            updateMaxValueMap,
+            updateMapCount,
+            context: collectContext,
+        });
     }
 
-    for (const parentBlock of paramObj.backlinkParentBlockArray) {
-        let markdown = parentBlock.markdown;
-        let inAttrConcat = parentBlock.inAttrConcat;
-        if (parentBlock.type == 'i' && parentBlock.subMarkdown) {
-            markdown = parentBlock.subMarkdown;
-            // console.log("backlinkParentBlockArray subMarkdown  ", markdown)
-        }
-        markdown += inAttrConcat;
-        // console.log("backlinkParentBlockArray markdown  ", markdown)
-
-        let backlnikParentDefBlockIdArray = getRefBlockId(markdown);
-        let backlinkBlockId = parentBlock.childIdPath.split("->")[0];
-        let backlinkBlockNode = backlinkBlockMap[backlinkBlockId];
-        if (backlinkBlockNode) {
-            for (const parentDefBlockId of backlnikParentDefBlockIdArray) {
-                backlinkBlockNode.includeRelatedDefBlockIds.add(parentDefBlockId);
-                backlinkBlockNode.includeParentDefBlockIds.add(parentDefBlockId);
-                if (curDocDefBlockIdArray.includes(parentDefBlockId)) {
-                    backlinkBlockNode.includeDirectDefBlockIds.add(parentDefBlockId);
-                } else if (!relatedDefBlockIdSet.has(parentDefBlockId)) {
-                    updateMapCount(relatedDefBlockCountMap, parentDefBlockId);
-                }
-            }
-            backlinkBlockNode.parentMarkdown += markdown;
-            updateDynamicAnchorMap(relatedDefBlockDynamicAnchorMap, markdown);
-            updateStaticAnchorMap(relatedDefBlockStaticAnchorMap, markdown);
-            // updateMapCount(backlinkDocumentCountMap, parentBlock.root_id);
-        }
-    }
+    collectParentBlocks({
+        backlinkParentBlockArray: paramObj.backlinkParentBlockArray,
+        relatedDefBlockIdSet,
+        getRefBlockId,
+        updateDynamicAnchorMap,
+        updateStaticAnchorMap,
+        updateMapCount,
+        context: collectContext,
+    });
 
     const blockIdArray = [...relatedDefBlockCountMap.keys(), ...backlinkDocumentCountMap.keys()];
 

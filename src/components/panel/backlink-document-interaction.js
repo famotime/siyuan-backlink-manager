@@ -25,6 +25,10 @@ export function getBacklinkDocumentClickAction({
     return "toggle-fold";
   }
 
+  if (targetRole === "title") {
+    return "expand-context";
+  }
+
   return "noop";
 }
 

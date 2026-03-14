@@ -170,6 +170,10 @@ export function createBacklinkPanelController(state) {
       return;
     }
 
+    if (action === "expand-context") {
+      stepBacklinkDocumentContext(target, "next");
+    }
+
   }
 
   function contextmenuBacklinkDocumentLiElement(event) {

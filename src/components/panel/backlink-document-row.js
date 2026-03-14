@@ -7,6 +7,8 @@ const BACKLINK_CONTEXT_LEVEL_LABELS = {
   extended: "扩展",
   full: "全文",
 };
+const BACKLINK_DOCUMENT_TITLE_TOOLTIP =
+  "单击逐级展开上下文，Ctrl+单击打开反链块";
 
 export function getBacklinkContextLevelLabel(level = "core") {
   return BACKLINK_CONTEXT_LEVEL_LABELS[level] || BACKLINK_CONTEXT_LEVEL_LABELS.core;
@@ -76,7 +78,7 @@ export function buildBacklinkDocumentListItemHtml({
 <svg class="b3-list-item__arrow b3-list-item__arrow--open"><use xlink:href="#iconRight"></use></svg>
 </span>
 <svg class="b3-list-item__graphic popover__block"><use xlink:href="#iconFile"></use></svg>
-<span class="b3-list-item__text ariaLabel"  aria-label="${truncatedAriaText}"  >
+<span class="b3-list-item__text ariaLabel"  aria-label="${truncatedAriaText}" title="${BACKLINK_DOCUMENT_TITLE_TOOLTIP}"  >
 ${documentName}
 </span>
 <span class="b3-list-item__meta backlink-context-source">${matchSourceLabel}</span>
@@ -164,6 +166,7 @@ export function updateBacklinkDocumentLiNavigation(
       "aria-label",
       documentGroup.activeBacklink.backlinkBlock.content.substring(0, 100),
     );
+    textElement.setAttribute("title", BACKLINK_DOCUMENT_TITLE_TOOLTIP);
   }
   if (sourceElement) {
     sourceElement.textContent = matchSourceLabel;

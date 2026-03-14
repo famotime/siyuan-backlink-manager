@@ -10,13 +10,13 @@ import {
   shouldHandleBacklinkDocumentClick,
 } from "../src/components/panel/backlink-document-interaction.js";
 
-test("does not use title click as a context expansion shortcut", () => {
+test("uses title click as a context expansion shortcut", () => {
   const action = getBacklinkDocumentClickAction({
     ctrlKey: false,
     targetRole: "title",
   });
 
-  assert.equal(action, "noop");
+  assert.equal(action, "expand-context");
 });
 
 test("keeps fold toggle action on the left toggle button", () => {

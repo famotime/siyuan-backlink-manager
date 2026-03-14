@@ -23,6 +23,7 @@ test("buildBacklinkDocumentListItemHtml renders title aria text and progress tex
   assert.match(html, /Document A/);
   assert.match(html, /2\/3/);
   assert.match(html, /aria-label="A{100}"/);
+  assert.match(html, /title="单击逐级展开上下文，Ctrl\+单击打开反链块"/);
   assert.match(html, /父级/);
   assert.match(html, /命中说明/);
   assert.match(html, /backlink-document-header-row/);
@@ -109,6 +110,10 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and 
   assert.equal(documentLiElement.attrs["data-backlink-block-id"], "block-a");
   assert.equal(progressElement.textContent, "1/1");
   assert.equal(textElement.attrs["aria-label"], "content");
+  assert.equal(
+    textElement.attrs.title,
+    "单击逐级展开上下文，Ctrl+单击打开反链块",
+  );
   assert.equal(sourceElement.textContent, "父级");
   assert.equal(summaryElement.textContent, "父级：命中说明");
   assert.equal(controlRowElement.attrs["data-context-level"], "近邻");

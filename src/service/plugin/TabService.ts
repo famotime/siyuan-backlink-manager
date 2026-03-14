@@ -20,7 +20,7 @@ export class TabService {
     public init() {
         EnvConfig.ins.plugin.addCommand({
             langKey: "showDocumentBacklinkPanelTab",
-            langText: "显示当前文反链过滤面板页签",
+            langText: "显示当前文反链管家页签",
             hotkey: "⌥⇧T",
             editorCallback: (protyle: any) => {
                 // console.log(protyle, "editorCallback");
@@ -91,7 +91,7 @@ export class TabService {
 
     public openBacklinkTab(docTitle: string, docId: string, focusBlockId: string) {
         if (isStrBlank(docTitle) || isStrBlank(docId)) {
-            console.log("反链过滤面板插件 打开反链页签错误，参数缺失")
+            console.log("反链管家插件 打开反链页签错误，参数缺失")
             return;
         }
 

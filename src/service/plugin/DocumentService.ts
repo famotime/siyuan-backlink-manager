@@ -272,7 +272,7 @@ function hadnleClickEditorTitleIcon(e) {
     (e.detail.menu as Menu).addItem({
         icon: "BacklinkPanelFilter",
         type: "submenu",
-        label: "反链过滤面板",
+        label: "反链管家",
         submenu: getDocumentBlockIconMenus(e)
     });
 }

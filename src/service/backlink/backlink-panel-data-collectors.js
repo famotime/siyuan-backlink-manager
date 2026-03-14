@@ -269,3 +269,92 @@ export function collectParentBlocks({
     updateStaticAnchorMap(context.relatedDefBlockStaticAnchorMap, markdown);
   }
 }
+
+function buildSiblingMarkdown(siblingBlock = {}) {
+  return [
+    siblingBlock.markdown || "",
+    siblingBlock.name || "",
+    siblingBlock.alias || "",
+    siblingBlock.memo || "",
+  ].join("");
+}
+
+function appendSiblingBlockContext({
+  siblingBlock,
+  backlinkBlockNode,
+  relatedDefBlockIdSet,
+  getRefBlockId,
+  updateDynamicAnchorMap,
+  updateStaticAnchorMap,
+  updateMaxValueMap,
+  updateMapCount,
+  context,
+}) {
+  const markdown = buildSiblingMarkdown(siblingBlock);
+  if (!markdown) {
+    return "";
+  }
+
+  const siblingDefBlockIdArray = getRefBlockId(markdown);
+  for (const siblingDefBlockId of siblingDefBlockIdArray) {
+    trackRelatedDefBlockIdWithoutDuplicates({
+      backlinkBlockNode,
+      relatedDefBlockId: siblingDefBlockId,
+      curDocDefBlockIdArray: context.curDocDefBlockIdArray,
+      relatedDefBlockIdSet,
+      created: backlinkBlockNode.block.created,
+      updated: backlinkBlockNode.block.updated,
+      relatedDefBlockCountMap: context.relatedDefBlockCountMap,
+      backlinkBlockCreatedMap: context.backlinkBlockCreatedMap,
+      backlinkBlockUpdatedMap: context.backlinkBlockUpdatedMap,
+      updateMaxValueMap,
+      updateMapCount,
+    });
+  }
+
+  updateDynamicAnchorMap(context.relatedDefBlockDynamicAnchorMap, markdown);
+  updateStaticAnchorMap(context.relatedDefBlockStaticAnchorMap, markdown);
+  return markdown;
+}
+
+export function collectSiblingBlocks({
+  backlinkSiblingBlockGroupArray = [],
+  getRefBlockId,
+  updateDynamicAnchorMap,
+  updateStaticAnchorMap,
+  updateMaxValueMap,
+  updateMapCount,
+  context,
+}) {
+  const relatedDefBlockIdSet = new Set(context.relatedDefBlockCountMap.keys());
+
+  for (const siblingGroup of backlinkSiblingBlockGroupArray) {
+    const backlinkBlockNode = context.backlinkBlockMap[siblingGroup.backlinkBlockId];
+    if (!backlinkBlockNode) {
+      continue;
+    }
+
+    backlinkBlockNode.previousSiblingMarkdown += appendSiblingBlockContext({
+      siblingBlock: siblingGroup.previousSiblingBlock,
+      backlinkBlockNode,
+      relatedDefBlockIdSet,
+      getRefBlockId,
+      updateDynamicAnchorMap,
+      updateStaticAnchorMap,
+      updateMaxValueMap,
+      updateMapCount,
+      context,
+    });
+    backlinkBlockNode.nextSiblingMarkdown += appendSiblingBlockContext({
+      siblingBlock: siblingGroup.nextSiblingBlock,
+      backlinkBlockNode,
+      relatedDefBlockIdSet,
+      getRefBlockId,
+      updateDynamicAnchorMap,
+      updateStaticAnchorMap,
+      updateMaxValueMap,
+      updateMapCount,
+      context,
+    });
+  }
+}

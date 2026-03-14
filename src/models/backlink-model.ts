@@ -36,6 +36,8 @@ export interface IBacklinkBlockNode {
     parentMarkdown: string;
     listItemChildMarkdown: string;
     headlineChildMarkdown: string;
+    previousSiblingMarkdown: string;
+    nextSiblingMarkdown: string;
     // 存放包含当前文档定义块的定义块id
     includeDirectDefBlockIds: Set<string>;
     // 存放包含关联定义块的id；关联的定义：非当前文档的定义块

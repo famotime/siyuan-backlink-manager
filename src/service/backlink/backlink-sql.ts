@@ -233,6 +233,34 @@ export function generateGetBacklinkListItemBlockArraySql(
     return cleanSpaceText(sql);
 }
 
+export function generateGetBacklinkSiblingBlockArraySql(
+    queryParams: IBacklinkBlockQueryParams,
+): string {
+    let backlinkBlocks = queryParams.backlinkBlocks || [];
+    let parentBlockIds = Array.from(
+        new Set(
+            backlinkBlocks
+                .map(block => block?.parent_id)
+                .filter(parentId => !isStrBlank(parentId)),
+        ),
+    );
+    let parentIdInSql = generateAndInConditions("parent_id", parentBlockIds);
+    if (isStrBlank(parentIdInSql)) {
+        return "";
+    }
+
+    let sql = `
+    SELECT *
+    FROM blocks
+    WHERE 1 = 1
+        ${parentIdInSql}
+        AND type != 'd'
+    LIMIT 999999999;
+    `
+
+    return cleanSpaceText(sql);
+}
+
 
 export function generateGetHeadlineChildDefBlockArraySql(
     queryParams: IBacklinkBlockQueryParams,
@@ -464,4 +492,3 @@ function generateInConditions(
 
     return result;
 }
-

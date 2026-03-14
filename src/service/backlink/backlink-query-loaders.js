@@ -176,6 +176,88 @@ export async function getParentBlockArray(queryParams, deps) {
   return parentBlockArray;
 }
 
+function sortSiblingBlocks(blockArray = []) {
+  blockArray.sort((a, b) => {
+    const sortA = Number(a?.sort ?? 0);
+    const sortB = Number(b?.sort ?? 0);
+    if (sortA !== sortB) {
+      return sortA - sortB;
+    }
+
+    const pathA = String(a?.path ?? "");
+    const pathB = String(b?.path ?? "");
+    const pathResult = pathA.localeCompare(pathB);
+    if (pathResult !== 0) {
+      return pathResult;
+    }
+
+    return String(a?.id ?? "").localeCompare(String(b?.id ?? ""));
+  });
+}
+
+export async function getSiblingBlockGroupArray(queryParams, deps) {
+  const {
+    generateGetBacklinkSiblingBlockArraySql,
+    sql,
+    isArrayEmpty,
+  } = deps;
+
+  if (!queryParams || isArrayEmpty(queryParams.backlinkBlocks)) {
+    return [];
+  }
+
+  const siblingBlockArray =
+    (await sql(generateGetBacklinkSiblingBlockArraySql(queryParams))) || [];
+  if (isArrayEmpty(siblingBlockArray)) {
+    return [];
+  }
+
+  const parentSiblingMap = new Map();
+  for (const siblingBlock of siblingBlockArray) {
+    if (!siblingBlock?.parent_id) {
+      continue;
+    }
+
+    let siblingList = parentSiblingMap.get(siblingBlock.parent_id);
+    if (!siblingList) {
+      siblingList = [];
+      parentSiblingMap.set(siblingBlock.parent_id, siblingList);
+    }
+    siblingList.push(siblingBlock);
+  }
+
+  for (const siblingList of parentSiblingMap.values()) {
+    sortSiblingBlocks(siblingList);
+  }
+
+  const backlinkSiblingBlockGroupArray = [];
+  for (const backlinkBlock of queryParams.backlinkBlocks) {
+    const siblingList = parentSiblingMap.get(backlinkBlock.parent_id);
+    if (isArrayEmpty(siblingList) || siblingList.length <= 1) {
+      continue;
+    }
+
+    const currentIndex = siblingList.findIndex((item) => item.id === backlinkBlock.id);
+    if (currentIndex < 0) {
+      continue;
+    }
+
+    const previousSiblingBlock = siblingList[currentIndex - 1] || null;
+    const nextSiblingBlock = siblingList[currentIndex + 1] || null;
+    if (!previousSiblingBlock && !nextSiblingBlock) {
+      continue;
+    }
+
+    backlinkSiblingBlockGroupArray.push({
+      backlinkBlockId: backlinkBlock.id,
+      previousSiblingBlock,
+      nextSiblingBlock,
+    });
+  }
+
+  return backlinkSiblingBlockGroupArray;
+}
+
 export async function getBlockInfoMap(blockIds, deps) {
   const { generateGetBlockArraySql, sql } = deps;
   const blockArray = (await sql(generateGetBlockArraySql(blockIds))) || [];

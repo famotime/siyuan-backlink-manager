@@ -6,6 +6,7 @@ import {
   collectHeadlineChildBlocks,
   collectListItemTreeNodes,
   collectParentBlocks,
+  collectSiblingBlocks,
 } from "../src/service/backlink/backlink-panel-data-collectors.js";
 
 function createCollectorContext() {
@@ -196,4 +197,64 @@ test("collectParentBlocks appends parent markdown and tracks parent def block id
   assert.ok(context.backlinkBlockMap["block-a"].includeDirectDefBlockIds.has("def-current"));
   assert.ok(context.backlinkBlockMap["block-a"].includeParentDefBlockIds.has("def-parent"));
   assert.equal(context.relatedDefBlockCountMap.get("def-parent"), 1);
+});
+
+test("collectSiblingBlocks appends previous and next sibling markdown and tracks sibling def block ids", () => {
+  const context = createCollectorContext();
+  context.backlinkBlockMap["block-a"] = {
+    block: { id: "block-a", root_id: "doc-a", created: "11", updated: "22" },
+    includeRelatedDefBlockIds: new Set(),
+    includeDirectDefBlockIds: new Set(),
+    previousSiblingMarkdown: "",
+    nextSiblingMarkdown: "",
+  };
+
+  collectSiblingBlocks({
+    backlinkSiblingBlockGroupArray: [
+      {
+        backlinkBlockId: "block-a",
+        previousSiblingBlock: {
+          id: "block-prev",
+          markdown: "prev ((def-current 'current'))",
+          name: "",
+          alias: "",
+          memo: "",
+        },
+        nextSiblingBlock: {
+          id: "block-next",
+          markdown: "next ((def-next 'next'))",
+          name: "",
+          alias: "",
+          memo: "",
+        },
+      },
+    ],
+    getRefBlockId: (markdown) => {
+      if (markdown.includes("def-current")) {
+        return ["def-current"];
+      }
+      if (markdown.includes("def-next")) {
+        return ["def-next"];
+      }
+      return [];
+    },
+    updateDynamicAnchorMap: () => {},
+    updateStaticAnchorMap: () => {},
+    updateMaxValueMap: (map, key, value) => map.set(key, value),
+    updateMapCount: (map, key, initialValue = 1) =>
+      map.set(key, map.has(key) ? map.get(key) + 1 : initialValue),
+    context,
+  });
+
+  assert.equal(
+    context.backlinkBlockMap["block-a"].previousSiblingMarkdown,
+    "prev ((def-current 'current'))",
+  );
+  assert.equal(
+    context.backlinkBlockMap["block-a"].nextSiblingMarkdown,
+    "next ((def-next 'next'))",
+  );
+  assert.ok(context.backlinkBlockMap["block-a"].includeDirectDefBlockIds.has("def-current"));
+  assert.ok(context.backlinkBlockMap["block-a"].includeRelatedDefBlockIds.has("def-next"));
+  assert.equal(context.relatedDefBlockCountMap.get("def-next"), 1);
 });

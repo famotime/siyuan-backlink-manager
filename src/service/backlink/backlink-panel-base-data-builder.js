@@ -31,6 +31,8 @@ export function createBacklinkBlockNode(backlinkBlock) {
     parentMarkdown: "",
     listItemChildMarkdown: "",
     headlineChildMarkdown: "",
+    previousSiblingMarkdown: "",
+    nextSiblingMarkdown: "",
     includeDirectDefBlockIds: new Set(),
     includeRelatedDefBlockIds: new Set(),
     includeCurBlockDefBlockIds: new Set(),

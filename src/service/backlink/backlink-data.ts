@@ -9,6 +9,7 @@ import {
     generateGetListItemtSubMarkdownArraySql,
     generateGetParenListItemtDefBlockArraySql,
     generateGetParentDefBlockArraySql,
+    generateGetBacklinkSiblingBlockArraySql,
     generateGetBlockArraySql,
 } from "./backlink-sql";
 import {
@@ -60,6 +61,7 @@ import {
     collectHeadlineChildBlocks,
     collectListItemTreeNodes,
     collectParentBlocks,
+    collectSiblingBlocks,
 } from "./backlink-panel-data-collectors.js";
 import { buildBacklinkPanelData } from "./backlink-panel-data-assembly.js";
 import {
@@ -76,6 +78,7 @@ import {
     getHeadlineChildBlockArray,
     getListItemChildBlockArray,
     getParentBlockArray,
+    getSiblingBlockGroupArray,
 } from "./backlink-query-loaders.js";
 
 
@@ -368,6 +371,15 @@ export async function getBacklinkPanelData(
             isStrNotBlank,
         });
 
+    let backlinkSiblingBlockGroupArray = await getSiblingBlockGroupArray(
+        backlinkBlockQueryParams,
+        {
+            generateGetBacklinkSiblingBlockArraySql,
+            sql,
+            isArrayEmpty,
+        },
+    );
+
 
     let backlinkPanelData: IBacklinkFilterPanelData = await buildBacklinkPanelData(
         {
@@ -377,6 +389,7 @@ export async function getBacklinkPanelData(
             headlinkBacklinkChildBlockArray,
             listItemBacklinkChildBlockArray,
             backlinkParentBlockArray,
+            backlinkSiblingBlockGroupArray,
         },
         {
             getBlockIds,
@@ -384,6 +397,7 @@ export async function getBacklinkPanelData(
             collectHeadlineChildBlocks,
             collectListItemTreeNodes,
             collectParentBlocks,
+            collectSiblingBlocks,
             getBacklinkEmbedBlockInfo: (backlinkBlock, curDocDefBlockArray) =>
                 getBacklinkEmbedBlockInfo(backlinkBlock, curDocDefBlockArray, {
                     sql,

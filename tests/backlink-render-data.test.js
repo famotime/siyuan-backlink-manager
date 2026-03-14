@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   formatBacklinkDocApiKeyword,
   getBatchBacklinkDoc,
+  isBacklinkBlockValid,
 } from "../src/service/backlink/backlink-render-data.js";
 
 test("formatBacklinkDocApiKeyword keeps the longest segment and truncates it to 80 chars", () => {
@@ -62,4 +63,48 @@ test("getBatchBacklinkDoc deduplicates backlink dom results and preserves backli
   );
   assert.deepEqual(result.backlinks[1].includeChildListItemIdArray, ["child-1"]);
   assert.deepEqual(result.backlinks[1].excludeChildLisetItemIdArray, ["child-2"]);
+});
+
+test("isBacklinkBlockValid matches keywords from sibling markdown", () => {
+  const result = isBacklinkBlockValid(
+    {
+      backlinkKeywordStr: "sibling-hit",
+      includeRelatedDefBlockIds: new Set(),
+      excludeRelatedDefBlockIds: new Set(),
+      includeDocumentIds: new Set(),
+      excludeDocumentIds: new Set(),
+      backlinkCurDocDefBlockType: "",
+    },
+    {
+      block: { root_id: "doc-a", markdown: "self" },
+      documentBlock: { markdown: "doc" },
+      includeDirectDefBlockIds: new Set(),
+      includeRelatedDefBlockIds: new Set(),
+      includeParentDefBlockIds: new Set(),
+      parentListItemTreeNode: null,
+      dynamicAnchorMap: new Map(),
+      staticAnchorMap: new Map(),
+      parentMarkdown: "",
+      headlineChildMarkdown: "",
+      previousSiblingMarkdown: "sibling-hit",
+      nextSiblingMarkdown: "",
+    },
+    {
+      isSetNotEmpty: (value) => value && value.size > 0,
+      parseSearchSyntax: (value) => ({
+        includeText: [value],
+        excludeText: [],
+        includeAnchor: [],
+        excludeAnchor: [],
+      }),
+      getQueryStrByBlock: (block) => block?.markdown || "",
+      getMarkdownAnchorTextArray: () => [],
+      removeMarkdownRefBlockStyle: (markdown) => markdown,
+      matchKeywords: (content, includeText, excludeText) =>
+        includeText.every((keyword) => content.includes(keyword)) &&
+        excludeText.every((keyword) => !content.includes(keyword)),
+    },
+  );
+
+  assert.equal(result, true);
 });

@@ -6,6 +6,7 @@ import {
   getHeadlineChildBlockArray,
   getListItemChildBlockArray,
   getParentBlockArray,
+  getSiblingBlockGroupArray,
 } from "../src/service/backlink/backlink-query-loaders.js";
 
 test("getBacklinkBlockArray chooses list-item SQL when list-item child queries are enabled", async () => {
@@ -106,6 +107,41 @@ test("getParentBlockArray enriches deep list parents with sub-markdown", async (
       type: "i",
       childIdPath: "a->b->c->d",
       subMarkdown: "sub attr",
+    },
+  ]);
+});
+
+test("getSiblingBlockGroupArray groups immediate previous and next siblings by parent block", async () => {
+  const result = await getSiblingBlockGroupArray(
+    {
+      backlinkBlocks: [
+        { id: "block-b", parent_id: "parent-1" },
+        { id: "block-e", parent_id: "parent-2" },
+      ],
+    },
+    {
+      generateGetBacklinkSiblingBlockArraySql: () => "SIBLING_SQL",
+      sql: async () => [
+        { id: "block-e", parent_id: "parent-2", sort: 20, path: "/e" },
+        { id: "block-b", parent_id: "parent-1", sort: 20, path: "/b" },
+        { id: "block-c", parent_id: "parent-1", sort: 30, path: "/c" },
+        { id: "block-d", parent_id: "parent-2", sort: 10, path: "/d" },
+        { id: "block-a", parent_id: "parent-1", sort: 10, path: "/a" },
+      ],
+      isArrayEmpty: (value) => !value || value.length === 0,
+    },
+  );
+
+  assert.deepEqual(result, [
+    {
+      backlinkBlockId: "block-b",
+      previousSiblingBlock: { id: "block-a", parent_id: "parent-1", sort: 10, path: "/a" },
+      nextSiblingBlock: { id: "block-c", parent_id: "parent-1", sort: 30, path: "/c" },
+    },
+    {
+      backlinkBlockId: "block-e",
+      previousSiblingBlock: { id: "block-d", parent_id: "parent-2", sort: 10, path: "/d" },
+      nextSiblingBlock: null,
     },
   ]);
 });

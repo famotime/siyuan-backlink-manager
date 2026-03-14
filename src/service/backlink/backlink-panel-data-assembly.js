@@ -96,6 +96,11 @@ export async function buildBacklinkPanelData(paramObj, deps) {
   if (paramObj.backlinkSiblingBlockGroupArray) {
     collectSiblingBlocks({
       backlinkSiblingBlockGroupArray: paramObj.backlinkSiblingBlockGroupArray,
+      getRefBlockId,
+      updateDynamicAnchorMap,
+      updateStaticAnchorMap,
+      updateMaxValueMap,
+      updateMapCount,
       context: collectContext,
     });
   }

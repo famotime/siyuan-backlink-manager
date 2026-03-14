@@ -265,6 +265,8 @@ export function isBacklinkBlockValid(queryParams, backlinkBlockNode, deps) {
     const docContent = getQueryStrByBlock(backlinkBlockNode.documentBlock);
     const parentMarkdown = backlinkBlockNode.parentMarkdown;
     const headlineChildMarkdown = backlinkBlockNode.headlineChildMarkdown;
+    const previousSiblingMarkdown = backlinkBlockNode.previousSiblingMarkdown || "";
+    const nextSiblingMarkdown = backlinkBlockNode.nextSiblingMarkdown || "";
     let listItemChildMarkdown = "";
     if (parentListItemTreeNode) {
       listItemChildMarkdown = parentListItemTreeNode.getFilterMarkdown(
@@ -279,6 +281,8 @@ export function isBacklinkBlockValid(queryParams, backlinkBlockNode, deps) {
       docContent +
       parentMarkdown +
       headlineChildMarkdown +
+      previousSiblingMarkdown +
+      nextSiblingMarkdown +
       listItemChildMarkdown;
     const backlinkAllAnchorText = getMarkdownAnchorTextArray(backlinkConcatContent).join(" ");
     backlinkConcatContent = removeMarkdownRefBlockStyle(backlinkConcatContent).toLowerCase();

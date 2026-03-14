@@ -172,6 +172,20 @@ input {
     color: var(--b3-theme-on-surface-light);
 }
 
+.list-item__document-name {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.backlink-document-header-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    width: 100%;
+    min-width: 0;
+}
+
 .backlink-context-control-row {
     display: flex;
     align-items: center;
@@ -207,6 +221,22 @@ input {
 
 .backlink-context-budget-hint {
     color: var(--b3-theme-warning);
+}
+
+@media (max-width: 640px) {
+    .backlink-context-source,
+    .backlink-context-summary,
+    .backlink-context-visible-summary,
+    .backlink-context-next-action,
+    .backlink-context-budget-hint {
+        max-width: 100%;
+        white-space: normal;
+    }
+
+    .backlink-context-control-row {
+        margin-left: 20px;
+        width: calc(100% - 20px);
+    }
 }
 
 .backlink-pagination {

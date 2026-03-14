@@ -29,6 +29,7 @@ test("buildBacklinkDocumentListItemHtml renders title aria text and progress tex
   assert.match(html, /父级/);
   assert.match(html, /命中说明/);
   assert.match(html, /title="单击逐级展开上下文，Ctrl\+单击打开反链块"/);
+  assert.match(html, /backlink-document-header-row/);
   assert.match(html, /backlink-context-control-row/);
   assert.match(html, /backlink-context-level-button/);
   assert.match(html, /展开到近邻/);

@@ -77,6 +77,7 @@ export function buildBacklinkDocumentListItemHtml({
   const truncatedAriaText = docAriaText ? docAriaText.substring(0, 100) : "";
 
   return `
+<div class="backlink-document-header-row">
 <span style="padding-left: 4px;margin-right: 2px" class="b3-list-item__toggle b3-list-item__toggle--hl">
 <svg class="b3-list-item__arrow b3-list-item__arrow--open"><use xlink:href="#iconRight"></use></svg>
 </span>
@@ -89,6 +90,7 @@ ${documentName}
 <svg class="b3-list-item__graphic counter ariaLabel backlink-nav-button previous-backlink-icon" aria-label="上一个反链块"><use xlink:href="#iconLeft"></use></svg>
 <span class="b3-list-item__meta backlink-nav-progress">${progressText}</span>
 <svg class="b3-list-item__graphic counter ariaLabel backlink-nav-button next-backlink-icon" aria-label="下一个反链块"><use xlink:href="#iconRight"></use></svg>
+</div>
 ${buildBacklinkContextControlRowHtml(contextControlState)}
 `;
 }

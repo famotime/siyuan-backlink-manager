@@ -63,7 +63,7 @@ docs/                              Product and maintenance docs
 ### Backlink Data Layer
 
 - `src/service/backlink/backlink-data.ts`
-  Main orchestration entry for backlink panel data and render data, now focused on query flow, pagination, cache fetch, and base-data assembly.
+  Main orchestration entry for backlink panel data and render data, now reduced below 500 lines and focused on public orchestration only.
 - `src/service/backlink/backlink-def-blocks.js`
   Definition-block sorting and filter-state helpers used by the panel filter UI.
 - `src/service/backlink/backlink-document-pagination.js`
@@ -72,10 +72,16 @@ docs/                              Product and maintenance docs
   Query cleanup, definition-block filtering, and backlink-document filtering helpers.
 - `src/service/backlink/backlink-markdown.js`
   Markdown ref parsing, anchor extraction, and search-syntax helpers shared by backlink data assembly and models.
+- `src/service/backlink/backlink-panel-data-assembly.js`
+  Assembly helper that composes base-data collectors and builders into the final backlink panel data object.
 - `src/service/backlink/backlink-panel-base-data-builder.js`
   Base-data builder helpers for current-document anchor enrichment, related-block materialization, source-document materialization, and backlink-node document attachment.
 - `src/service/backlink/backlink-panel-data-collectors.js`
   Collector helpers for backlink blocks, headline child blocks, list-item trees, and parent blocks inside the base-data assembly flow.
+- `src/service/backlink/backlink-query-loaders.js`
+  Query-preparation and SQL-loading helpers for backlink blocks, child blocks, parent blocks, and related block metadata.
+- `src/service/backlink/backlink-render-data.js`
+  Cache-backed backlink document loading, backlink-node validation, and render-data sorting helpers.
 - `src/service/backlink/backlink-sql.ts`
   SQL builders used by the backlink queries.
 
@@ -114,6 +120,9 @@ Current automated tests are in `tests/` and cover:
 - backlink markdown parsing helpers
 - backlink panel base-data builder helpers
 - backlink panel data collector helpers
+- backlink panel data assembly helpers
+- backlink query-loader helpers
+- backlink render-data helpers
 - panel host lifecycle helpers
 - panel query-parameter helpers
 - setting config resolution helpers

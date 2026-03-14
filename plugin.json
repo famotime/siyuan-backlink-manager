@@ -1,0 +1,30 @@
+{
+  "name": "siyuan-backlink-manager",
+  "author": "Misuzu2027",
+  "url": "https://github.com/famotime/siyuan-backlink-manager",
+  "version": "0.0.31",
+  "minAppVersion": "3.1.4",
+  "backends": [
+    "all"
+  ],
+  "frontends": [
+    "all"
+  ],
+  "displayName": {
+    "en_US": "Filterable Backlink Panel",
+    "zh_CN": "反链过滤面板"
+  },
+  "description": {
+    "en_US": "Filterable Backlink Panel",
+    "zh_CN": "支持过滤的反链面板"
+  },
+  "readme": {
+    "en_US": "README.md",
+    "zh_CN": "README_zh_CN.md"
+  },
+  "keywords": [
+    "dock",
+    "backlink",
+    "反链"
+  ]
+}

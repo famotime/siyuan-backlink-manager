@@ -51,6 +51,7 @@
     "previousLabel": "Previous",
     "nextLabel": "Next",
     "findInDoc": "Found ${x} documents",
+    "findInBacklinkDocument": "Found ${x} backlink documents",
     "notebookFilter": "Notebook Filter",
     "attr": "Attribute",
     "other": "Other",

@@ -29,12 +29,13 @@ import {
     matchKeywords,
     splitKeywordStringToArray
 } from "@/utils/string-util";
-import { intersectionSet, isArrayEmpty, isArrayNotEmpty, isSetEmpty, isSetNotEmpty, paginate } from "@/utils/array-util";
+import { intersectionSet, isArrayEmpty, isArrayNotEmpty, isSetEmpty, isSetNotEmpty } from "@/utils/array-util";
 import { DefinitionBlockStatus } from "@/models/backlink-constant";
 import { CacheManager } from "@/config/CacheManager";
 import { SettingService } from "../setting/SettingService";
 import { stringToDom } from "@/utils/html-util";
 import { getQueryStrByBlock, NewNodeID } from "@/utils/siyuan-util";
+import { paginateBacklinkBlocksByDocument } from "./backlink-document-pagination.js";
 
 
 export async function getBacklinkPanelRenderData(
@@ -61,13 +62,9 @@ export async function getBacklinkPanelRenderData(
         }
         validBacklinkBlockNodeArray.push(backlinkBlockNode);
     }
-    let totalPage = calculateTotalPages(validBacklinkBlockNodeArray.length, pageSize);
-    // if (pageNum > totalPage) {
-    //     pageNum = 1;
-    // }
-
     backlinkBlockNodeArraySort(validBacklinkBlockNodeArray, queryParams.backlinkBlockSortMethod);
-    let pageBacklinkBlockArray = paginate(validBacklinkBlockNodeArray, pageNum, pageSize);
+    let pagination = paginateBacklinkBlocksByDocument(validBacklinkBlockNodeArray, pageNum, pageSize);
+    let pageBacklinkBlockArray = pagination.pageBacklinkBlockArray;
     let backlinkCacheData: IBacklinkCacheData = await getBatchBacklinkDoc(rootId, pageBacklinkBlockArray);
     // highlightBacklinkContent(backlinkCacheData.backlinks, queryParams.keywordStr);
 
@@ -90,19 +87,20 @@ export async function getBacklinkPanelRenderData(
         queryParams,
     );
 
-    queryParams.pageNum = pageNum;
+    queryParams.pageNum = pagination.pageNum;
 
 
     let backlinkPanelRenderDataResult: IBacklinkPanelRenderData = {
         rootId,
         backlinkDataArray: backlinkDataArray,
+        backlinkDocumentCount: pagination.totalDocumentCount,
         backlinkBlockNodeArray: validBacklinkBlockNodeArray,
         curDocDefBlockArray: filterCurDocDefBlockArray,
         relatedDefBlockArray: filterRelatedDefBlockArray,
         backlinkDocumentArray: filterBacklinkDocumentArray,
-        pageNum,
+        pageNum: pagination.pageNum,
         pageSize,
-        totalPage,
+        totalPage: pagination.totalPage,
         usedCache,
     };
 
@@ -125,16 +123,9 @@ export async function getTurnPageBacklinkPanelRenderData(
     const startTime = performance.now(); // 记录开始时间
     let pageNum = queryParams.pageNum;
     let pageSize = SettingService.ins.SettingConfig.pageSize;
-    let totalPage = calculateTotalPages(validBacklinkBlockNodeArray.length, pageSize);
-    if (pageNum < 1) {
-        pageNum = 1;
-    }
-    if (pageNum > totalPage) {
-        pageNum = totalPage;
-    }
-
     backlinkBlockNodeArraySort(validBacklinkBlockNodeArray, queryParams.backlinkBlockSortMethod);
-    let pageBacklinkBlockArray = paginate(validBacklinkBlockNodeArray, pageNum, pageSize);
+    let pagination = paginateBacklinkBlocksByDocument(validBacklinkBlockNodeArray, pageNum, pageSize);
+    let pageBacklinkBlockArray = pagination.pageBacklinkBlockArray;
     let backlinkCacheData: IBacklinkCacheData = await getBatchBacklinkDoc(rootId, pageBacklinkBlockArray);
     // highlightBacklinkContent(backlinkCacheData.backlinks, queryParams.keywordStr);
 
@@ -143,13 +134,14 @@ export async function getTurnPageBacklinkPanelRenderData(
     let backlinkPanelRenderDataResult: IBacklinkPanelRenderData = {
         rootId,
         backlinkDataArray: backlinkDataArray,
+        backlinkDocumentCount: pagination.totalDocumentCount,
         backlinkBlockNodeArray: null,
         curDocDefBlockArray: null,
         relatedDefBlockArray: null,
         backlinkDocumentArray: null,
-        pageNum,
+        pageNum: pagination.pageNum,
         pageSize,
-        totalPage,
+        totalPage: pagination.totalPage,
         usedCache,
     };
     const endTime = performance.now(); // 记录结束时间
@@ -448,7 +440,7 @@ async function getBatchBacklinkDoc(
 
     // 碰到一种奇怪的现象， getBacklinkDoc 接口返回数据不全时，调用一下 getBacklink2 就好了。。
     if (backlinkBlockNodeArray.length > backlinkDcoDataResult.length) {
-        console.log("反链过滤面板插件 疑似 getBacklinkDoc 接口数据不全，如果清除缓存刷新后还是不全，请反馈开发者。 ");
+        console.log("反链管家插件 疑似 getBacklinkDoc 接口数据不全，如果清除缓存刷新后还是不全，请反馈开发者。 ");
         console.log("backlinkBlockNodeArray ", backlinkBlockNodeArray, " ,backlinkDcoDataResult ", backlinkDcoDataResult);
         getBacklink2(curRootId, "", "", "3", "3")
     }
@@ -1708,14 +1700,6 @@ function updateStaticAnchorMap(map: Map<string, Set<string>>, markdown: string) 
             map.set(id, anchorSet);
         }
     }
-}
-
-
-function calculateTotalPages(totalItems: number, itemsPerPage: number): number {
-    if (itemsPerPage <= 0) {
-        return 0;
-    }
-    return Math.ceil(totalItems / itemsPerPage);
 }
 
 function formatDefBlockMap(defBlockArray: DefBlock[])

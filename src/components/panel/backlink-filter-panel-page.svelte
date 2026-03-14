@@ -1998,10 +1998,10 @@ ${documentName}
                     <span class="fn__space"></span>
 
                     <span class="">
-                        {EnvConfig.ins.i18n.findInBacklink.replace(
+                        {(EnvConfig.ins.i18n.findInBacklinkDocument ||
+                            EnvConfig.ins.i18n.findInBacklink).replace(
                             "${x}",
-                            backlinkFilterPanelRenderData.backlinkBlockNodeArray
-                                .length,
+                            backlinkFilterPanelRenderData.backlinkDocumentCount,
                         )}
                     </span>
                 </span>
@@ -2009,42 +2009,41 @@ ${documentName}
                 <span class="fn__flex-1" style="min-height: 100%"></span>
 
                 <span
-                    class="fn__flex-shrink ft__selectnone {backlinkFilterPanelRenderData.totalPage ==
+                    class="fn__flex-shrink ft__selectnone backlink-pagination {backlinkFilterPanelRenderData.totalPage ==
                         null || backlinkFilterPanelRenderData.totalPage == 0
                         ? 'fn__none'
                         : ''}"
                 >
-                    {backlinkFilterPanelRenderData.pageNum}/{backlinkFilterPanelRenderData.totalPage}
+                    <span
+                        data-position="9bottom"
+                        class="block__icon block__icon--show ariaLabel backlink-nav-button {backlinkFilterPanelRenderData.pageNum <=
+                        1
+                            ? 'disabled'
+                            : ''}"
+                        aria-label={EnvConfig.ins.i18n.previousLabel}
+                        on:click={() => {
+                            pageTurning(backlinkFilterPanelRenderData.pageNum - 1);
+                        }}
+                        on:keydown={handleKeyDownDefault}
+                        ><svg><use xlink:href="#iconLeft"></use></svg></span
+                    >
+                    <span class="backlink-nav-progress">
+                        {backlinkFilterPanelRenderData.pageNum}/{backlinkFilterPanelRenderData.totalPage}
+                    </span>
+                    <span
+                        data-position="9bottom"
+                        class="block__icon block__icon--show ariaLabel backlink-nav-button {backlinkFilterPanelRenderData.pageNum >=
+                        backlinkFilterPanelRenderData.totalPage
+                            ? 'disabled'
+                            : ''}"
+                        aria-label={EnvConfig.ins.i18n.nextLabel}
+                        on:click={() => {
+                            pageTurning(backlinkFilterPanelRenderData.pageNum + 1);
+                        }}
+                        on:keydown={handleKeyDownDefault}
+                        ><svg><use xlink:href="#iconRight"></use></svg></span
+                    >
                 </span>
-
-                <span class="fn__space"></span>
-                <span
-                    data-position="9bottom"
-                    class="block__icon block__icon--show ariaLabel {backlinkFilterPanelRenderData.pageNum <=
-                    1
-                        ? 'disabled'
-                        : ''}"
-                    aria-label={EnvConfig.ins.i18n.previousLabel}
-                    on:click={() => {
-                        pageTurning(backlinkFilterPanelRenderData.pageNum - 1);
-                    }}
-                    on:keydown={handleKeyDownDefault}
-                    ><svg><use xlink:href="#iconLeft"></use></svg></span
-                >
-                <span class="fn__space"></span>
-                <span
-                    data-position="9bottom"
-                    class="block__icon block__icon--show ariaLabel {backlinkFilterPanelRenderData.pageNum >=
-                    backlinkFilterPanelRenderData.totalPage
-                        ? 'disabled'
-                        : ''}"
-                    aria-label={EnvConfig.ins.i18n.nextLabel}
-                    on:click={() => {
-                        pageTurning(backlinkFilterPanelRenderData.pageNum + 1);
-                    }}
-                    on:keydown={handleKeyDownDefault}
-                    ><svg><use xlink:href="#iconRight"></use></svg></span
-                >
                 <span class="fn__space"></span>
             </div>
         {/if}
@@ -2218,6 +2217,12 @@ ${documentName}
     .backlink-nav-progress {
         min-width: 2.75em;
         text-align: center;
+    }
+
+    .backlink-pagination {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
     }
 
     .backlink-nav-button {

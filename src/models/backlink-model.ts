@@ -325,6 +325,7 @@ export interface IBacklinkPanelRenderData {
     rootId: string;
 
     backlinkDataArray: IBacklinkData[];
+    backlinkDocumentCount: number;
 
     backlinkBlockNodeArray: IBacklinkBlockNode[];
     // 当前文档的定义块

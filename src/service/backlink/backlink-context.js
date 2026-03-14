@@ -43,6 +43,26 @@ const SOURCE_RULES = {
   },
 };
 
+const MATCH_SOURCE_PRIORITY = {
+  self: 1,
+  sibling_prev: 2,
+  sibling_next: 2,
+  parent: 3,
+  child_list: 4,
+  child_headline: 4,
+  document: 5,
+};
+
+const SOURCE_LABELS = {
+  self: "反链块",
+  document: "文档",
+  parent: "父级",
+  child_headline: "标题子级",
+  child_list: "列表子级",
+  sibling_prev: "前相邻块",
+  sibling_next: "后相邻块",
+};
+
 function pushFragment(fragmentArray, fragment) {
   if (!fragment || !fragment.text) {
     return;
@@ -243,4 +263,94 @@ export function hydrateBacklinkContextBundles(backlinkBlockNodeArray = [], deps)
   for (const backlinkBlockNode of backlinkBlockNodeArray) {
     buildBacklinkContextBundle(backlinkBlockNode, deps);
   }
+}
+
+function resetBundleMatches(bundle) {
+  bundle.matchedFragments = [];
+  bundle.matchSummaryList = [];
+  bundle.primaryMatchSourceType = undefined;
+
+  for (const fragment of bundle.fragments || []) {
+    fragment.matched = false;
+    fragment.matchTypes = [];
+    fragment.matchKeywords = [];
+  }
+}
+
+function buildMatchSummary(fragment) {
+  const label = SOURCE_LABELS[fragment.sourceType] || fragment.sourceType;
+  const useAnchor = fragment.matchTypes.includes("anchor") && fragment.anchorText;
+  const text = useAnchor ? fragment.anchorText : fragment.displayText;
+  const compactText = String(text || "").replace(/\s+/g, " ").trim().slice(0, 48);
+  return compactText ? `${label}：${compactText}` : label;
+}
+
+export function matchBacklinkContextBundle(bundle, { keywordObj, matchKeywords }) {
+  resetBundleMatches(bundle);
+
+  const includeText = keywordObj.includeText || [];
+  const excludeText = keywordObj.excludeText || [];
+  const includeAnchor = keywordObj.includeAnchor || [];
+  const excludeAnchor = keywordObj.excludeAnchor || [];
+  const requireText = includeText.length > 0;
+  const requireAnchor = includeAnchor.length > 0;
+
+  let matchText = !requireText;
+  let matchAnchor = !requireAnchor;
+
+  for (const fragment of bundle.fragments || []) {
+    if (!fragment.searchable) {
+      continue;
+    }
+
+    const fragmentTextMatched = matchKeywords(
+      fragment.searchText || "",
+      includeText,
+      excludeText,
+    );
+    const fragmentAnchorMatched = matchKeywords(
+      (fragment.anchorText || "").toLowerCase(),
+      includeAnchor,
+      excludeAnchor,
+    );
+
+    if (requireText && fragmentTextMatched) {
+      matchText = true;
+      fragment.matchTypes.push("text");
+      fragment.matchKeywords.push(...includeText);
+    }
+    if (requireAnchor && fragmentAnchorMatched) {
+      matchAnchor = true;
+      fragment.matchTypes.push("anchor");
+      fragment.matchKeywords.push(...includeAnchor);
+    }
+
+    if (
+      (!requireText && !requireAnchor) ||
+      (requireText && fragmentTextMatched) ||
+      (requireAnchor && fragmentAnchorMatched)
+    ) {
+      if (fragment.matchTypes.length > 0) {
+        fragment.matched = true;
+        bundle.matchedFragments.push(fragment);
+      }
+    }
+  }
+
+  if (bundle.matchedFragments.length > 0) {
+    bundle.matchedFragments.sort((a, b) => {
+      const priorityA = MATCH_SOURCE_PRIORITY[a.sourceType] || Infinity;
+      const priorityB = MATCH_SOURCE_PRIORITY[b.sourceType] || Infinity;
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+      return (a.order || 0) - (b.order || 0);
+    });
+    bundle.primaryMatchSourceType = bundle.matchedFragments[0].sourceType;
+    bundle.matchSummaryList = bundle.matchedFragments
+      .slice(0, 3)
+      .map(buildMatchSummary);
+  }
+
+  return { matchText, matchAnchor, bundle };
 }

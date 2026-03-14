@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   buildBacklinkContextBundle,
   hydrateBacklinkContextBundles,
+  matchBacklinkContextBundle,
 } from "../src/service/backlink/backlink-context.js";
 
 function createBundleDeps() {
@@ -106,4 +107,49 @@ test("hydrateBacklinkContextBundles attaches context fragments and bundle to bac
   assert.equal(backlinkBlockNodeArray[0].contextFragments.length, 3);
   assert.equal(backlinkBlockNodeArray[0].contextBundle.fragments.length, 3);
   assert.ok(backlinkBlockNodeArray[0].contextBundle.includeRelatedDefBlockIds.has("def-list"));
+});
+
+test("matchBacklinkContextBundle records matched fragments, primary source, and summaries", () => {
+  const bundle = buildBacklinkContextBundle(
+    {
+      block: {
+        id: "block-a",
+        root_id: "doc-a",
+        markdown: "self hit",
+      },
+      documentBlock: {
+        id: "doc-a",
+        root_id: "doc-a",
+        markdown: "doc title",
+      },
+      parentMarkdown: "parent context target-hit",
+      headlineChildMarkdown: "",
+      previousSiblingMarkdown: "",
+      nextSiblingMarkdown: "",
+      includeCurBlockDefBlockIds: new Set(),
+      includeDirectDefBlockIds: new Set(),
+      includeRelatedDefBlockIds: new Set(),
+      parentListItemTreeNode: null,
+    },
+    createBundleDeps(),
+  );
+
+  const result = matchBacklinkContextBundle(bundle, {
+    keywordObj: {
+      includeText: ["target-hit"],
+      excludeText: [],
+      includeAnchor: [],
+      excludeAnchor: [],
+    },
+    matchKeywords: (content, includeText, excludeText) =>
+      includeText.every((keyword) => content.includes(keyword)) &&
+      excludeText.every((keyword) => !content.includes(keyword)),
+  });
+
+  assert.equal(result.matchText, true);
+  assert.equal(bundle.matchedFragments.length, 1);
+  assert.equal(bundle.matchedFragments[0].sourceType, "parent");
+  assert.equal(bundle.primaryMatchSourceType, "parent");
+  assert.equal(bundle.matchSummaryList.length, 1);
+  assert.match(bundle.matchSummaryList[0], /父级/);
 });

@@ -110,6 +110,36 @@ test("isBacklinkBlockValid matches keywords from sibling markdown", () => {
 });
 
 test("isBacklinkBlockValid matches keywords from context fragments when available", () => {
+  const backlinkBlockNode = {
+    block: { root_id: "doc-a", markdown: "" },
+    documentBlock: { markdown: "" },
+    includeDirectDefBlockIds: new Set(),
+    includeRelatedDefBlockIds: new Set(),
+    includeParentDefBlockIds: new Set(),
+    parentListItemTreeNode: null,
+    dynamicAnchorMap: new Map(),
+    staticAnchorMap: new Map(),
+    parentMarkdown: "",
+    headlineChildMarkdown: "",
+    previousSiblingMarkdown: "",
+    nextSiblingMarkdown: "",
+    contextBundle: {
+      fragments: [
+        {
+          sourceType: "sibling_prev",
+          searchText: "fragment-hit",
+          displayText: "fragment-hit",
+          anchorText: "",
+          searchable: true,
+          matched: false,
+          matchTypes: [],
+          matchKeywords: [],
+        },
+      ],
+      matchedFragments: [],
+      matchSummaryList: [],
+    },
+  };
   const result = isBacklinkBlockValid(
     {
       backlinkKeywordStr: "fragment-hit",
@@ -119,29 +149,7 @@ test("isBacklinkBlockValid matches keywords from context fragments when availabl
       excludeDocumentIds: new Set(),
       backlinkCurDocDefBlockType: "",
     },
-    {
-      block: { root_id: "doc-a", markdown: "" },
-      documentBlock: { markdown: "" },
-      includeDirectDefBlockIds: new Set(),
-      includeRelatedDefBlockIds: new Set(),
-      includeParentDefBlockIds: new Set(),
-      parentListItemTreeNode: null,
-      dynamicAnchorMap: new Map(),
-      staticAnchorMap: new Map(),
-      parentMarkdown: "",
-      headlineChildMarkdown: "",
-      previousSiblingMarkdown: "",
-      nextSiblingMarkdown: "",
-      contextBundle: {
-        fragments: [
-          {
-            searchText: "fragment-hit",
-            anchorText: "",
-            searchable: true,
-          },
-        ],
-      },
-    },
+    backlinkBlockNode,
     {
       isSetNotEmpty: (value) => value && value.size > 0,
       parseSearchSyntax: (value) => ({
@@ -160,4 +168,7 @@ test("isBacklinkBlockValid matches keywords from context fragments when availabl
   );
 
   assert.equal(result, true);
+  assert.equal(backlinkBlockNode.contextBundle.matchedFragments.length, 1);
+  assert.equal(backlinkBlockNode.contextBundle.primaryMatchSourceType, "sibling_prev");
+  assert.equal(backlinkBlockNode.contextBundle.matchSummaryList.length, 1);
 });

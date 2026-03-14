@@ -1,4 +1,4 @@
-import { buildBacklinkContextBundle } from "./backlink-context.js";
+import { buildBacklinkContextBundle, matchBacklinkContextBundle } from "./backlink-context.js";
 
 export function formatBacklinkDocApiKeyword(keyword = "") {
   if (!keyword) {
@@ -275,6 +275,13 @@ export function isBacklinkBlockValid(queryParams, backlinkBlockNode, deps) {
     let backlinkConcatContent = "";
     let backlinkAllAnchorText = "";
     if (contextBundle?.fragments?.length) {
+      const matchResult = matchBacklinkContextBundle(contextBundle, {
+        keywordObj,
+        matchKeywords,
+      });
+      if (!matchResult.matchText || !matchResult.matchAnchor) {
+        return false;
+      }
       backlinkConcatContent = contextBundle.fragments
         .filter((fragment) => fragment.searchable)
         .map((fragment) => fragment.searchText)
@@ -311,18 +318,20 @@ export function isBacklinkBlockValid(queryParams, backlinkBlockNode, deps) {
       backlinkAllAnchorText = getMarkdownAnchorTextArray(backlinkConcatContent).join(" ");
       backlinkConcatContent = removeMarkdownRefBlockStyle(backlinkConcatContent).toLowerCase();
     }
-    const matchText = matchKeywords(
-      backlinkConcatContent,
-      keywordObj.includeText,
-      keywordObj.excludeText,
-    );
-    const matchAnchor = matchKeywords(
-      backlinkAllAnchorText,
-      keywordObj.includeAnchor,
-      keywordObj.excludeAnchor,
-    );
-    if (!matchText || !matchAnchor) {
-      return false;
+    if (!contextBundle?.fragments?.length) {
+      const matchText = matchKeywords(
+        backlinkConcatContent,
+        keywordObj.includeText,
+        keywordObj.excludeText,
+      );
+      const matchAnchor = matchKeywords(
+        backlinkAllAnchorText,
+        keywordObj.includeAnchor,
+        keywordObj.excludeAnchor,
+      );
+      if (!matchText || !matchAnchor) {
+        return false;
+      }
     }
   }
 

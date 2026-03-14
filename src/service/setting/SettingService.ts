@@ -4,7 +4,11 @@ import { sql } from "@/utils/api";
 import Instance from "@/utils/Instance";
 import { getCreateBlocksParentIdIdxSql } from "../backlink/backlink-sql";
 import { setReplacer } from "@/utils/json-util";
-import { mergeObjects } from "@/utils/object-util";
+import {
+    createDefaultSettingConfig,
+    resolveSettingConfig,
+    shouldPersistSettingConfig,
+} from "./setting-config-resolver.js";
 
 const SettingFileName = 'backlink-panel-setting.json';
 
@@ -14,20 +18,15 @@ export class SettingService {
         return Instance.get(SettingService);
     }
 
-    private _settingConfig: SettingConfig;
+    private _settingConfig: SettingConfig = getDefaultSettingConfig();
 
     public get SettingConfig() {
-        if (this._settingConfig) {
-            return this._settingConfig;
-        }
-        this.init()
-        return getDefaultSettingConfig()
-
+        return this._settingConfig;
     }
 
     public async init() {
         let persistentConfig = await getPersistentConfig();
-        this._settingConfig = mergeObjects(persistentConfig, getDefaultSettingConfig());
+        this._settingConfig = getResolvedSettingConfig(persistentConfig);
         // console.log("init this._settingConfig ", this._settingConfig)
 
         if (this._settingConfig.usePraentIdIdx) {
@@ -69,16 +68,12 @@ export class SettingService {
             return;
         }
 
-        let curSettingConfigJson = "";
-        if (this._settingConfig) {
-            curSettingConfigJson = JSON.stringify(this._settingConfig, setReplacer);
-        }
-        let paramJson = JSON.stringify(settingConfigParam, setReplacer);
-        if (paramJson == curSettingConfigJson) {
+        if (!shouldPersistSettingConfig(this._settingConfig, settingConfigParam)) {
             return;
         }
+        let paramJson = JSON.stringify(settingConfigParam, setReplacer);
         console.log(`反链面板 更新设置配置文件: ${paramJson}`);
-        this._settingConfig = { ...settingConfigParam };
+        this._settingConfig = getResolvedSettingConfig(settingConfigParam);
         plugin.saveData(SettingFileName, paramJson);
     }
 
@@ -127,44 +122,13 @@ function setKeyValue(settingConfig, key: any, value: any) {
 }
 
 function getDefaultSettingConfig() {
-    let defaultConfig = new SettingConfig();
-
-    defaultConfig.dockDisplay = true;
-    defaultConfig.documentBottomDisplay = false;
-    defaultConfig.flashCardBottomDisplay = false;
-    defaultConfig.topBarDisplay = true;
-
-    defaultConfig.cacheAfterResponseMs = -1;
-    defaultConfig.cacheExpirationTime = 5 * 60;
-    defaultConfig.usePraentIdIdx = false;
-    defaultConfig.doubleClickTimeout = 0;
-
-
-    defaultConfig.documentBottomBacklinkPaddingWidth = null;
-
-
-    // 筛选面板
-    defaultConfig.filterPanelViewExpand = false;
-    defaultConfig.queryParentDefBlock = true;
-    defaultConfig.querrChildDefBlockForListItem = true;
-    defaultConfig.queryChildDefBlockForHeadline = false;
-    defaultConfig.filterPanelCurDocDefBlockSortMethod = "typeAndContent";
-    defaultConfig.filterPanelRelatedDefBlockSortMethod = "modifiedDesc";
-    defaultConfig.filterPanelBacklinkDocumentSortMethod = "createdDesc";
-    defaultConfig.defaultSelectedViewBlock = false;
-
-
-    // 反链面板
-    defaultConfig.docBottomBacklinkPanelViewExpand = true;
-    defaultConfig.pageSize = 8;
-    defaultConfig.backlinkBlockSortMethod = "modifiedDesc";
-    defaultConfig.hideBacklinkProtyleBreadcrumb = false;
-    defaultConfig.defaultExpandedListItemLevel = 0;
-    // defaultConfig.queryAllContentUnderHeadline = false;
-
-
-
-    return defaultConfig;
+    return getResolvedSettingConfig();
 }
 
+function getResolvedSettingConfig(settingConfig: Partial<SettingConfig> = null): SettingConfig {
+    return Object.assign(
+        new SettingConfig(),
+        resolveSettingConfig(settingConfig),
+    );
+}
 

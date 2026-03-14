@@ -1,0 +1,72 @@
+# 重构计划
+
+## 1. 项目快照
+
+- 生成日期：2026-03-14
+- 范围：`siyuan-backlink-manager` 仓库，优先聚焦 `src/components/panel/`、`src/service/backlink/`、`src/service/plugin/`
+- 目标：在不改变现有插件行为的前提下，降低反链面板核心代码的耦合度，补足测试切入点，并为后续持续演进建立更清晰的模块边界
+- 文档刷新目标：`docs/project-structure.md`、`README.md`
+- 当前仓库状态：存在用户未提交改动，后续重构必须限定在获批条目范围内，避免误碰无关文件
+
+## 2. 架构与模块分析
+
+| 模块 | 关键文件 | 当前职责 | 主要痛点 | 测试覆盖情况 |
+| --- | --- | --- | --- | --- |
+| 入口与生命周期 | `src/index.ts` | 初始化环境、设置、底部面板、Dock、Tab、TopBar 事件 | 启动编排直接依赖多个 service，缺少模块边界说明 | 无直接测试 |
+| 反链面板 UI | `src/components/panel/backlink-filter-panel-page.svelte` | 筛选条件、分页、分组渲染、交互事件、Protyle 生命周期、局部状态缓存 | 单文件约 2300 行，状态、视图、事件、渲染策略耦合严重，回归风险集中 | 只有少量交互 helper 的单测，组件本体缺少自动化保护 |
+| 面板交互 helper | `src/components/panel/backlink-document-interaction.js`、`src/components/panel/backlink-document-navigation.js` | 文档标题点击动作、文档内反链切换、分页进度文本 | 方向正确，但仍只是从大组件中抽出少量逻辑，边界不完整 | 有针对性单测，覆盖较好 |
+| 反链数据装配 | `src/service/backlink/backlink-data.ts` | 查询、过滤、排序、分页、缓存命中、渲染数据组装 | 单文件约 1780 行，既做领域规则又做分页与缓存装配，复杂度高，难以定向测试 | 目前仅有导航/分页 helper 单测，核心过滤与组装逻辑缺少单测 |
+| 插件宿主接入 | `src/service/plugin/DocumentService.ts`、`src/service/plugin/TabService.ts`、`src/service/plugin/DockServices.ts` | 在文档底部、Tab、Dock 中挂载 Svelte 面板并处理销毁 | 生命周期逻辑分散且有重复，命名不一致，缺少统一挂载抽象 | 无自动化测试 |
+| 设置与持久化 | `src/service/setting/SettingService.ts` | 默认配置、持久化读取、更新保存 | getter 带隐式初始化、副作用混杂、命名拼写不一致 | 无自动化测试 |
+| 测试基线 | `tests/*.test.js` | 当前只覆盖 dev build 配置、文档交互 helper、文档分组/分页 helper | 未覆盖 service 层和 Svelte 大组件的核心不变量 | 2026-03-14 基线：`node --test tests/*.test.js` 16/16 通过 |
+
+## 3. 按优先级排序的重构待办
+
+| ID | 优先级 | 模块/场景 | 涉及文件 | 重构目标 | 风险等级 | 重构前测试清单 | 文档影响 | 状态 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| RF-001 | P0 | 反链面板组件拆分 | `src/components/panel/backlink-filter-panel-page.svelte`，必要时新增 `src/components/panel/*` helper/module | 将文档头交互、分页栏、面板状态保存、Protyle 渲染编排从单一 Svelte 文件中拆出，保留现有点击、分页、筛选、展开/折叠行为不变 | 高 | - [x] `node --test tests/*.test.js` 基线通过；- [x] 新增“面板分页栏状态/显示文案/按钮禁用”单测；- [x] 新增“全文模式/折叠模式/文档内切换”回归用例 | `docs/project-structure.md` 需补充分层；`README.md` 需更新反链面板实现结构与测试命令 | done |
+| RF-002 | P0 | 反链数据装配与分页拆分 | `src/service/backlink/backlink-data.ts`，必要时新增 `src/service/backlink/*` | 将过滤、排序、文档级分页、缓存拉取、渲染数据装配拆成可测试模块，缩小 `backlink-data.ts` 体积并明确输入输出边界 | 高 | - [x] `node --test tests/*.test.js` 基线通过；- [x] 新增“过滤结果只保留合法反链块”测试；- [x] 新增“排序+文档分页+翻页结果稳定”测试；- [x] 新增“queryParams 清理不破坏行为”测试 | `docs/project-structure.md` 已补充 service 子模块；`README.md` 已更新数据流说明 | done |
+| RF-003 | P1 | Dock/Tab/文档底部挂载生命周期统一 | `src/service/plugin/DocumentService.ts`、`src/service/plugin/TabService.ts`、`src/service/plugin/DockServices.ts`、必要时新增 `src/service/plugin/*` | 抽出统一的面板挂载/销毁编排，减少重复的 Svelte 挂载和滚动监听逻辑，统一命名和清理入口 | 中 | - [x] `node --test tests/*.test.js` 基线通过；- [x] 新增“宿主配置转换/挂载参数”单测；- [x] 新增“销毁时清理 editor/panel”单测 | `docs/project-structure.md` 已补充插件宿主层；`README.md` 已更新打开方式与宿主入口说明 | done |
+| RF-004 | P2 | 设置服务与类型边界清理 | `src/service/setting/SettingService.ts`、`src/models/backlink-model.ts`、相关 type/import 文件 | 修正 getter 隐式初始化、副作用和拼写问题，改进类型边界，清理当前构建中的类型导入/未使用导入警告 | 中 | - [x] `node --test tests/*.test.js` 基线通过；- [x] 新增“默认配置+持久化 merge”测试；- [x] 新增“更新配置去重保存”测试 | `docs/project-structure.md` 已补充 setting/type 层；`README.md` 已更新配置行为说明 | done |
+| RF-005 | P2 | 仓库文档基线补齐 | `docs/project-structure.md`、`README.md` | 在获批重构项完成后，补齐仓库结构文档和顶层说明文档；当前仓库两者均不存在，需新建 | 低 | - [x] 文档刷新前核对最终模块结构；- [x] 核对测试命令、构建命令、主要能力与限制 | 两份文档均已创建并与当前实现一致 | done |
+
+优先级说明：
+- `P0`：价值和风险都最高，优先执行
+- `P1`：价值或风险中等，放在 `P0` 之后
+- `P2`：低风险清理项，最后执行
+
+状态说明：
+- `pending`
+- `in_progress`
+- `done`
+- `blocked`
+
+## 4. 执行日志
+
+| ID | 开始日期 | 结束日期 | 验证命令 | 结果 | 已刷新文档 | 备注 |
+| --- | --- | --- | --- | --- | --- | --- |
+| BASELINE | 2026-03-14 | 2026-03-14 | `node --test tests/*.test.js` | pass | 无 | 当前基线 16/16 通过，尚未开始任何重构 |
+| RF-001 | 2026-03-14 | 2026-03-14 | `node --test tests/backlink-panel-header.test.js tests/backlink-panel-formatting.test.js tests/backlink-document-view-state.test.js tests/backlink-document-interaction.test.js`；`node --test tests/*.test.js`；`npm run build` | pass | 暂未刷新 | 新增 `backlink-panel-header.js`、`backlink-panel-formatting.js`、`backlink-document-view-state.js`，并将分页栏摘要、关键词清洗、aria 文案、文档视图状态从大组件抽离；构建仍保留既有类型导入警告 |
+| RF-002 | 2026-03-14 | 2026-03-14 | `node --test tests/backlink-filtering.test.js tests/backlink-document-pagination.test.js`；`node --test tests/*.test.js`；`npm run build` | pass | 暂未刷新 | 新增 `backlink-filtering.js` 并将 query 清理、关联定义块过滤、反链文档过滤从 `backlink-data.ts` 中拆出 |
+| RF-003 | 2026-03-14 | 2026-03-14 | `node --test tests/backlink-panel-host.test.js`；`node --test tests/*.test.js`；`npm run build` | pass | 暂未刷新 | 新增 `backlink-panel-host.js`，统一宿主挂载参数、scroll gutter cleanup 与 panel 销毁 |
+| RF-004 | 2026-03-14 | 2026-03-14 | `node --test tests/setting-config-resolver.test.js`；`node --test tests/*.test.js`；`npm run build` | pass | 暂未刷新 | 新增 `setting-config-resolver.js`，移除 `SettingService` getter 的隐式 `init()` 副作用，并将 Svelte 类型导入改为 `import type`；构建中的类型导入/未使用导入警告已清除 |
+| RF-005 | 2026-03-14 | 2026-03-14 | 文档核对；`node --test tests/*.test.js`；`npm run build` | pass | `docs/project-structure.md`、`README.md` | 新建仓库结构文档和顶层 README，内容已对齐当前重构后的模块边界与开发命令 |
+
+## 5. 决策与确认
+
+- 用户批准的条目：`RF-001`、`RF-002`、`RF-003`、`RF-004`、`RF-005`
+- 延后的条目：
+- 阻塞条目及原因：
+- 备注：按技能要求，未获批前不进入任何重构实现
+
+## 6. 文档刷新
+
+- `docs/project-structure.md`：已创建，反映当前模块结构、职责映射与测试入口
+- `README.md`：已创建，说明插件能力、开发命令、测试命令与当前状态
+- 最终同步检查：已完成，文档内容与当前重构后的代码结构一致
+
+## 7. 下一步
+
+1. 若需要继续缩减 `backlink-filter-panel-page.svelte` 或 `backlink-data.ts`，可在新一轮重构中继续向更细的模块边界推进。
+2. 若需要对 Dock/Tab/文档底部宿主补更强的集成测试，可在后续增加 DOM/host 级测试夹具。
+3. 当前这轮计划已全部完成，可进入代码评审或提交阶段。

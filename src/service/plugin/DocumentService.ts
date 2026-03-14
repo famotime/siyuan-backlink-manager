@@ -9,9 +9,15 @@ import { generateGetDefBlockArraySql } from "../backlink/backlink-sql";
 import { sql } from "@/utils/api";
 import { isArrayEmpty } from "@/utils/array-util";
 import { NewNodeID } from "@/utils/siyuan-util";
+import {
+    attachBacklinkPanelScrollCleanup,
+    buildBacklinkPanelPageProps,
+    destroyBacklinkPanelHost,
+} from "./backlink-panel-host.js";
 
 
 let backlinkPanelPageSvelteMap: Map<string, BacklinkFilterPanelPageSvelte> = new Map();
+let backlinkPanelScrollCleanupMap: Map<string, () => void> = new Map();
 let documentProtyleElementMap: Map<string, HTMLElement> = new Map();
 
 
@@ -190,19 +196,17 @@ async function addBacklinkPanelToBottom(docuemntContentElement: HTMLElement, roo
 
     let pageSvelte = new BacklinkFilterPanelPageSvelte({
         target: backlinkPanelBottomElement,
-        props: {
+        props: buildBacklinkPanelPageProps({
             rootId: rootId,
             focusBlockId: focusBlockId,
             currentTab: null,
             panelBacklinkViewExpand: docBottomBacklinkPanelViewExpand,
-        }
+        }),
     });
-    backlinkPanelBottomElement.parentElement.addEventListener(
-        "scroll",
-        () => {
-            clearProtyleGutters(backlinkPanelBottomElement as HTMLElement);
-        },
-    );
+    let detachScrollCleanup = attachBacklinkPanelScrollCleanup({
+        element: backlinkPanelBottomElement.parentElement,
+        onCleanup: () => clearProtyleGutters(backlinkPanelBottomElement as HTMLElement),
+    });
     backlinkPanelBottomElement.addEventListener("mouseover", (event: MouseEvent) => {
         // const target = event.target as HTMLElement;
         //
@@ -224,6 +228,7 @@ async function addBacklinkPanelToBottom(docuemntContentElement: HTMLElement, roo
 
 
     backlinkPanelPageSvelteMap.set(panelId, pageSvelte);
+    backlinkPanelScrollCleanupMap.set(panelId, detachScrollCleanup);
     documentProtyleElementMap.set(panelId, protyleWysiwygElement as HTMLElement);
     // handleProtyleHeightChange(protyleElement)
 }
@@ -243,11 +248,17 @@ function destroyPanel(docuemntContentElement: HTMLElement) {
     }
     documentProtyleElementMap.delete(panelId);
     let pageSvelte = backlinkPanelPageSvelteMap.get(panelId);
+    let detachScrollCleanup = backlinkPanelScrollCleanupMap.get(panelId);
     if (!pageSvelte) {
+        backlinkPanelScrollCleanupMap.delete(panelId);
         return;
     }
     backlinkPanelPageSvelteMap.delete(panelId);
-    pageSvelte.$destroy();
+    backlinkPanelScrollCleanupMap.delete(panelId);
+    destroyBacklinkPanelHost({
+        panelInstance: pageSvelte,
+        detachScrollCleanup,
+    });
     backlinkPanelBottomElement.remove();
 
 }

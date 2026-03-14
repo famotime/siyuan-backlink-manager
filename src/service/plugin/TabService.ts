@@ -6,6 +6,11 @@ import { CUSTOM_ICON_MAP } from "@/models/icon-constant";
 import { isStrBlank } from "@/utils/string-util";
 import { clearProtyleGutters, getActiveTab } from "@/utils/html-util";
 import { CacheManager } from "@/config/CacheManager";
+import {
+    attachBacklinkPanelScrollCleanup,
+    buildBacklinkPanelPageProps,
+    destroyBacklinkPanelHost,
+} from "./backlink-panel-host.js";
 
 
 const BACKLINK_TAB_PREFIX = "backlink_tab_"
@@ -53,29 +58,31 @@ export class TabService {
     public pluginAddTab(docId: string, focusBlockId: string) {
         let tabId = BACKLINK_TAB_PREFIX + docId;
         let backlinkFilterPanelPageSvelte: BacklinkFilterPanelPageSvelte;
+        let detachScrollCleanup: () => void;
 
         EnvConfig.ins.plugin.addTab({
             type: tabId,
             init() {
                 backlinkFilterPanelPageSvelte = new BacklinkFilterPanelPageSvelte({
                     target: this.element,
-                    props: {
+                    props: buildBacklinkPanelPageProps({
                         rootId: docId,
                         focusBlockId: focusBlockId,
                         panelBacklinkViewExpand: true,
                         currentTab: this,
-                    }
+                    }),
                 });
 
-                this.element.addEventListener(
-                    "scroll",
-                    () => {
-                        clearProtyleGutters(this.element);
-                    },
-                );
+                detachScrollCleanup = attachBacklinkPanelScrollCleanup({
+                    element: this.element,
+                    onCleanup: () => clearProtyleGutters(this.element),
+                });
             },
             beforeDestroy() {
-                backlinkFilterPanelPageSvelte?.$destroy();
+                destroyBacklinkPanelHost({
+                    panelInstance: backlinkFilterPanelPageSvelte,
+                    detachScrollCleanup,
+                });
             },
             destroy() {
             },

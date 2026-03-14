@@ -8,7 +8,7 @@
         RELATED_DEF_BLOCK_TYPE_ELEMENT,
         RELATED_DOCMUMENT_SORT_METHOD_ELEMENT,
     } from "@/models/backlink-constant";
-    import {
+    import type {
         IBacklinkFilterPanelData,
         IBacklinkFilterPanelDataQueryParams,
         IBacklinkPanelRenderData,
@@ -37,17 +37,15 @@
     } from "@/utils/html-util";
     import {
         isStrBlank,
-        removePrefixAndSuffix,
         splitKeywordStringToArray,
     } from "@/utils/string-util";
     import {
         Constants,
         openMobileFileById,
         Protyle,
-        TProtyleAction,
-        Custom,
         openTab,
     } from "siyuan";
+    import type { Custom, TProtyleAction } from "siyuan";
     import { onDestroy, onMount } from "svelte";
     import { getBlockTypeIconHref } from "@/utils/icon-util";
     import { CacheManager } from "@/config/CacheManager";
@@ -66,6 +64,21 @@
         getBacklinkDocumentTargetRole,
         shouldHandleBacklinkDocumentClick,
     } from "./backlink-document-interaction.js";
+    import {
+        buildBacklinkPaginationState,
+        getBacklinkSummaryText,
+    } from "./backlink-panel-header.js";
+    import {
+        createBacklinkDocumentViewState,
+        getBacklinkDocumentRenderState,
+        markBacklinkDocumentExpanded,
+        markBacklinkDocumentFoldState,
+        markBacklinkDocumentFullView,
+    } from "./backlink-document-view-state.js";
+    import {
+        buildDefBlockAriaLabel,
+        sanitizeBacklinkKeywords,
+    } from "./backlink-panel-formatting.js";
 
     export let rootId: string;
     export let focusBlockId: string;
@@ -97,11 +110,15 @@
     let inputChangeTimeoutId: NodeJS.Timeout;
     let queryCurDocDefBlockRange: string;
     // 用来保存当前页面反链渲染区的展开折叠状态
-    let backlinkDocumentFoldMap: Map<string, boolean> = new Map();
-    let backlinkDocumentShowFullMap: Map<string, boolean> = new Map();
+    const backlinkDocumentViewState = createBacklinkDocumentViewState();
+    let backlinkDocumentFoldMap: Map<string, boolean> =
+        backlinkDocumentViewState.documentFoldMap;
+    let backlinkDocumentShowFullMap: Map<string, boolean> =
+        backlinkDocumentViewState.documentShowFullMap;
     let backlinkProtyleItemFoldMap: Map<string, Set<string>> = new Map();
     let backlinkProtyleHeadingExpandMap: Map<string, boolean> = new Map();
-    let backlinkDocumentActiveIndexMap: Map<string, number> = new Map();
+    let backlinkDocumentActiveIndexMap: Map<string, number> =
+        backlinkDocumentViewState.documentActiveIndexMap;
     let backlinkDocumentEditorMap: Map<string, Protyle> = new Map();
     let backlinkDocumentGroupArray = [];
 
@@ -113,11 +130,15 @@
     let hideBacklinkProtyleBreadcrumb: boolean = false;
     let showSaveCriteriaInputBox: boolean = false;
     let saveCriteriaInputText: string = "";
+    let backlinkPaginationState = buildBacklinkPaginationState();
 
     $: updateLastCriteria(
         queryParams,
         panelFilterViewExpand,
         // panelBacklinkViewExpand,
+    );
+    $: backlinkPaginationState = buildBacklinkPaginationState(
+        backlinkFilterPanelRenderData || {},
     );
 
     onMount(async () => {
@@ -222,6 +243,8 @@
     }
 
     function expandBacklinkDocument(documentLiElement: HTMLElement) {
+        const documentId = documentLiElement.getAttribute("data-node-id");
+        markBacklinkDocumentExpanded(backlinkDocumentFoldMap, documentId);
         documentLiElement.nextElementSibling.classList.remove("fn__none");
         documentLiElement.classList.remove("backlink-hide");
         documentLiElement
@@ -230,6 +253,8 @@
     }
 
     function collapseBacklinkDocument(documentLiElement: HTMLElement) {
+        const documentId = documentLiElement.getAttribute("data-node-id");
+        markBacklinkDocumentFoldState(backlinkDocumentFoldMap, documentId, true);
         documentLiElement.nextElementSibling.classList.add("fn__none");
         documentLiElement.classList.add("backlink-hide");
         documentLiElement
@@ -248,8 +273,7 @@
             return;
         }
 
-        backlinkDocumentShowFullMap.set(documentId, true);
-        backlinkDocumentFoldMap.delete(documentId);
+        markBacklinkDocumentFullView(backlinkDocumentViewState, documentId);
         expandBacklinkDocument(documentLiElement);
 
         const documentGroup = backlinkDocumentGroupArray.find(
@@ -716,11 +740,11 @@
         );
         let backlinkRootId = documentLiElement.getAttribute("data-node-id");
         let closeStatus = documentLiElement.classList.contains("backlink-hide");
-        if (closeStatus) {
-            backlinkDocumentFoldMap.set(backlinkRootId, true);
-        } else {
-            backlinkDocumentFoldMap.delete(backlinkRootId);
-        }
+        markBacklinkDocumentFoldState(
+            backlinkDocumentFoldMap,
+            backlinkRootId,
+            closeStatus,
+        );
 
         let protyleWysiwygElement = editor.protyle.contentElement.querySelector(
             "div.protyle-wysiwyg",
@@ -814,8 +838,10 @@
 
         editorElement.innerHTML = "";
         const activeBacklink = documentGroup.activeBacklink;
-        const showFullDocument =
-            backlinkDocumentShowFullMap.get(documentGroup.documentId) === true;
+        const showFullDocument = getBacklinkDocumentRenderState(
+            backlinkDocumentViewState,
+            documentGroup.documentId,
+        ).showFullDocument;
         const editor = new Protyle(
             EnvConfig.ins.app,
             editorElement,
@@ -860,7 +886,12 @@
         // 是否折叠反链文档
         if (showFullDocument) {
             expandBacklinkDocument(documentLiElement);
-        } else if (backlinkDocumentFoldMap.get(backlinkRootId) === true) {
+        } else if (
+            getBacklinkDocumentRenderState(
+                backlinkDocumentViewState,
+                backlinkRootId,
+            ).isFolded
+        ) {
             collapseBacklinkDocument(documentLiElement);
         }
 
@@ -898,18 +929,9 @@
         }
 
         // 高亮搜索内容
-        let keywordArray = splitKeywordStringToArray(
-            queryParams.backlinkKeywordStr,
+        let keywordArray = sanitizeBacklinkKeywords(
+            splitKeywordStringToArray(queryParams.backlinkKeywordStr),
         );
-        // 去掉关键词前面存在的匹配符
-        for (let i = 0; i < keywordArray.length; i++) {
-            let keyword = keywordArray[i];
-            if (keyword.startsWith("-%") || keyword.startsWith("%-")) {
-                keywordArray[i] = keyword.slice(2);
-            } else if (keyword.startsWith("%") || keyword.startsWith("-")) {
-                keywordArray[i] = keyword.slice(1);
-            }
-        }
         highlightElementTextByCss(documentLiElement, keywordArray);
         delayedTwiceRefresh(() => {
             highlightElementTextByCss(protyleContentElement, keywordArray);
@@ -1193,37 +1215,11 @@ ${documentName}
         defBlock: DefBlock,
         showContent: boolean = false,
     ): string {
-        let ariaLabel = "";
-        if (!defBlock) {
-            return ariaLabel;
-        }
-        let ariaLabelRow = [];
-        if (defBlock.name) {
-            ariaLabelRow.push(
-                `<br>${window.siyuan.languages.name}: ${defBlock.name}`,
-            );
-        }
-        if (defBlock.alias) {
-            ariaLabelRow.push(
-                `<br>${window.siyuan.languages.alias}: ${defBlock.alias}`,
-            );
-        }
-        if (defBlock.staticAnchor) {
-            ariaLabelRow.push(
-                `<br>${window.siyuan.languages.anchor}: ${defBlock.staticAnchor}`,
-            );
-        }
-        if (showContent) {
-            ariaLabelRow.push(`<br> ${defBlock.content.substring(0, 100)}`);
-        }
-        // if (defBlock.memo) {
-        //     ariaLabelRow.push(
-        //         `<br>${window.siyuan.languages.memo} ${defBlock.memo}`,
-        //     );
-        // }
-        ariaLabel = ariaLabelRow.join("");
-        ariaLabel = removePrefixAndSuffix(ariaLabel, "<br>", "<br>");
-        return ariaLabel;
+        return buildDefBlockAriaLabel(
+            defBlock,
+            window.siyuan.languages,
+            showContent,
+        );
     }
 
     function clearCacheAndRefresh() {
@@ -1990,17 +1986,15 @@ ${documentName}
                 style="overflow:auto;style=color:var(--b3-theme-on-background);"
             >
                 <span
-                    class="fn__flex-shrink ft__selectnone {backlinkFilterPanelRenderData.totalPage ==
-                        null || backlinkFilterPanelRenderData.totalPage == 0
-                        ? 'fn__none'
-                        : ''}"
+                    class="fn__flex-shrink ft__selectnone {backlinkPaginationState.isVisible
+                        ? ''
+                        : 'fn__none'}"
                 >
                     <span class="fn__space"></span>
 
                     <span class="">
-                        {(EnvConfig.ins.i18n.findInBacklinkDocument ||
-                            EnvConfig.ins.i18n.findInBacklink).replace(
-                            "${x}",
+                        {getBacklinkSummaryText(
+                            EnvConfig.ins.i18n,
                             backlinkFilterPanelRenderData.backlinkDocumentCount,
                         )}
                     </span>
@@ -2009,15 +2003,13 @@ ${documentName}
                 <span class="fn__flex-1" style="min-height: 100%"></span>
 
                 <span
-                    class="fn__flex-shrink ft__selectnone backlink-pagination {backlinkFilterPanelRenderData.totalPage ==
-                        null || backlinkFilterPanelRenderData.totalPage == 0
-                        ? 'fn__none'
-                        : ''}"
+                    class="fn__flex-shrink ft__selectnone backlink-pagination {backlinkPaginationState.isVisible
+                        ? ''
+                        : 'fn__none'}"
                 >
                     <span
                         data-position="9bottom"
-                        class="block__icon block__icon--show ariaLabel backlink-nav-button {backlinkFilterPanelRenderData.pageNum <=
-                        1
+                        class="block__icon block__icon--show ariaLabel backlink-nav-button {backlinkPaginationState.previousDisabled
                             ? 'disabled'
                             : ''}"
                         aria-label={EnvConfig.ins.i18n.previousLabel}
@@ -2028,12 +2020,11 @@ ${documentName}
                         ><svg><use xlink:href="#iconLeft"></use></svg></span
                     >
                     <span class="backlink-nav-progress">
-                        {backlinkFilterPanelRenderData.pageNum}/{backlinkFilterPanelRenderData.totalPage}
+                        {backlinkPaginationState.progressText}
                     </span>
                     <span
                         data-position="9bottom"
-                        class="block__icon block__icon--show ariaLabel backlink-nav-button {backlinkFilterPanelRenderData.pageNum >=
-                        backlinkFilterPanelRenderData.totalPage
+                        class="block__icon block__icon--show ariaLabel backlink-nav-button {backlinkPaginationState.nextDisabled
                             ? 'disabled'
                             : ''}"
                         aria-label={EnvConfig.ins.i18n.nextLabel}

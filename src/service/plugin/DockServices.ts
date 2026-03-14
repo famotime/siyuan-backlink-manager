@@ -4,6 +4,9 @@ import Instance from "@/utils/Instance";
 import BacklinkPanelDockSvelte from "@/components/dock/backlink-filter-panel-dock.svelte";
 import { SettingService } from "@/service/setting/SettingService";
 import { clearProtyleGutters } from "@/utils/html-util";
+import {
+    attachBacklinkPanelScrollCleanup,
+} from "./backlink-panel-host.js";
 
 const BACKLINK_PANEL_DOCK_TYPE = "backlink-panel-dock";
 export class DockService {
@@ -33,6 +36,7 @@ function addBacklinkPanelDock() {
 
     let plugin = EnvConfig.ins.plugin;
     let docSearchSvelet: BacklinkPanelDockSvelte;
+    let detachScrollCleanup: () => void;
     let dockRet = plugin.addDock({
         config: {
             position: "RightBottom",
@@ -58,18 +62,17 @@ function addBacklinkPanelDock() {
                 props: {
                 }
             });
-            this.element.addEventListener(
-                "scroll",
-                () => {
-                    clearProtyleGutters(this.element);
-                },
-            );
+            detachScrollCleanup = attachBacklinkPanelScrollCleanup({
+                element: this.element,
+                onCleanup: () => clearProtyleGutters(this.element),
+            });
 
             if (EnvConfig.ins.isMobile) {
                 docSearchSvelet.resize(1);
             }
         },
         destroy() {
+            detachScrollCleanup?.();
             docSearchSvelet.$destroy();
         }
     });

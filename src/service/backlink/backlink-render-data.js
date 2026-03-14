@@ -1,4 +1,5 @@
 import { buildBacklinkContextBundle, matchBacklinkContextBundle } from "./backlink-context.js";
+import { getBacklinkContextSourceRule } from "./backlink-context-rules.js";
 
 export function formatBacklinkDocApiKeyword(keyword = "") {
   if (!keyword) {
@@ -34,6 +35,40 @@ export function buildLegacyBacklinkSearchText({
     nextSiblingMarkdown,
     listItemChildMarkdown,
   ].join("");
+}
+
+export function buildBacklinkVisibleSourceSummary({
+  contextVisibilityLevel = "core",
+  contextBundle = null,
+} = {}) {
+  if (contextVisibilityLevel === "full") {
+    return "已进入全文模式";
+  }
+
+  const visibleFragments = Array.isArray(contextBundle?.visibleFragments)
+    ? contextBundle.visibleFragments
+    : [];
+  const levelLabels = [];
+  const seenSourceTypes = new Set();
+
+  for (const fragment of visibleFragments) {
+    if (!fragment || fragment.visibilityLevel !== contextVisibilityLevel) {
+      continue;
+    }
+    if (seenSourceTypes.has(fragment.sourceType)) {
+      continue;
+    }
+    seenSourceTypes.add(fragment.sourceType);
+    levelLabels.push(getBacklinkContextSourceRule(fragment.sourceType).label);
+  }
+
+  if (levelLabels.length <= 0) {
+    return "";
+  }
+  if (levelLabels.length <= 3) {
+    return `已显示：${levelLabels.join("、")}`;
+  }
+  return `已显示：${levelLabels.slice(0, 2).join("、")}等${levelLabels.length}类上下文`;
 }
 
 export function getBacklinkBlockId(dom, deps) {

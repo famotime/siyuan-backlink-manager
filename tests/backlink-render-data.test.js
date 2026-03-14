@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildBacklinkVisibleSourceSummary,
   buildLegacyBacklinkSearchText,
   formatBacklinkDocApiKeyword,
   getBatchBacklinkDoc,
@@ -28,6 +29,53 @@ test("buildLegacyBacklinkSearchText counts document markdown only once", () => {
 
   assert.equal(result, "selfdocumentparentheadlineprevnextlist");
   assert.equal(result.includes("documentdocument"), false);
+});
+
+test("buildBacklinkVisibleSourceSummary summarizes only the sources introduced at the current level", () => {
+  const result = buildBacklinkVisibleSourceSummary({
+    contextVisibilityLevel: "nearby",
+    contextBundle: {
+      visibleFragments: [
+        { sourceType: "self", visibilityLevel: "core" },
+        { sourceType: "document", visibilityLevel: "core" },
+        { sourceType: "parent", visibilityLevel: "nearby" },
+        { sourceType: "sibling_prev", visibilityLevel: "nearby" },
+        { sourceType: "sibling_prev", visibilityLevel: "nearby" },
+      ],
+    },
+  });
+
+  assert.equal(result, "已显示：父级、前相邻块");
+});
+
+test("buildBacklinkVisibleSourceSummary merges long source lists into a compact summary", () => {
+  const result = buildBacklinkVisibleSourceSummary({
+    contextVisibilityLevel: "nearby",
+    contextBundle: {
+      visibleFragments: [
+        { sourceType: "parent", visibilityLevel: "nearby" },
+        { sourceType: "child_headline", visibilityLevel: "nearby" },
+        { sourceType: "child_list", visibilityLevel: "nearby" },
+        { sourceType: "sibling_prev", visibilityLevel: "nearby" },
+      ],
+    },
+  });
+
+  assert.equal(result, "已显示：父级、标题子级等4类上下文");
+});
+
+test("buildBacklinkVisibleSourceSummary returns a dedicated full mode hint", () => {
+  const result = buildBacklinkVisibleSourceSummary({
+    contextVisibilityLevel: "full",
+    contextBundle: {
+      visibleFragments: [
+        { sourceType: "self", visibilityLevel: "core" },
+        { sourceType: "parent", visibilityLevel: "nearby" },
+      ],
+    },
+  });
+
+  assert.equal(result, "已进入全文模式");
 });
 
 test("getBatchBacklinkDoc deduplicates backlink dom results and preserves backlink block order", async () => {

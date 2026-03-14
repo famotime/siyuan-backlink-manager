@@ -108,3 +108,56 @@ test("isBacklinkBlockValid matches keywords from sibling markdown", () => {
 
   assert.equal(result, true);
 });
+
+test("isBacklinkBlockValid matches keywords from context fragments when available", () => {
+  const result = isBacklinkBlockValid(
+    {
+      backlinkKeywordStr: "fragment-hit",
+      includeRelatedDefBlockIds: new Set(),
+      excludeRelatedDefBlockIds: new Set(),
+      includeDocumentIds: new Set(),
+      excludeDocumentIds: new Set(),
+      backlinkCurDocDefBlockType: "",
+    },
+    {
+      block: { root_id: "doc-a", markdown: "" },
+      documentBlock: { markdown: "" },
+      includeDirectDefBlockIds: new Set(),
+      includeRelatedDefBlockIds: new Set(),
+      includeParentDefBlockIds: new Set(),
+      parentListItemTreeNode: null,
+      dynamicAnchorMap: new Map(),
+      staticAnchorMap: new Map(),
+      parentMarkdown: "",
+      headlineChildMarkdown: "",
+      previousSiblingMarkdown: "",
+      nextSiblingMarkdown: "",
+      contextBundle: {
+        fragments: [
+          {
+            searchText: "fragment-hit",
+            anchorText: "",
+            searchable: true,
+          },
+        ],
+      },
+    },
+    {
+      isSetNotEmpty: (value) => value && value.size > 0,
+      parseSearchSyntax: (value) => ({
+        includeText: [value],
+        excludeText: [],
+        includeAnchor: [],
+        excludeAnchor: [],
+      }),
+      getQueryStrByBlock: (block) => block?.markdown || "",
+      getMarkdownAnchorTextArray: () => [],
+      removeMarkdownRefBlockStyle: (markdown) => markdown,
+      matchKeywords: (content, includeText, excludeText) =>
+        includeText.every((keyword) => content.includes(keyword)) &&
+        excludeText.every((keyword) => !content.includes(keyword)),
+    },
+  );
+
+  assert.equal(result, true);
+});

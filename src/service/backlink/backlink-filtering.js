@@ -1,3 +1,5 @@
+import { buildBacklinkContextBundle } from "./backlink-context.js";
+
 const DefinitionBlockStatus = {
   SELECTED: "SELECTED",
   EXCLUDED: "EXCLUDED",
@@ -100,25 +102,22 @@ export function filterExistingDefBlocks(
   const excludeRelatedDefBlockIds = queryParams.excludeRelatedDefBlockIds || new Set();
 
   for (const backlinkBlockNode of validBacklinkBlockNodeArray) {
-    const verifyRelateDefBlockIds = backlinkBlockNode.includeRelatedDefBlockIds;
-    const parentListItemTreeNode = backlinkBlockNode.parentListItemTreeNode;
-
-    if (parentListItemTreeNode) {
-      verifyRelateDefBlockIds.clear();
-      backlinkBlockNode.includeCurBlockDefBlockIds.forEach((defBlockId) =>
-        verifyRelateDefBlockIds.add(defBlockId),
-      );
-      backlinkBlockNode.includeParentDefBlockIds.forEach((defBlockId) =>
-        verifyRelateDefBlockIds.add(defBlockId),
-      );
-      const listItemDefBlockIdArray = parentListItemTreeNode.getFilterDefBlockIds(
-        parentListItemTreeNode.includeChildIdArray,
-        parentListItemTreeNode.excludeChildIdArray,
-      );
-      listItemDefBlockIdArray.forEach((defBlockId) =>
-        verifyRelateDefBlockIds.add(defBlockId),
-      );
-    }
+    const contextBundle = backlinkBlockNode.contextBundle?.fragments
+      ? buildBacklinkContextBundle(backlinkBlockNode, {
+          getQueryStrByBlock: (block) => block?.markdown || "",
+          getMarkdownAnchorTextArray: () => [],
+          removeMarkdownRefBlockStyle: (markdown) => markdown || "",
+          getRefBlockId: (markdown) => {
+            if (!markdown) {
+              return [];
+            }
+            const matched = markdown.match(/\(\(([^\s)]+)(?:\s+['"][^)]*['"])?\)\)/g) || [];
+            return matched.map((item) => item.replace(/\(\(|\)\)/g, "").split(/\s+/)[0]);
+          },
+        })
+      : backlinkBlockNode.contextBundle;
+    const verifyRelateDefBlockIds =
+      contextBundle?.includeRelatedDefBlockIds || backlinkBlockNode.includeRelatedDefBlockIds;
 
     for (const blockId of verifyRelateDefBlockIds) {
       if (!existingDefBlockIdMap.has(blockId)) {

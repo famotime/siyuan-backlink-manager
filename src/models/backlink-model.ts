@@ -28,6 +28,55 @@ export interface IBacklinkBlockQueryParams {
     // relatedDefBlockIdArray?: string[];
 }
 
+export type BacklinkContextSourceType =
+    | "self"
+    | "document"
+    | "parent"
+    | "child_headline"
+    | "child_list"
+    | "sibling_prev"
+    | "sibling_next";
+
+export type BacklinkContextVisibilityLevel =
+    | "core"
+    | "nearby"
+    | "extended"
+    | "full";
+
+export interface IBacklinkContextFragment {
+    id: string;
+    backlinkBlockId: string;
+    rootId: string;
+    sourceType: BacklinkContextSourceType;
+    visibilityLevel: BacklinkContextVisibilityLevel;
+    text: string;
+    displayText: string;
+    searchText: string;
+    anchorText: string;
+    refBlockIds: string[];
+    includeCurDocDefBlockIds: string[];
+    includeRelatedDefBlockIds: string[];
+    searchable: boolean;
+    filterable: boolean;
+    defaultVisible: boolean;
+    matched: boolean;
+    matchTypes: string[];
+    matchKeywords: string[];
+    order: number;
+}
+
+export interface IBacklinkContextBundle {
+    backlinkBlockId: string;
+    rootId: string;
+    fragments: IBacklinkContextFragment[];
+    visibleFragments: IBacklinkContextFragment[];
+    matchedFragments: IBacklinkContextFragment[];
+    includeCurDocDefBlockIds: Set<string>;
+    includeRelatedDefBlockIds: Set<string>;
+    matchSummaryList: string[];
+    primaryMatchSourceType?: BacklinkContextSourceType;
+}
+
 
 
 export interface IBacklinkBlockNode {
@@ -52,6 +101,8 @@ export interface IBacklinkBlockNode {
     dynamicAnchorMap: Map<string, Set<string>>;
     staticAnchorMap: Map<string, Set<string>>;
     parentListItemTreeNode?: ListItemTreeNode;
+    contextFragments?: IBacklinkContextFragment[];
+    contextBundle?: IBacklinkContextBundle;
 }
 
 export class ListItemTreeNode {

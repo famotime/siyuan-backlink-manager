@@ -80,6 +80,7 @@ import {
     getParentBlockArray,
     getSiblingBlockGroupArray,
 } from "./backlink-query-loaders.js";
+import { hydrateBacklinkContextBundles } from "./backlink-context.js";
 
 
 export async function getBacklinkPanelRenderData(
@@ -421,6 +422,10 @@ export async function getBacklinkPanelData(
             buildRelatedDefBlockArray,
             buildBacklinkDocumentArray,
             attachDocumentBlocksToBacklinkNodes,
+            hydrateBacklinkContextBundles,
+            getQueryStrByBlock,
+            getMarkdownAnchorTextArray,
+            removeMarkdownRefBlockStyle,
         },
     );
 

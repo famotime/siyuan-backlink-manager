@@ -1,3 +1,5 @@
+import { buildBacklinkContextBundle } from "./backlink-context.js";
+
 export function formatBacklinkDocApiKeyword(keyword = "") {
   if (!keyword) {
     return "";
@@ -260,32 +262,55 @@ export function isBacklinkBlockValid(queryParams, backlinkBlockNode, deps) {
 
   if (keywordStr) {
     const keywordObj = parseSearchSyntax(keywordStr.toLowerCase());
-    const selfMarkdown = getQueryStrByBlock(backlinkBlockNode.block);
-    const selfDocumentMarkdown = getQueryStrByBlock(backlinkBlockNode.documentBlock);
-    const docContent = getQueryStrByBlock(backlinkBlockNode.documentBlock);
-    const parentMarkdown = backlinkBlockNode.parentMarkdown;
-    const headlineChildMarkdown = backlinkBlockNode.headlineChildMarkdown;
-    const previousSiblingMarkdown = backlinkBlockNode.previousSiblingMarkdown || "";
-    const nextSiblingMarkdown = backlinkBlockNode.nextSiblingMarkdown || "";
-    let listItemChildMarkdown = "";
-    if (parentListItemTreeNode) {
-      listItemChildMarkdown = parentListItemTreeNode.getFilterMarkdown(
-        parentListItemTreeNode.includeChildIdArray,
-        parentListItemTreeNode.excludeChildIdArray,
-      );
+    let contextBundle = backlinkBlockNode.contextBundle;
+    if (!contextBundle?.fragments?.length || parentListItemTreeNode) {
+      contextBundle = buildBacklinkContextBundle(backlinkBlockNode, {
+        getQueryStrByBlock,
+        getMarkdownAnchorTextArray,
+        removeMarkdownRefBlockStyle,
+        getRefBlockId: () => [],
+      });
     }
 
-    let backlinkConcatContent =
-      selfMarkdown +
-      selfDocumentMarkdown +
-      docContent +
-      parentMarkdown +
-      headlineChildMarkdown +
-      previousSiblingMarkdown +
-      nextSiblingMarkdown +
-      listItemChildMarkdown;
-    const backlinkAllAnchorText = getMarkdownAnchorTextArray(backlinkConcatContent).join(" ");
-    backlinkConcatContent = removeMarkdownRefBlockStyle(backlinkConcatContent).toLowerCase();
+    let backlinkConcatContent = "";
+    let backlinkAllAnchorText = "";
+    if (contextBundle?.fragments?.length) {
+      backlinkConcatContent = contextBundle.fragments
+        .filter((fragment) => fragment.searchable)
+        .map((fragment) => fragment.searchText)
+        .join(" ");
+      backlinkAllAnchorText = contextBundle.fragments
+        .filter((fragment) => fragment.searchable)
+        .map((fragment) => fragment.anchorText || "")
+        .join(" ");
+    } else {
+      const selfMarkdown = getQueryStrByBlock(backlinkBlockNode.block);
+      const selfDocumentMarkdown = getQueryStrByBlock(backlinkBlockNode.documentBlock);
+      const docContent = getQueryStrByBlock(backlinkBlockNode.documentBlock);
+      const parentMarkdown = backlinkBlockNode.parentMarkdown;
+      const headlineChildMarkdown = backlinkBlockNode.headlineChildMarkdown;
+      const previousSiblingMarkdown = backlinkBlockNode.previousSiblingMarkdown || "";
+      const nextSiblingMarkdown = backlinkBlockNode.nextSiblingMarkdown || "";
+      let listItemChildMarkdown = "";
+      if (parentListItemTreeNode) {
+        listItemChildMarkdown = parentListItemTreeNode.getFilterMarkdown(
+          parentListItemTreeNode.includeChildIdArray,
+          parentListItemTreeNode.excludeChildIdArray,
+        );
+      }
+
+      backlinkConcatContent =
+        selfMarkdown +
+        selfDocumentMarkdown +
+        docContent +
+        parentMarkdown +
+        headlineChildMarkdown +
+        previousSiblingMarkdown +
+        nextSiblingMarkdown +
+        listItemChildMarkdown;
+      backlinkAllAnchorText = getMarkdownAnchorTextArray(backlinkConcatContent).join(" ");
+      backlinkConcatContent = removeMarkdownRefBlockStyle(backlinkConcatContent).toLowerCase();
+    }
     const matchText = matchKeywords(
       backlinkConcatContent,
       keywordObj.includeText,

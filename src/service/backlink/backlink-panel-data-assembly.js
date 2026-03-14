@@ -22,6 +22,10 @@ export async function buildBacklinkPanelData(paramObj, deps) {
     buildRelatedDefBlockArray,
     buildBacklinkDocumentArray,
     attachDocumentBlocksToBacklinkNodes,
+    hydrateBacklinkContextBundles,
+    getQueryStrByBlock,
+    getMarkdownAnchorTextArray,
+    removeMarkdownRefBlockStyle,
   } = deps;
 
   const curDocDefBlockIdArray = getBlockIds(paramObj.curDocDefBlockArray);
@@ -135,6 +139,14 @@ export async function buildBacklinkPanelData(paramObj, deps) {
     backlinkBlockMap,
     relatedDefBlockAndDocumentMap,
   );
+  if (hydrateBacklinkContextBundles) {
+    hydrateBacklinkContextBundles(Object.values(backlinkBlockMap), {
+      getQueryStrByBlock,
+      getMarkdownAnchorTextArray,
+      removeMarkdownRefBlockStyle,
+      getRefBlockId,
+    });
+  }
 
   return {
     rootId: paramObj.rootId,

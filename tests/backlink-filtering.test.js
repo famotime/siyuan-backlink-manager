@@ -78,6 +78,31 @@ test("filterExistingDefBlocks keeps referenced and explicitly selected blocks wi
   assert.equal(byId.get("excluded-c").selectionStatus, DefinitionBlockStatus.EXCLUDED);
 });
 
+test("filterExistingDefBlocks prefers contextBundle related ids when available", () => {
+  const result = filterExistingDefBlocks(
+    [{ id: "fragment-ref", content: "Fragment Ref" }],
+    [
+      {
+        includeRelatedDefBlockIds: new Set(),
+        includeCurBlockDefBlockIds: new Set(),
+        includeParentDefBlockIds: new Set(),
+        parentListItemTreeNode: null,
+        contextBundle: {
+          includeRelatedDefBlockIds: new Set(["fragment-ref"]),
+        },
+      },
+    ],
+    {
+      includeRelatedDefBlockIds: new Set(),
+      excludeRelatedDefBlockIds: new Set(),
+    },
+  );
+
+  assert.equal(result.length, 1);
+  assert.equal(result[0].id, "fragment-ref");
+  assert.equal(result[0].refCount, 1);
+});
+
 test("filterBacklinkDocumentBlocks counts backlinks per document and preserves selected and excluded docs", () => {
   const existingDocBlockArray = [
     { id: "doc-a", content: "Doc A" },

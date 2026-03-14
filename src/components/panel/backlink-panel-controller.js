@@ -7,7 +7,10 @@ import {
   getBacklinkPanelRenderData,
   getTurnPageBacklinkPanelRenderData,
 } from "@/service/backlink/backlink-data";
-import { buildBacklinkVisibleSourceSummary } from "@/service/backlink/backlink-render-data.js";
+import {
+  buildBacklinkContextBudgetHint,
+  buildBacklinkVisibleSourceSummary,
+} from "@/service/backlink/backlink-render-data.js";
 import {
   defBlockArrayTypeAndKeywordFilter,
   defBlockArraySort,
@@ -339,6 +342,10 @@ export function createBacklinkPanelController(state) {
         ? `展开到${getBacklinkContextLevelLabel(nextVisibilityLevel)}`
         : "",
       visibleSummaryText: buildBacklinkVisibleSourceSummary({
+        contextVisibilityLevel,
+        contextBundle: documentGroup?.activeBacklink?.contextBundle,
+      }),
+      budgetHintText: buildBacklinkContextBudgetHint({
         contextVisibilityLevel,
         contextBundle: documentGroup?.activeBacklink?.contextBundle,
       }),

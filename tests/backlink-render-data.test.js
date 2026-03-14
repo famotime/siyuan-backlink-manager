@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildBacklinkContextBudgetHint,
   buildBacklinkVisibleSourceSummary,
   buildLegacyBacklinkSearchText,
   formatBacklinkDocApiKeyword,
@@ -76,6 +77,47 @@ test("buildBacklinkVisibleSourceSummary returns a dedicated full mode hint", () 
   });
 
   assert.equal(result, "已进入全文模式");
+});
+
+test("buildBacklinkContextBudgetHint reports truncated preview state", () => {
+  const result = buildBacklinkContextBudgetHint({
+    contextVisibilityLevel: "nearby",
+    contextBundle: {
+      budgetSummary: {
+        omittedFragmentCount: 2,
+        truncated: true,
+      },
+    },
+  });
+
+  assert.equal(result, "部分上下文已裁剪，继续展开查看更多");
+});
+
+test("buildBacklinkContextBudgetHint stays hidden when not truncated or already full", () => {
+  assert.equal(
+    buildBacklinkContextBudgetHint({
+      contextVisibilityLevel: "extended",
+      contextBundle: {
+        budgetSummary: {
+          omittedFragmentCount: 0,
+          truncated: false,
+        },
+      },
+    }),
+    "",
+  );
+  assert.equal(
+    buildBacklinkContextBudgetHint({
+      contextVisibilityLevel: "full",
+      contextBundle: {
+        budgetSummary: {
+          omittedFragmentCount: 3,
+          truncated: true,
+        },
+      },
+    }),
+    "",
+  );
 });
 
 test("getBatchBacklinkDoc deduplicates backlink dom results and preserves backlink block order", async () => {

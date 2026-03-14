@@ -71,6 +71,22 @@ export function buildBacklinkVisibleSourceSummary({
   return `已显示：${levelLabels.slice(0, 2).join("、")}等${levelLabels.length}类上下文`;
 }
 
+export function buildBacklinkContextBudgetHint({
+  contextVisibilityLevel = "core",
+  contextBundle = null,
+} = {}) {
+  if (contextVisibilityLevel === "full") {
+    return "";
+  }
+
+  const budgetSummary = contextBundle?.budgetSummary;
+  if (!budgetSummary?.truncated) {
+    return "";
+  }
+
+  return "部分上下文已裁剪，继续展开查看更多";
+}
+
 export function getBacklinkBlockId(dom, deps) {
   const { isStrBlank, stringToDom, NewNodeID } = deps;
   if (isStrBlank(dom)) {

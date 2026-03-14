@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   advanceBacklinkDocumentVisibilityLevel,
+  cycleBacklinkDocumentVisibilityLevel,
   createBacklinkDocumentViewState,
   getBacklinkDocumentRenderState,
   markBacklinkDocumentExpanded,
@@ -30,6 +31,35 @@ test("advancing document visibility level stops at full", () => {
 
   assert.equal(state.documentVisibilityLevelMap.get("doc-a"), "full");
   assert.equal(state.documentShowFullMap.get("doc-a"), true);
+});
+
+test("cycling document visibility level loops in both directions", () => {
+  const state = createBacklinkDocumentViewState();
+
+  assert.equal(
+    cycleBacklinkDocumentVisibilityLevel(state, "doc-a", "previous"),
+    "full",
+  );
+  assert.equal(
+    cycleBacklinkDocumentVisibilityLevel(state, "doc-a", "next"),
+    "core",
+  );
+  assert.equal(
+    cycleBacklinkDocumentVisibilityLevel(state, "doc-a", "next"),
+    "nearby",
+  );
+  assert.equal(
+    cycleBacklinkDocumentVisibilityLevel(state, "doc-a", "next"),
+    "extended",
+  );
+  assert.equal(
+    cycleBacklinkDocumentVisibilityLevel(state, "doc-a", "next"),
+    "full",
+  );
+  assert.equal(
+    cycleBacklinkDocumentVisibilityLevel(state, "doc-a", "next"),
+    "core",
+  );
 });
 
 test("marking full view clears folded state for the document", () => {

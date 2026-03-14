@@ -189,46 +189,54 @@ input {
 .backlink-context-control-row {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
     gap: 6px;
     margin: 4px 8px 0 26px;
     padding: 4px 0 0;
     width: calc(100% - 26px);
 }
 
-.backlink-context-level-button {
+.backlink-context-step-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+}
+
+.backlink-context-step-button svg {
+    width: 12px;
+    height: 12px;
+}
+
+.backlink-context-state-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.backlink-context-state {
+    display: inline-flex;
+    align-items: center;
     min-height: 22px;
     padding: 0 8px;
     border-radius: 999px;
     font-size: 11px;
-}
-
-.backlink-context-next-action,
-.backlink-context-visible-summary,
-.backlink-context-budget-hint {
-    display: inline-flex;
-    align-items: center;
-    min-height: 20px;
-    font-size: 11px;
     color: var(--b3-theme-on-surface-light);
+    background: var(--b3-theme-surface);
+    border: 1px solid transparent;
 }
 
-.backlink-context-next-action:empty,
-.backlink-context-visible-summary:empty,
-.backlink-context-budget-hint:empty {
-    display: none;
-}
-
-.backlink-context-budget-hint {
-    color: var(--b3-theme-warning);
+.backlink-context-state.active {
+    color: var(--b3-theme-primary);
+    background: rgba(26, 188, 156, 0.12);
+    border-color: rgba(26, 188, 156, 0.24);
 }
 
 @media (max-width: 640px) {
     .backlink-context-source,
-    .backlink-context-summary,
-    .backlink-context-visible-summary,
-    .backlink-context-next-action,
-    .backlink-context-budget-hint {
+    .backlink-context-summary {
         max-width: 100%;
         white-space: normal;
     }

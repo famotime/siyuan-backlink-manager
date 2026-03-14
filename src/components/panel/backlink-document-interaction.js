@@ -25,10 +25,6 @@ export function getBacklinkDocumentClickAction({
     return "toggle-fold";
   }
 
-  if (targetRole === "title") {
-    return "expand-context";
-  }
-
   return "noop";
 }
 
@@ -71,6 +67,14 @@ export function getNextBacklinkContextVisibilityLevel(level = "core") {
     BACKLINK_CONTEXT_VISIBILITY_LEVEL_ORDER.length - 1,
   );
   return BACKLINK_CONTEXT_VISIBILITY_LEVEL_ORDER[nextIndex];
+}
+
+export function getPreviousBacklinkContextVisibilityLevel(level = "core") {
+  const currentIndex = BACKLINK_CONTEXT_VISIBILITY_LEVEL_ORDER.includes(level)
+    ? BACKLINK_CONTEXT_VISIBILITY_LEVEL_ORDER.indexOf(level)
+    : 0;
+  const previousIndex = Math.max(currentIndex - 1, 0);
+  return BACKLINK_CONTEXT_VISIBILITY_LEVEL_ORDER[previousIndex];
 }
 
 export function getBacklinkDocumentTargetRole(target) {

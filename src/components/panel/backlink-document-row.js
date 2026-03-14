@@ -1,13 +1,12 @@
 import { getBacklinkContextSourceRule } from "../../service/backlink/backlink-context-rules.js";
 
+const BACKLINK_CONTEXT_LEVEL_ORDER = ["core", "nearby", "extended", "full"];
 const BACKLINK_CONTEXT_LEVEL_LABELS = {
   core: "核心",
   nearby: "近邻",
   extended: "扩展",
   full: "全文",
 };
-const BACKLINK_DOCUMENT_TITLE_HINT =
-  "单击逐级展开上下文，Ctrl+单击打开反链块";
 
 export function getBacklinkContextLevelLabel(level = "core") {
   return BACKLINK_CONTEXT_LEVEL_LABELS[level] || BACKLINK_CONTEXT_LEVEL_LABELS.core;
@@ -30,39 +29,34 @@ function getBacklinkMatchMeta(backlinkData = null) {
 function normalizeBacklinkContextControlState(contextControlState = {}) {
   const contextVisibilityLevel =
     contextControlState.contextVisibilityLevel || "core";
-  const levelLabel =
-    contextControlState.levelLabel ||
-    getBacklinkContextLevelLabel(contextVisibilityLevel);
-  const nextActionLabel = contextControlState.nextActionLabel || "";
-  const visibleSummaryText = contextControlState.visibleSummaryText || "";
-  const budgetHintText = contextControlState.budgetHintText || "";
-  const hasMoreContext = contextControlState.hasMoreContext !== false;
   return {
     contextVisibilityLevel,
-    levelLabel,
-    nextActionLabel,
-    visibleSummaryText,
-    budgetHintText,
-    hasMoreContext,
+    levelLabel: getBacklinkContextLevelLabel(contextVisibilityLevel),
   };
+}
+
+function buildBacklinkContextStateGroupHtml(contextVisibilityLevel = "core") {
+  return BACKLINK_CONTEXT_LEVEL_ORDER.map((level) => {
+    const isActive = level === contextVisibilityLevel;
+    const activeClass = isActive ? " active" : "";
+    return `<span class="backlink-context-state${activeClass}" data-context-level="${level}">${getBacklinkContextLevelLabel(level)}</span>`;
+  }).join("");
 }
 
 function buildBacklinkContextControlRowHtml(contextControlState = {}) {
   const normalizedState = normalizeBacklinkContextControlState(
     contextControlState,
   );
-  const advanceAriaLabel = normalizedState.nextActionLabel
-    ? `当前上下文层级：${normalizedState.levelLabel}。点击${normalizedState.nextActionLabel}`
-    : `当前上下文层级：${normalizedState.levelLabel}`;
 
   return `
-<div class="backlink-context-control-row" data-context-level="${normalizedState.levelLabel}" data-has-more-context="${normalizedState.hasMoreContext}">
-<button type="button" class="b3-button b3-button--outline backlink-context-level-button ariaLabel" aria-label="${advanceAriaLabel}">
-${normalizedState.levelLabel}
+<div class="backlink-context-control-row" data-context-level="${normalizedState.levelLabel}">
+<button type="button" class="block__icon ariaLabel backlink-context-step-button previous" aria-label="切换到上一个上下文层级">
+<svg><use xlink:href="#iconLeft"></use></svg>
 </button>
-<span class="b3-list-item__meta backlink-context-next-action">${normalizedState.nextActionLabel}</span>
-<span class="b3-list-item__meta backlink-context-visible-summary">${normalizedState.visibleSummaryText}</span>
-<span class="b3-list-item__meta backlink-context-budget-hint">${normalizedState.budgetHintText}</span>
+<div class="backlink-context-state-group">${buildBacklinkContextStateGroupHtml(normalizedState.contextVisibilityLevel)}</div>
+<button type="button" class="block__icon ariaLabel backlink-context-step-button next" aria-label="切换到下一个上下文层级">
+<svg><use xlink:href="#iconRight"></use></svg>
+</button>
 </div>`;
 }
 
@@ -82,7 +76,7 @@ export function buildBacklinkDocumentListItemHtml({
 <svg class="b3-list-item__arrow b3-list-item__arrow--open"><use xlink:href="#iconRight"></use></svg>
 </span>
 <svg class="b3-list-item__graphic popover__block"><use xlink:href="#iconFile"></use></svg>
-<span class="b3-list-item__text ariaLabel"  aria-label="${truncatedAriaText}" title="${BACKLINK_DOCUMENT_TITLE_HINT}"  >
+<span class="b3-list-item__text ariaLabel"  aria-label="${truncatedAriaText}"  >
 ${documentName}
 </span>
 <span class="b3-list-item__meta backlink-context-source">${matchSourceLabel}</span>
@@ -102,47 +96,35 @@ function updateBacklinkContextControlRow(
   const controlRowElement = documentLiElement.querySelector(
     ".backlink-context-control-row",
   );
-  const controlButtonElement = documentLiElement.querySelector(
-    ".backlink-context-level-button",
+  const previousButtonElement = documentLiElement.querySelector(
+    ".backlink-context-step-button.previous",
   );
-  const nextActionElement = documentLiElement.querySelector(
-    ".backlink-context-next-action",
+  const nextButtonElement = documentLiElement.querySelector(
+    ".backlink-context-step-button.next",
   );
-  const visibleSummaryElement = documentLiElement.querySelector(
-    ".backlink-context-visible-summary",
-  );
-  const budgetHintElement = documentLiElement.querySelector(
-    ".backlink-context-budget-hint",
+  const stateGroupElement = documentLiElement.querySelector(
+    ".backlink-context-state-group",
   );
   const normalizedState = normalizeBacklinkContextControlState(
     contextControlState,
   );
-  const controlAriaLabel = normalizedState.nextActionLabel
-    ? `当前上下文层级：${normalizedState.levelLabel}。点击${normalizedState.nextActionLabel}`
-    : `当前上下文层级：${normalizedState.levelLabel}`;
 
   if (controlRowElement) {
     controlRowElement.setAttribute(
       "data-context-level",
       normalizedState.levelLabel,
     );
-    controlRowElement.setAttribute(
-      "data-has-more-context",
-      String(normalizedState.hasMoreContext),
+  }
+  if (previousButtonElement) {
+    previousButtonElement.setAttribute("aria-label", "切换到上一个上下文层级");
+  }
+  if (nextButtonElement) {
+    nextButtonElement.setAttribute("aria-label", "切换到下一个上下文层级");
+  }
+  if (stateGroupElement) {
+    stateGroupElement.innerHTML = buildBacklinkContextStateGroupHtml(
+      normalizedState.contextVisibilityLevel,
     );
-  }
-  if (controlButtonElement) {
-    controlButtonElement.textContent = normalizedState.levelLabel;
-    controlButtonElement.setAttribute("aria-label", controlAriaLabel);
-  }
-  if (nextActionElement) {
-    nextActionElement.textContent = normalizedState.nextActionLabel;
-  }
-  if (visibleSummaryElement) {
-    visibleSummaryElement.textContent = normalizedState.visibleSummaryText;
-  }
-  if (budgetHintElement) {
-    budgetHintElement.textContent = normalizedState.budgetHintText;
   }
 }
 
@@ -182,7 +164,6 @@ export function updateBacklinkDocumentLiNavigation(
       "aria-label",
       documentGroup.activeBacklink.backlinkBlock.content.substring(0, 100),
     );
-    textElement.setAttribute("title", BACKLINK_DOCUMENT_TITLE_HINT);
   }
   if (sourceElement) {
     sourceElement.textContent = matchSourceLabel;
@@ -204,7 +185,7 @@ export function createBacklinkDocumentListItemElement({
   onContextMenu,
   onToggle,
   onNavigate,
-  onAdvanceContextLevel,
+  onStepContextLevel,
 } = {}) {
   if (!documentGroup || !documentRef?.createElement) {
     return null;
@@ -255,11 +236,19 @@ export function createBacklinkDocumentListItemElement({
   });
 
   documentLiElement
-    .querySelector(".backlink-context-level-button")
+    .querySelector(".backlink-context-step-button.previous")
     ?.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
-      onAdvanceContextLevel?.(documentLiElement);
+      onStepContextLevel?.(documentLiElement, "previous");
+    });
+
+  documentLiElement
+    .querySelector(".backlink-context-step-button.next")
+    ?.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      onStepContextLevel?.(documentLiElement, "next");
     });
 
   documentLiElement

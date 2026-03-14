@@ -5,17 +5,18 @@ import {
   buildBacklinkDocumentRenderOptions,
   getBacklinkDocumentClickAction,
   getNextBacklinkContextVisibilityLevel,
+  getPreviousBacklinkContextVisibilityLevel,
   getBacklinkDocumentTargetRole,
   shouldHandleBacklinkDocumentClick,
 } from "../src/components/panel/backlink-document-interaction.js";
 
-test("uses progressive expansion action when left-clicking a backlink document title", () => {
+test("does not use title click as a context expansion shortcut", () => {
   const action = getBacklinkDocumentClickAction({
     ctrlKey: false,
     targetRole: "title",
   });
 
-  assert.equal(action, "expand-context");
+  assert.equal(action, "noop");
 });
 
 test("keeps fold toggle action on the left toggle button", () => {
@@ -60,6 +61,13 @@ test("returns the next document visibility level until full", () => {
   assert.equal(getNextBacklinkContextVisibilityLevel("nearby"), "extended");
   assert.equal(getNextBacklinkContextVisibilityLevel("extended"), "full");
   assert.equal(getNextBacklinkContextVisibilityLevel("full"), "full");
+});
+
+test("returns the previous document visibility level until core", () => {
+  assert.equal(getPreviousBacklinkContextVisibilityLevel("full"), "extended");
+  assert.equal(getPreviousBacklinkContextVisibilityLevel("extended"), "nearby");
+  assert.equal(getPreviousBacklinkContextVisibilityLevel("nearby"), "core");
+  assert.equal(getPreviousBacklinkContextVisibilityLevel("core"), "core");
 });
 
 test("skips row-level handling when the click comes from the dedicated toggle button", () => {

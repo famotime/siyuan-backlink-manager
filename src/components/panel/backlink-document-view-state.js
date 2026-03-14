@@ -82,6 +82,28 @@ export function advanceBacklinkDocumentVisibilityLevel(state, documentId) {
   return nextLevel;
 }
 
+export function cycleBacklinkDocumentVisibilityLevel(
+  state,
+  documentId,
+  direction = "next",
+) {
+  if (!state || !documentId) {
+    return "core";
+  }
+
+  const currentLevel = normalizeBacklinkDocumentVisibilityLevel(
+    state.documentVisibilityLevelMap?.get(documentId),
+  );
+  const currentIndex = BACKLINK_DOCUMENT_VISIBILITY_LEVELS.indexOf(currentLevel);
+  const step = direction === "previous" ? -1 : 1;
+  const nextIndex =
+    (currentIndex + step + BACKLINK_DOCUMENT_VISIBILITY_LEVELS.length) %
+    BACKLINK_DOCUMENT_VISIBILITY_LEVELS.length;
+  const nextLevel = BACKLINK_DOCUMENT_VISIBILITY_LEVELS[nextIndex];
+  markBacklinkDocumentVisibilityLevel(state, documentId, nextLevel);
+  return nextLevel;
+}
+
 export function getBacklinkDocumentRenderState(state, documentId) {
   const contextVisibilityLevel = normalizeBacklinkDocumentVisibilityLevel(
     state?.documentVisibilityLevelMap?.get(documentId),

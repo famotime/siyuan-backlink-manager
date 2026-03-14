@@ -8,10 +8,6 @@ import {
   getTurnPageBacklinkPanelRenderData,
 } from "@/service/backlink/backlink-data";
 import {
-  buildBacklinkContextBudgetHint,
-  buildBacklinkVisibleSourceSummary,
-} from "@/service/backlink/backlink-render-data.js";
-import {
   defBlockArrayTypeAndKeywordFilter,
   defBlockArraySort,
 } from "@/service/backlink/backlink-def-blocks.js";
@@ -41,7 +37,6 @@ import {
   buildBacklinkDocumentRenderOptions,
   getBacklinkDocumentClickAction,
   getBacklinkDocumentTargetRole,
-  getNextBacklinkContextVisibilityLevel,
   shouldHandleBacklinkDocumentClick,
 } from "./backlink-document-interaction.js";
 import {
@@ -73,7 +68,7 @@ import {
   toggleRelatedDocumentCondition,
 } from "./backlink-panel-query-params.js";
 import {
-  advanceBacklinkDocumentVisibilityLevel,
+  cycleBacklinkDocumentVisibilityLevel,
   getBacklinkDocumentRenderState,
   markBacklinkDocumentExpanded,
   markBacklinkDocumentFoldState,
@@ -175,9 +170,6 @@ export function createBacklinkPanelController(state) {
       return;
     }
 
-    if (action === "expand-context") {
-      expandBacklinkDocumentContext(target);
-    }
   }
 
   function contextmenuBacklinkDocumentLiElement(event) {
@@ -318,7 +310,7 @@ export function createBacklinkPanelController(state) {
             onContextMenu: contextmenuBacklinkDocumentLiElement,
             onToggle: toggleBacklinkDocument,
             onNavigate: navigateBacklinkDocument,
-            onAdvanceContextLevel: expandBacklinkDocumentContext,
+            onStepContextLevel: stepBacklinkDocumentContext,
           }),
         renderDocumentGroup: renderBacklinkDocumentGroup,
       },
@@ -331,25 +323,10 @@ export function createBacklinkPanelController(state) {
       documentGroup?.documentId,
     );
     const contextVisibilityLevel = renderState.contextVisibilityLevel;
-    const nextVisibilityLevel =
-      getNextBacklinkContextVisibilityLevel(contextVisibilityLevel);
-    const hasMoreContext = contextVisibilityLevel !== "full";
 
     return {
       contextVisibilityLevel,
       levelLabel: getBacklinkContextLevelLabel(contextVisibilityLevel),
-      nextActionLabel: hasMoreContext
-        ? `展开到${getBacklinkContextLevelLabel(nextVisibilityLevel)}`
-        : "",
-      visibleSummaryText: buildBacklinkVisibleSourceSummary({
-        contextVisibilityLevel,
-        contextBundle: documentGroup?.activeBacklink?.contextBundle,
-      }),
-      budgetHintText: buildBacklinkContextBudgetHint({
-        contextVisibilityLevel,
-        contextBundle: documentGroup?.activeBacklink?.contextBundle,
-      }),
-      hasMoreContext,
     };
   }
 
@@ -390,7 +367,7 @@ export function createBacklinkPanelController(state) {
     );
   }
 
-  function expandBacklinkDocumentContext(documentLiElement) {
+  function stepBacklinkDocumentContext(documentLiElement, direction = "next") {
     if (!documentLiElement) {
       return;
     }
@@ -401,9 +378,10 @@ export function createBacklinkPanelController(state) {
       return;
     }
 
-    const nextVisibilityLevel = advanceBacklinkDocumentVisibilityLevel(
+    const nextVisibilityLevel = cycleBacklinkDocumentVisibilityLevel(
       state.backlinkDocumentViewState,
       documentId,
+      direction,
     );
     expandBacklinkDocument(documentLiElement);
 

@@ -21,6 +21,10 @@ const DEFAULT_SETTING_CONFIG = {
   backlinkBlockSortMethod: "modifiedDesc",
   hideBacklinkProtyleBreadcrumb: false,
   defaultExpandedListItemLevel: 0,
+  backlinkContextMaxVisibleFragments: 6,
+  backlinkContextMaxVisibleChars: 240,
+  backlinkContextMaxDepth: 3,
+  backlinkContextMaxExpandedNodes: 12,
 };
 
 export function createDefaultSettingConfig() {

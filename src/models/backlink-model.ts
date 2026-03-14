@@ -87,6 +87,17 @@ export interface IBacklinkContextBundle {
     includeRelatedDefBlockIds: Set<string>;
     matchSummaryList: string[];
     primaryMatchSourceType?: BacklinkContextSourceType;
+    budgetSummary?: IBacklinkContextBudgetSummary;
+}
+
+export interface IBacklinkContextBudgetSummary {
+    maxVisibleFragments: number;
+    maxVisibleChars: number;
+    totalCandidateFragments: number;
+    omittedFragmentCount: number;
+    preservedMatchedFragmentCount: number;
+    visibleCharacterCount: number;
+    truncated: boolean;
 }
 
 

@@ -40,6 +40,10 @@ export class SettingConfig {
     backlinkBlockSortMethod: BlockSortMethod;
     hideBacklinkProtyleBreadcrumb: boolean;
     defaultExpandedListItemLevel: number;
+    backlinkContextMaxVisibleFragments: number;
+    backlinkContextMaxVisibleChars: number;
+    backlinkContextMaxDepth: number;
+    backlinkContextMaxExpandedNodes: number;
     // queryAllContentUnderHeadline: boolean;
 
 

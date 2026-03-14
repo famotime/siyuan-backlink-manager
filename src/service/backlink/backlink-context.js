@@ -1,4 +1,8 @@
 import {
+  applyBacklinkContextBudgetToNodes,
+  applyBacklinkContextBudget,
+} from "./backlink-context-budget.js";
+import {
   getBacklinkContextSourceRule,
   getBacklinkContextVisibilityLevelOrder,
 } from "./backlink-context-rules.js";
@@ -228,6 +232,8 @@ export function applyBacklinkContextVisibilityToNodes(
     applyBacklinkContextVisibility(backlinkBlockNode.contextBundle, visibilityLevel);
   }
 }
+
+export { applyBacklinkContextBudget, applyBacklinkContextBudgetToNodes };
 
 function resetBundleMatches(bundle) {
   bundle.matchedFragments = [];

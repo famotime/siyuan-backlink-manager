@@ -81,9 +81,11 @@ import {
     getSiblingBlockGroupArray,
 } from "./backlink-query-loaders.js";
 import {
+    applyBacklinkContextBudgetToNodes,
     applyBacklinkContextVisibilityToNodes,
     hydrateBacklinkContextBundles,
 } from "./backlink-context.js";
+import { normalizeBacklinkContextBudget } from "./backlink-context-budget.js";
 
 
 export async function getBacklinkPanelRenderData(
@@ -125,6 +127,19 @@ export async function getBacklinkPanelRenderData(
     applyBacklinkContextVisibilityToNodes(
         validBacklinkBlockNodeArray,
         queryParams.backlinkContextVisibilityLevel || "core",
+    );
+    applyBacklinkContextBudgetToNodes(
+        validBacklinkBlockNodeArray,
+        normalizeBacklinkContextBudget({
+            maxVisibleFragments:
+                SettingService.ins.SettingConfig.backlinkContextMaxVisibleFragments,
+            maxVisibleChars:
+                SettingService.ins.SettingConfig.backlinkContextMaxVisibleChars,
+            maxDepth:
+                SettingService.ins.SettingConfig.backlinkContextMaxDepth,
+            maxExpandedNodes:
+                SettingService.ins.SettingConfig.backlinkContextMaxExpandedNodes,
+        }),
     );
     let pagination = paginateBacklinkBlocksByDocument(validBacklinkBlockNodeArray, pageNum, pageSize);
     let pageBacklinkBlockArray = pagination.pageBacklinkBlockArray;

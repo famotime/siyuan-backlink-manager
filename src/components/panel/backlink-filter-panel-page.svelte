@@ -16,12 +16,14 @@
         BacklinkPanelFilterCriteria,
     } from "@/models/backlink-model";
     import {
-        defBlockArrayTypeAndKeywordFilter,
-        defBlockArraySort,
         getBacklinkPanelData,
         getBacklinkPanelRenderData,
         getTurnPageBacklinkPanelRenderData,
     } from "@/service/backlink/backlink-data";
+    import {
+        defBlockArrayTypeAndKeywordFilter,
+        defBlockArraySort,
+    } from "@/service/backlink/backlink-def-blocks.js";
     import {
         isArrayEmpty,
         isArrayNotEmpty,
@@ -52,7 +54,7 @@
     import { BacklinkFilterPanelAttributeService } from "@/service/setting/BacklinkPanelFilterCriteriaService";
     import { SettingService } from "@/service/setting/SettingService";
     import { delayedTwiceRefresh } from "@/utils/timing-util";
-    import { getBlockIsFolded } from "@/utils/api";
+    import { getBatchBlockIdIndex, getBlockIsFolded } from "@/utils/api";
     import { getOpenTabActionByZoomIn } from "@/utils/siyuan-util";
     import {
         getCyclicBacklinkIndex,
@@ -79,6 +81,14 @@
         buildDefBlockAriaLabel,
         sanitizeBacklinkKeywords,
     } from "./backlink-panel-formatting.js";
+    import {
+        applySavedPanelCriteria,
+        clonePanelQueryParamsForSave,
+        resetBacklinkQueryParameters,
+        resetFilterQueryParameters,
+        toggleRelatedDefBlockCondition,
+        toggleRelatedDocumentCondition,
+    } from "./backlink-panel-query-params.js";
 
     export let rootId: string;
     export let focusBlockId: string;
@@ -677,14 +687,17 @@
         await defBlockArraySort(
             curDocDefBlockArray,
             queryParams.filterPanelCurDocDefBlockSortMethod,
+            { getBatchBlockIdIndex },
         );
         await defBlockArraySort(
             relatedDefBlockArray,
             queryParams.filterPanelRelatedDefBlockSortMethod,
+            { getBatchBlockIdIndex },
         );
         await defBlockArraySort(
             backlinkDocumentArray,
             queryParams.filterPanelBacklinkDocumentSortMethod,
+            { getBatchBlockIdIndex },
         );
 
         backlinkFilterPanelRenderData = backlinkFilterPanelRenderData;
@@ -1230,24 +1243,7 @@ ${documentName}
     function resetFilterQueryParametersToDefault() {
         let defaultQueryParams =
             BacklinkFilterPanelAttributeService.ins.getDefaultQueryParams();
-
-        queryParams.filterPanelCurDocDefBlockSortMethod =
-            defaultQueryParams.filterPanelCurDocDefBlockSortMethod;
-        queryParams.filterPanelCurDocDefBlockKeywords = "";
-
-        queryParams.includeRelatedDefBlockIds.clear();
-        queryParams.excludeRelatedDefBlockIds.clear();
-        queryParams.filterPanelRelatedDefBlockType =
-            defaultQueryParams.filterPanelRelatedDefBlockType;
-        queryParams.filterPanelRelatedDefBlockSortMethod =
-            defaultQueryParams.filterPanelRelatedDefBlockSortMethod;
-        queryParams.filterPanelRelatedDefBlockKeywords = "";
-
-        queryParams.includeDocumentIds.clear();
-        queryParams.excludeDocumentIds.clear();
-        queryParams.filterPanelBacklinkDocumentSortMethod =
-            defaultQueryParams.filterPanelBacklinkDocumentSortMethod;
-        queryParams.filterPanelBacklinkDocumentKeywords = "";
+        resetFilterQueryParameters(queryParams, defaultQueryParams);
         queryParams = queryParams;
         updateRenderData();
     }
@@ -1255,12 +1251,7 @@ ${documentName}
     function resetBacklinkQueryParametersToDefault() {
         let defaultQueryParams =
             BacklinkFilterPanelAttributeService.ins.getDefaultQueryParams();
-        queryParams.backlinkCurDocDefBlockType =
-            defaultQueryParams.backlinkCurDocDefBlockType;
-        queryParams.backlinkBlockSortMethod =
-            defaultQueryParams.backlinkBlockSortMethod;
-        queryParams.backlinkKeywordStr = "";
-
+        resetBacklinkQueryParameters(queryParams, defaultQueryParams);
         updateRenderData();
     }
 
@@ -1326,86 +1317,31 @@ ${documentName}
     }
 
     function addIncludeRelatedDefBlockCondition(defBlock: DefBlock) {
-        let includeRelatedDefBlockIds = queryParams.includeRelatedDefBlockIds;
-        let defBlockId = defBlock.id;
-        let recover = recoverDefBlockStatus(defBlock);
-        if (!recover) {
-            includeRelatedDefBlockIds.add(defBlockId);
-        }
-
+        toggleRelatedDefBlockCondition(queryParams, defBlock.id, "include");
         updateRenderData();
     }
 
     function addExcludeRelatedDefBlockCondition(defBlock: DefBlock) {
-        let excludeRelatedDefBlockIds = queryParams.excludeRelatedDefBlockIds;
-        let defBlockId = defBlock.id;
-        let recover = recoverDefBlockStatus(defBlock);
-        if (!recover) {
-            excludeRelatedDefBlockIds.add(defBlockId);
-        }
-
+        toggleRelatedDefBlockCondition(queryParams, defBlock.id, "exclude");
         updateRenderData();
     }
 
     function addIncludeRelatedDocBlockCondition(defBlock: DefBlock) {
-        let includeDocumentIds = queryParams.includeDocumentIds;
-        let defBlockId = defBlock.id;
-        let recover = recoverDocBlockStatus(defBlock);
-        if (!recover) {
-            includeDocumentIds.add(defBlockId);
-        }
-
+        toggleRelatedDocumentCondition(queryParams, defBlock.id, "include");
         updateRenderData();
     }
 
     function addExcludeRelatedDocBlockCondition(defBlock: DefBlock) {
-        let excludeDocumentIds = queryParams.excludeDocumentIds;
-        let defBlockId = defBlock.id;
-        let recover = recoverDocBlockStatus(defBlock);
-        if (!recover) {
-            excludeDocumentIds.add(defBlockId);
-        }
-
+        toggleRelatedDocumentCondition(queryParams, defBlock.id, "exclude");
         updateRenderData();
-    }
-
-    function recoverDefBlockStatus(defBlock: DefBlock): boolean {
-        let includeRelatedDefBlockIds = queryParams.includeRelatedDefBlockIds;
-        let excludeRelatedDefBlockIds = queryParams.excludeRelatedDefBlockIds;
-        let defBlockId = defBlock.id;
-        if (includeRelatedDefBlockIds.has(defBlockId)) {
-            includeRelatedDefBlockIds.delete(defBlockId);
-            return true;
-        }
-        if (excludeRelatedDefBlockIds.has(defBlockId)) {
-            excludeRelatedDefBlockIds.delete(defBlockId);
-            return true;
-        }
-        return false;
-    }
-
-    function recoverDocBlockStatus(defBlock: DefBlock): boolean {
-        let includeDocumentIds = queryParams.includeDocumentIds;
-        let excludeDocumentIds = queryParams.excludeDocumentIds;
-        let defBlockId = defBlock.id;
-        if (includeDocumentIds.has(defBlockId)) {
-            includeDocumentIds.delete(defBlockId);
-            return true;
-        }
-        if (excludeDocumentIds.has(defBlockId)) {
-            excludeDocumentIds.delete(defBlockId);
-            return true;
-        }
-        return false;
     }
 
     function handleCriteriaConfirm() {
         if (isStrBlank(saveCriteriaInputText)) {
             return;
         }
-        let savedQueryParams: IPanelRednerFilterQueryParams = JSON.parse(
-            JSON.stringify(queryParams),
-        );
+        let savedQueryParams: IPanelRednerFilterQueryParams =
+            clonePanelQueryParamsForSave(queryParams);
         if (!savedQueryParamMap) {
             savedQueryParamMap = new Map();
         }
@@ -1434,32 +1370,7 @@ ${documentName}
         if (!savedQueryParam) {
             return;
         }
-        queryParams.pageNum = 1;
-        queryParams.backlinkCurDocDefBlockType =
-            savedQueryParam.backlinkCurDocDefBlockType;
-        queryParams.backlinkBlockSortMethod =
-            savedQueryParam.backlinkBlockSortMethod;
-        queryParams.backlinkKeywordStr = savedQueryParam.backlinkKeywordStr;
-        queryParams.includeRelatedDefBlockIds =
-            savedQueryParam.includeRelatedDefBlockIds;
-        queryParams.excludeRelatedDefBlockIds =
-            savedQueryParam.excludeRelatedDefBlockIds;
-        queryParams.includeDocumentIds = savedQueryParam.includeDocumentIds;
-        queryParams.excludeDocumentIds = savedQueryParam.excludeDocumentIds;
-        queryParams.filterPanelCurDocDefBlockSortMethod =
-            savedQueryParam.filterPanelCurDocDefBlockSortMethod;
-        queryParams.filterPanelCurDocDefBlockKeywords =
-            savedQueryParam.filterPanelCurDocDefBlockKeywords;
-        queryParams.filterPanelRelatedDefBlockType =
-            savedQueryParam.filterPanelRelatedDefBlockType;
-        queryParams.filterPanelRelatedDefBlockSortMethod =
-            savedQueryParam.filterPanelRelatedDefBlockSortMethod;
-        queryParams.filterPanelRelatedDefBlockKeywords =
-            savedQueryParam.filterPanelRelatedDefBlockKeywords;
-        queryParams.filterPanelBacklinkDocumentSortMethod =
-            savedQueryParam.filterPanelBacklinkDocumentSortMethod;
-        queryParams.filterPanelBacklinkDocumentKeywords =
-            savedQueryParam.filterPanelBacklinkDocumentKeywords;
+        applySavedPanelCriteria(queryParams, savedQueryParam);
 
         console.log("hadnleSavedPanelCriteriaClick", queryParams);
 

@@ -1,4 +1,4 @@
-import { getBacklink2, getBacklinkDoc, getBatchBlockIdIndex, sql } from "@/utils/api";
+import { getBacklink2, getBacklinkDoc, sql } from "@/utils/api";
 import {
     generateGetBacklinkBlockArraySql,
     generateGetBacklinkListItemBlockArraySql,
@@ -21,13 +21,11 @@ import {
     ListItemTreeNode
 } from "@/models/backlink-model";
 import {
-    containsAllKeywords,
     countOccurrences,
     isStrBlank,
     isStrNotBlank,
     longestCommonSubstring,
-    matchKeywords,
-    splitKeywordStringToArray
+    matchKeywords
 } from "@/utils/string-util";
 import { intersectionSet, isArrayEmpty, isArrayNotEmpty, isSetEmpty, isSetNotEmpty } from "@/utils/array-util";
 import { DefinitionBlockStatus } from "@/models/backlink-constant";
@@ -41,6 +39,15 @@ import {
     filterExistingDefBlocks,
     sanitizeBacklinkRenderQueryParams,
 } from "./backlink-filtering.js";
+import { getDefBlockSortFun } from "./backlink-def-blocks.js";
+import {
+    getMarkdownAnchorTextArray,
+    getRefBlockId,
+    parseSearchSyntax,
+    removeMarkdownRefBlockStyle,
+    updateDynamicAnchorMap,
+    updateStaticAnchorMap,
+} from "./backlink-markdown.js";
 
 
 export async function getBacklinkPanelRenderData(
@@ -410,7 +417,7 @@ function isBacklinkBlockValid(
         }
 
         let backlinkConcatContent = selfMarkdown + selfDocumendMarkdown + docContent + parentMarkdown + headlineChildMarkdown + listItemChildMarkdown;
-        let backlinkAllAnchorText = getMardownAnchorTextArray(backlinkConcatContent).join(" ");
+        let backlinkAllAnchorText = getMarkdownAnchorTextArray(backlinkConcatContent).join(" ");
 
         backlinkConcatContent = removeMarkdownRefBlockStyle(backlinkConcatContent).toLowerCase();
         let matchText = matchKeywords(backlinkConcatContent, keywordObj.includeText, keywordObj.excludeText);
@@ -1068,23 +1075,6 @@ async function getBacklinkEmbedBlockInfo(
     return { embedBlockmarkdown, relatedDefBlockIdArray };
 }
 
-
-export function getRefBlockId(markdown: string): string[] {
-    const matches = [];
-    if (!markdown) {
-        return matches;
-    }
-
-    let regex = /\(\((\d{14}-\w{7})\s'[^']+'\)\)/g;
-    regex = /\(\((\d{14}-\w{7})\s['"][^'"]+['"]\)\)/g;
-    let match;
-    while ((match = regex.exec(markdown)) !== null) {
-        matches.push(match[1]);
-    }
-    return matches;
-}
-
-
 async function backlinkBlockNodeArraySort(
     backlinkBlockArray: IBacklinkBlockNode[],
     blockSortMethod: BlockSortMethod,
@@ -1174,299 +1164,6 @@ async function backlinkBlockNodeArraySort(
     }
 }
 
-
-export async function defBlockArraySort(
-    defBlockArray: DefBlock[],
-    defBlockSortMethod: BlockSortMethod,
-) {
-    if (isArrayEmpty(defBlockArray)
-        || !defBlockSortMethod
-    ) {
-        return;
-    }
-    if (defBlockSortMethod == "content") {
-        await searchItemSortByContent(defBlockArray);
-    } else if (defBlockSortMethod == "typeAndContent") {
-        await searchItemSortByTypeAndContent(defBlockArray);
-    } else {
-        let blockSortFun: (
-            a: DefBlock,
-            b: DefBlock,
-        ) => number = getDefBlockSortFun(defBlockSortMethod);
-        if (blockSortFun) {
-            defBlockArray.sort(blockSortFun);
-        }
-    }
-}
-
-export async function defBlockArrayTypeAndKeywordFilter(
-    defBlockArray: DefBlock[],
-    defBLockType: string,
-    keywordStr: string,
-) {
-    if (isArrayEmpty(defBlockArray)) {
-        return;
-    }
-    for (const defBlock of defBlockArray) {
-        defBlock.filterStatus = false;
-    }
-
-    if (defBLockType) {
-        for (const defBlock of defBlockArray) {
-            if (defBLockType == "dynamicAnchorText" && isStrBlank(defBlock.dynamicAnchor)) {
-                console.log("dynamicAnchorText defBlock ", defBlock)
-                defBlock.filterStatus = true;
-            } else if (defBLockType == "staticAnchorText" && isStrBlank(defBlock.staticAnchor)) {
-                console.log("staticAnchorText defBlock ", defBlock)
-                defBlock.filterStatus = true;
-            }
-        }
-    }
-    let keywordArray = splitKeywordStringToArray(keywordStr);
-    if (isArrayEmpty(keywordArray)) {
-        return;
-    }
-    for (const defBlock of defBlockArray) {
-        let staticAnchor = defBlock.staticAnchor ? defBlock.staticAnchor + "-static- -静态锚文本- -锚- -锚链接-" : "";
-        let blockContent = defBlock.content + defBlock.name + defBlock.alias + defBlock.memo + staticAnchor;
-        let containsAll = containsAllKeywords(blockContent, keywordArray);
-        if (!containsAll) {
-            defBlock.filterStatus = true;
-        }
-    }
-}
-
-
-async function searchItemSortByContent(blockArray: DefBlock[]) {
-    let ids = blockArray.map(item => item.id);
-    let idMap: Map<string, number> = await getBatchBlockIdIndex(ids);
-    blockArray.sort((a, b) => {
-        let statusNum = getFilterStatusSortResult(a, b);
-        if (statusNum != null) {
-            return statusNum;
-        }
-        let aIndex = idMap.get(a.id) || 0;
-        let bIndex = idMap.get(b.id) || 0;
-        let result = aIndex - bIndex;
-        if (result == 0) {
-            result = Number(a.created) - Number(b.created);
-        }
-        if (result == 0) {
-            result = a.sort - b.sort;
-        }
-        return result;
-    });
-
-    return blockArray;
-}
-
-
-async function searchItemSortByTypeAndContent(blockArray: DefBlock[]) {
-    let ids: string[] = [];
-    for (const block of blockArray) {
-        let blockId = block.id;
-        ids.push(blockId);
-    }
-
-    let idMap: Map<string, number> = await getBatchBlockIdIndex(ids);
-    blockArray.sort((a, b) => {
-        let statusNum = getFilterStatusSortResult(a, b);
-        if (statusNum != null) {
-            return statusNum;
-        }
-
-        let result = a.sort - b.sort;
-        if (result == 0) {
-            let aBlockId = a.id;
-            let bBlockId = b.id;
-            let aIndex = idMap.get(aBlockId) || 0;
-            let bIndex = idMap.get(bBlockId) || 0;
-            result = aIndex - bIndex;
-        }
-        if (result == 0) {
-            result = Number(b.refCount) - Number(a.refCount);
-        }
-        return result;
-    });
-
-    return blockArray;
-}
-
-
-function getDefBlockSortFun(contentBlockSortMethod: BlockSortMethod) {
-    let blockSortFun: (
-        a: DefBlock,
-        b: DefBlock,
-    ) => number;
-    switch (contentBlockSortMethod) {
-        case "type":
-            blockSortFun = function (
-                a: DefBlock,
-                b: DefBlock,
-            ): number {
-                let statusNum = getFilterStatusSortResult(a, b);
-                if (statusNum != null) {
-                    return statusNum;
-                }
-
-                let result = a.sort - b.sort;
-                if (result == 0) {
-                    result = Number(b.updated) - Number(a.updated);
-                }
-                return result;
-            };
-            break;
-        case "modifiedAsc":
-            blockSortFun = function (
-                a: DefBlock,
-                b: DefBlock,
-            ): number {
-                let statusNum = getFilterStatusSortResult(a, b);
-                if (statusNum != null) {
-                    return statusNum;
-                }
-
-                return Number(a.updated) - Number(b.updated);
-            };
-            break;
-        case "modifiedDesc":
-            blockSortFun = function (
-                a: DefBlock,
-                b: DefBlock,
-            ): number {
-                let statusNum = getFilterStatusSortResult(a, b);
-                if (statusNum != null) {
-                    return statusNum;
-                }
-
-                return Number(b.updated) - Number(a.updated);
-            };
-            break;
-        case "createdAsc":
-            blockSortFun = function (
-                a: DefBlock,
-                b: DefBlock,
-            ): number {
-                let statusNum = getFilterStatusSortResult(a, b);
-                if (statusNum != null) {
-                    return statusNum;
-                }
-
-                return Number(a.created) - Number(b.created);
-            };
-            break;
-        case "createdDesc":
-            blockSortFun = function (
-                a: DefBlock,
-                b: DefBlock,
-            ): number {
-                let statusNum = getFilterStatusSortResult(a, b);
-                if (statusNum != null) {
-                    return statusNum;
-                }
-
-                return Number(b.created) - Number(a.created);
-            };
-            break;
-        case "refCountAsc":
-            blockSortFun = function (
-                a: DefBlock,
-                b: DefBlock,
-            ): number {
-                let statusNum = getFilterStatusSortResult(a, b);
-                if (statusNum != null) {
-                    return statusNum;
-                }
-                let result = Number(a.refCount) - Number(b.refCount);
-                if (result == 0) {
-                    result = Number(b.updated) - Number(a.updated);
-                }
-                return result;
-            };
-            break;
-        case "refCountDesc":
-            blockSortFun = function (
-                a: DefBlock,
-                b: DefBlock,
-            ): number {
-                let statusNum = getFilterStatusSortResult(a, b);
-                if (statusNum != null) {
-                    return statusNum;
-                }
-                let result = Number(b.refCount) - Number(a.refCount);
-                if (result == 0) {
-                    result = Number(b.updated) - Number(a.updated);
-                }
-
-                return result;
-            };
-            break;
-        case "alphabeticAsc":
-            blockSortFun = function (
-                a: DefBlock,
-                b: DefBlock,
-            ): number {
-                let statusNum = getFilterStatusSortResult(a, b);
-                if (statusNum != null) {
-                    return statusNum;
-                }
-
-                let aContent = a.content.replace("<mark>", "").replace("</mark>", "");
-                let bContent = b.content.replace("<mark>", "").replace("</mark>", "");
-                let result = aContent.localeCompare(bContent, undefined, {
-                    sensitivity: 'base',
-                    usage: 'sort',
-                    numeric: true
-                });
-                if (result == 0) {
-                    result = Number(b.updated) - Number(a.updated);
-                }
-                return result;
-            };
-            break;
-        case "alphabeticDesc":
-            blockSortFun = function (
-                a: DefBlock,
-                b: DefBlock,
-            ): number {
-                let statusNum = getFilterStatusSortResult(a, b);
-                if (statusNum != null) {
-                    return statusNum;
-                }
-
-                let aContent = a.content.replace("<mark>", "").replace("</mark>", "");
-                let bContent = b.content.replace("<mark>", "").replace("</mark>", "");
-                let result = bContent.localeCompare(aContent, undefined, {
-                    sensitivity: 'base',
-                    usage: 'sort',
-                    numeric: true
-                });
-                if (result == 0) {
-                    result = Number(b.updated) - Number(a.updated);
-                }
-                return result;
-            };
-            break;
-    }
-    return blockSortFun;
-
-}
-
-function getFilterStatusSortResult(a: DefBlock, b: DefBlock): number {
-    if (a.selectionStatus !== b.selectionStatus) {
-        if (a.selectionStatus == "SELECTED") {
-            return -1;
-        } else if (b.selectionStatus == "SELECTED") {
-            return 1;
-        } else if (a.selectionStatus == "EXCLUDED") {
-            return -1;
-        } else if (b.selectionStatus == "EXCLUDED") {
-            return 1;
-        }
-    }
-    return null;
-}
-
 function updateMaxValueMap(map: Map<string, string>, key: string, value: string) {
     if (!value) {
         return;
@@ -1481,113 +1178,4 @@ function updateMapCount(map: Map<string, number>, key: string, initialValue = 1)
     let refCount = map.get(key);
     refCount = refCount ? refCount + 1 : initialValue;
     map.set(key, refCount);
-}
-
-function updateDynamicAnchorMap(map: Map<string, Set<string>>, markdown: string) {
-    let regex = /\(\((\d{14}-\w{7})\s'([^']+)'\)\)/g;
-    let match;
-    while ((match = regex.exec(markdown)) !== null) {
-        let id = match[1];
-        let anchor = match[2];
-        if (id && anchor) {
-            let anchorSet = map.get(id);
-            anchorSet = anchorSet ? anchorSet : new Set<string>();
-            anchorSet.add(anchor);
-            map.set(id, anchorSet);
-        }
-    }
-}
-
-function updateStaticAnchorMap(map: Map<string, Set<string>>, markdown: string) {
-    let regex = /\(\((\d{14}-\w{7})\s"([^"]+)"\)\)/g;
-    let match;
-    while ((match = regex.exec(markdown)) !== null) {
-        let id = match[1];
-        let anchor = match[2];
-        if (id && anchor) {
-            let anchorSet = map.get(id);
-            anchorSet = anchorSet ? anchorSet : new Set<string>();
-            anchorSet.add(anchor);
-            map.set(id, anchorSet);
-        }
-    }
-}
-
-function formatDefBlockMap(defBlockArray: DefBlock[])
-    : Map<string, DefBlock> {
-    let map: Map<string, DefBlock> = new Map();
-    if (!defBlockArray) {
-        return map;
-    }
-    for (const defBlock of defBlockArray) {
-        map.set(defBlock.id, defBlock);
-    }
-
-    return map;
-}
-
-function getMardownAnchorTextArray(markdown: string): string[] {
-    const regex = /\(\(\d{14}-\w{7}\s['"]([^'"]+)['"]\)\)/g;
-    let match;
-    let result: string[] = [];
-
-    while ((match = regex.exec(markdown)) !== null) {
-        let anchor = match[1];
-        if (anchor) {
-            result.push(anchor);
-        }
-    }
-
-    return result;
-}
-
-function removeMarkdownRefBlockStyle(input) {
-
-    // regex = /\(\((\d{14}-\w{7})\s['"][^'"]+['"]\)\)/g;
-    const regex = /\(\(\d{14}-\w{7}\s['"]([^'"]+)['"]\)\)/g;
-
-    // 使用正则表达式替换匹配的字符串
-    return input.replace(regex, (_, p1) => p1);
-}
-
-
-function parseSearchSyntax(query: string): {
-    includeText: string[],
-    excludeText: string[],
-    includeAnchor: string[],
-    excludeAnchor: string[]
-} {
-    const includeText: string[] = [];
-    const excludeText: string[] = [];
-    const includeAnchor: string[] = [];
-    const excludeAnchor: string[] = [];
-
-    // 按空格拆分查询字符串
-    const terms = splitKeywordStringToArray(query);
-
-    for (const term of terms) {
-        if (
-            term.startsWith("%-") ||
-            term.startsWith("-%")
-        ) {
-            // 以 `!-` 开头的排除锚文本
-            excludeAnchor.push(term.slice(2));
-        } else if (term.startsWith("%")) {
-            // 以 `!` 开头的包含锚文本
-            includeAnchor.push(term.slice(1));
-        } else if (term.startsWith("-")) {
-            // 以 `-` 开头的排除普通文本
-            excludeText.push(term.slice(1));
-        } else {
-            // 普通文本包含项
-            includeText.push(term);
-        }
-    }
-
-    return {
-        includeText,
-        excludeText,
-        includeAnchor,
-        excludeAnchor,
-    };
 }

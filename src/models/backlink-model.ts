@@ -1,4 +1,4 @@
-import { getRefBlockId } from "@/service/backlink/backlink-data";
+import { getRefBlockId } from "@/service/backlink/backlink-markdown.js";
 import { isArrayEmpty, isArrayNotEmpty, isSetNotEmpty } from "@/utils/array-util";
 import { isStrNotBlank } from "@/utils/string-util";
 

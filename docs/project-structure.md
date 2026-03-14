@@ -51,6 +51,8 @@ docs/                              Product and maintenance docs
   Click-action routing and Protyle render option selection.
 - `src/components/panel/backlink-document-navigation.js`
   Grouping backlinks by document and cyclic in-document navigation.
+- `src/components/panel/backlink-panel-query-params.js`
+  Filter-query reset, include/exclude toggling, and saved-criteria restore helpers extracted from the Svelte component.
 - `src/components/panel/backlink-document-view-state.js`
   Fold/full-view/active-index state helpers for document-level rendering.
 - `src/components/panel/backlink-panel-header.js`
@@ -61,11 +63,15 @@ docs/                              Product and maintenance docs
 ### Backlink Data Layer
 
 - `src/service/backlink/backlink-data.ts`
-  Main orchestration entry for backlink panel data and render data.
+  Main orchestration entry for backlink panel data and render data, now focused on query flow, pagination, cache fetch, and base-data assembly.
+- `src/service/backlink/backlink-def-blocks.js`
+  Definition-block sorting and filter-state helpers used by the panel filter UI.
 - `src/service/backlink/backlink-document-pagination.js`
   Document-based pagination helper.
 - `src/service/backlink/backlink-filtering.js`
   Query cleanup, definition-block filtering, and backlink-document filtering helpers.
+- `src/service/backlink/backlink-markdown.js`
+  Markdown ref parsing, anchor extraction, and search-syntax helpers shared by backlink data assembly and models.
 - `src/service/backlink/backlink-sql.ts`
   SQL builders used by the backlink queries.
 
@@ -101,7 +107,9 @@ Current automated tests are in `tests/` and cover:
 - panel header formatting/state helpers
 - document view state helpers
 - backlink filtering helpers
+- backlink markdown parsing helpers
 - panel host lifecycle helpers
+- panel query-parameter helpers
 - setting config resolution helpers
 
 Run the suite with:

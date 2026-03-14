@@ -258,3 +258,46 @@ test("collectSiblingBlocks appends previous and next sibling markdown and tracks
   assert.ok(context.backlinkBlockMap["block-a"].includeRelatedDefBlockIds.has("def-next"));
   assert.equal(context.relatedDefBlockCountMap.get("def-next"), 1);
 });
+
+test("collectSiblingBlocks ignores null sibling blocks", () => {
+  const context = createCollectorContext();
+  context.backlinkBlockMap["block-a"] = {
+    block: { id: "block-a", root_id: "doc-a", created: "11", updated: "22" },
+    includeRelatedDefBlockIds: new Set(),
+    includeDirectDefBlockIds: new Set(),
+    previousSiblingMarkdown: "",
+    nextSiblingMarkdown: "",
+  };
+
+  assert.doesNotThrow(() => {
+    collectSiblingBlocks({
+      backlinkSiblingBlockGroupArray: [
+        {
+          backlinkBlockId: "block-a",
+          previousSiblingBlock: null,
+          nextSiblingBlock: {
+            id: "block-next",
+            markdown: "next ((def-next 'next'))",
+            name: "",
+            alias: "",
+            memo: "",
+          },
+        },
+      ],
+      getRefBlockId: (markdown) =>
+        markdown.includes("def-next") ? ["def-next"] : [],
+      updateDynamicAnchorMap: () => {},
+      updateStaticAnchorMap: () => {},
+      updateMaxValueMap: (map, key, value) => map.set(key, value),
+      updateMapCount: (map, key, initialValue = 1) =>
+        map.set(key, map.has(key) ? map.get(key) + 1 : initialValue),
+      context,
+    });
+  });
+
+  assert.equal(context.backlinkBlockMap["block-a"].previousSiblingMarkdown, "");
+  assert.equal(
+    context.backlinkBlockMap["block-a"].nextSiblingMarkdown,
+    "next ((def-next 'next'))",
+  );
+});

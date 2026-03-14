@@ -271,11 +271,12 @@ export function collectParentBlocks({
 }
 
 function buildSiblingMarkdown(siblingBlock = {}) {
+  const safeSiblingBlock = siblingBlock || {};
   return [
-    siblingBlock.markdown || "",
-    siblingBlock.name || "",
-    siblingBlock.alias || "",
-    siblingBlock.memo || "",
+    safeSiblingBlock.markdown || "",
+    safeSiblingBlock.name || "",
+    safeSiblingBlock.alias || "",
+    safeSiblingBlock.memo || "",
   ].join("");
 }
 

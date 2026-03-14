@@ -14,6 +14,31 @@ function pushFragment(fragmentArray, fragment) {
   fragmentArray.push(fragment);
 }
 
+function buildBacklinkContextFragmentDedupeKey(fragment = {}) {
+  return [
+    fragment.sourceType || "",
+    fragment.searchText || "",
+    fragment.anchorText || "",
+    Array.isArray(fragment.refBlockIds) ? fragment.refBlockIds.join("|") : "",
+  ].join("::");
+}
+
+export function dedupeBacklinkContextFragments(fragments = []) {
+  const uniqueFragments = [];
+  const fragmentKeySet = new Set();
+
+  for (const fragment of fragments) {
+    const fragmentKey = buildBacklinkContextFragmentDedupeKey(fragment);
+    if (fragmentKeySet.has(fragmentKey)) {
+      continue;
+    }
+    fragmentKeySet.add(fragmentKey);
+    uniqueFragments.push(fragment);
+  }
+
+  return uniqueFragments;
+}
+
 function createContextFragment({
   backlinkBlockNode,
   sourceType,
@@ -177,9 +202,10 @@ export function buildBacklinkContextBundle(backlinkBlockNode, deps) {
     }),
   );
 
+  const dedupedFragments = dedupeBacklinkContextFragments(fragments);
   const includeCurDocDefBlockIds = new Set();
   const includeRelatedDefBlockIds = new Set();
-  for (const fragment of fragments) {
+  for (const fragment of dedupedFragments) {
     for (const blockId of fragment.includeCurDocDefBlockIds) {
       includeCurDocDefBlockIds.add(blockId);
     }
@@ -191,15 +217,15 @@ export function buildBacklinkContextBundle(backlinkBlockNode, deps) {
   const bundle = {
     backlinkBlockId: backlinkBlockNode.block.id,
     rootId: backlinkBlockNode.block.root_id,
-    fragments,
-    visibleFragments: fragments.filter((fragment) => fragment.defaultVisible),
+    fragments: dedupedFragments,
+    visibleFragments: dedupedFragments.filter((fragment) => fragment.defaultVisible),
     matchedFragments: [],
     includeCurDocDefBlockIds,
     includeRelatedDefBlockIds,
     matchSummaryList: [],
   };
 
-  backlinkBlockNode.contextFragments = fragments;
+  backlinkBlockNode.contextFragments = dedupedFragments;
   backlinkBlockNode.contextBundle = bundle;
   return bundle;
 }

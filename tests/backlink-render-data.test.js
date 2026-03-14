@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildLegacyBacklinkSearchText,
   formatBacklinkDocApiKeyword,
   getBatchBacklinkDoc,
   isBacklinkBlockValid,
@@ -12,6 +13,21 @@ test("formatBacklinkDocApiKeyword keeps the longest segment and truncates it to 
 
   assert.equal(formatBacklinkDocApiKeyword(`a'bigger'${longSegment}`), longSegment.slice(0, 80));
   assert.equal(formatBacklinkDocApiKeyword(""), "");
+});
+
+test("buildLegacyBacklinkSearchText counts document markdown only once", () => {
+  const result = buildLegacyBacklinkSearchText({
+    selfMarkdown: "self",
+    documentMarkdown: "document",
+    parentMarkdown: "parent",
+    headlineChildMarkdown: "headline",
+    previousSiblingMarkdown: "prev",
+    nextSiblingMarkdown: "next",
+    listItemChildMarkdown: "list",
+  });
+
+  assert.equal(result, "selfdocumentparentheadlineprevnextlist");
+  assert.equal(result.includes("documentdocument"), false);
 });
 
 test("getBatchBacklinkDoc deduplicates backlink dom results and preserves backlink block order", async () => {

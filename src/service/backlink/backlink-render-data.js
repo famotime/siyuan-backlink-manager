@@ -16,6 +16,26 @@ export function formatBacklinkDocApiKeyword(keyword = "") {
   return longestSubstring.substring(0, 80);
 }
 
+export function buildLegacyBacklinkSearchText({
+  selfMarkdown = "",
+  documentMarkdown = "",
+  parentMarkdown = "",
+  headlineChildMarkdown = "",
+  previousSiblingMarkdown = "",
+  nextSiblingMarkdown = "",
+  listItemChildMarkdown = "",
+} = {}) {
+  return [
+    selfMarkdown,
+    documentMarkdown,
+    parentMarkdown,
+    headlineChildMarkdown,
+    previousSiblingMarkdown,
+    nextSiblingMarkdown,
+    listItemChildMarkdown,
+  ].join("");
+}
+
 export function getBacklinkBlockId(dom, deps) {
   const { isStrBlank, stringToDom, NewNodeID } = deps;
   if (isStrBlank(dom)) {
@@ -293,8 +313,7 @@ export function isBacklinkBlockValid(queryParams, backlinkBlockNode, deps) {
         .join(" ");
     } else {
       const selfMarkdown = getQueryStrByBlock(backlinkBlockNode.block);
-      const selfDocumentMarkdown = getQueryStrByBlock(backlinkBlockNode.documentBlock);
-      const docContent = getQueryStrByBlock(backlinkBlockNode.documentBlock);
+      const documentMarkdown = getQueryStrByBlock(backlinkBlockNode.documentBlock);
       const parentMarkdown = backlinkBlockNode.parentMarkdown;
       const headlineChildMarkdown = backlinkBlockNode.headlineChildMarkdown;
       const previousSiblingMarkdown = backlinkBlockNode.previousSiblingMarkdown || "";
@@ -307,15 +326,15 @@ export function isBacklinkBlockValid(queryParams, backlinkBlockNode, deps) {
         );
       }
 
-      backlinkConcatContent =
-        selfMarkdown +
-        selfDocumentMarkdown +
-        docContent +
-        parentMarkdown +
-        headlineChildMarkdown +
-        previousSiblingMarkdown +
-        nextSiblingMarkdown +
-        listItemChildMarkdown;
+      backlinkConcatContent = buildLegacyBacklinkSearchText({
+        selfMarkdown,
+        documentMarkdown,
+        parentMarkdown,
+        headlineChildMarkdown,
+        previousSiblingMarkdown,
+        nextSiblingMarkdown,
+        listItemChildMarkdown,
+      });
       backlinkAllAnchorText = getMarkdownAnchorTextArray(backlinkConcatContent).join(" ");
       backlinkConcatContent = removeMarkdownRefBlockStyle(backlinkConcatContent).toLowerCase();
     }

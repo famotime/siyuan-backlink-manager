@@ -5,6 +5,7 @@ import {
   applyBacklinkContextVisibility,
   applyBacklinkContextVisibilityToNodes,
   buildBacklinkContextBundle,
+  dedupeBacklinkContextFragments,
   hydrateBacklinkContextBundles,
   matchBacklinkContextBundle,
 } from "../src/service/backlink/backlink-context.js";
@@ -254,5 +255,45 @@ test("applyBacklinkContextVisibilityToNodes updates every node bundle in place",
   assert.deepEqual(
     backlinkBlockNodeArray[0].contextBundle.visibleFragments.map((fragment) => fragment.sourceType),
     ["self", "parent"],
+  );
+});
+
+test("dedupeBacklinkContextFragments removes duplicate fragments from the same source", () => {
+  const fragments = dedupeBacklinkContextFragments([
+    {
+      id: "doc:1",
+      sourceType: "document",
+      searchText: "doc title",
+      anchorText: "",
+      displayText: "Doc Title",
+      text: "Doc Title",
+      refBlockIds: [],
+      order: 1,
+    },
+    {
+      id: "doc:2",
+      sourceType: "document",
+      searchText: "doc title",
+      anchorText: "",
+      displayText: "Doc Title",
+      text: "Doc Title",
+      refBlockIds: [],
+      order: 2,
+    },
+    {
+      id: "parent:1",
+      sourceType: "parent",
+      searchText: "doc title",
+      anchorText: "",
+      displayText: "Doc Title",
+      text: "Doc Title",
+      refBlockIds: [],
+      order: 3,
+    },
+  ]);
+
+  assert.deepEqual(
+    fragments.map((fragment) => fragment.id),
+    ["doc:1", "parent:1"],
   );
 });

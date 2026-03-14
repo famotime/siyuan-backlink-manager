@@ -14,6 +14,13 @@ test("buildBacklinkDocumentListItemHtml renders title aria text and progress tex
     progressText: "2/3",
     matchSourceLabel: "父级",
     matchSummaryText: "父级：命中说明",
+    contextControlState: {
+      levelLabel: "核心",
+      nextActionLabel: "展开到近邻",
+      visibleSummaryText: "已显示：反链块、文档",
+      budgetHintText: "部分上下文已裁剪",
+      hasMoreContext: true,
+    },
   });
 
   assert.match(html, /Document A/);
@@ -21,6 +28,11 @@ test("buildBacklinkDocumentListItemHtml renders title aria text and progress tex
   assert.match(html, /aria-label="A{100}"/);
   assert.match(html, /父级/);
   assert.match(html, /命中说明/);
+  assert.match(html, /backlink-context-control-row/);
+  assert.match(html, /backlink-context-level-button/);
+  assert.match(html, /展开到近邻/);
+  assert.match(html, /已显示：反链块、文档/);
+  assert.match(html, /部分上下文已裁剪/);
 });
 
 test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and disabled state", () => {
@@ -35,6 +47,16 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and 
   };
   const sourceElement = { textContent: "" };
   const summaryElement = { textContent: "" };
+  const controlRowElement = {
+    attrs: {},
+    setAttribute(name, value) {
+      this.attrs[name] = value;
+    },
+  };
+  const controlButtonElement = { textContent: "", attrs: {}, setAttribute(name, value) { this.attrs[name] = value; } };
+  const nextActionElement = { textContent: "" };
+  const visibleSummaryElement = { textContent: "" };
+  const budgetHintElement = { textContent: "" };
   const documentLiElement = {
     attrs: {},
     setAttribute(name, value) {
@@ -47,6 +69,11 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and 
       if (selector === ".b3-list-item__text") return textElement;
       if (selector === ".backlink-context-source") return sourceElement;
       if (selector === ".backlink-context-summary") return summaryElement;
+      if (selector === ".backlink-context-control-row") return controlRowElement;
+      if (selector === ".backlink-context-level-button") return controlButtonElement;
+      if (selector === ".backlink-context-next-action") return nextActionElement;
+      if (selector === ".backlink-context-visible-summary") return visibleSummaryElement;
+      if (selector === ".backlink-context-budget-hint") return budgetHintElement;
       return null;
     },
   };
@@ -64,6 +91,12 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and 
         matchSummaryList: ["父级：命中说明"],
       },
     },
+  }, {
+    levelLabel: "近邻",
+    nextActionLabel: "展开到扩展",
+    visibleSummaryText: "已显示：前相邻块、后相邻块",
+    budgetHintText: "部分上下文已裁剪",
+    hasMoreContext: true,
   });
 
   assert.equal(documentLiElement.attrs["data-backlink-block-id"], "block-a");
@@ -71,6 +104,13 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and 
   assert.equal(textElement.attrs["aria-label"], "content");
   assert.equal(sourceElement.textContent, "父级");
   assert.equal(summaryElement.textContent, "父级：命中说明");
+  assert.equal(controlRowElement.attrs["data-context-level"], "近邻");
+  assert.equal(controlRowElement.attrs["data-has-more-context"], "true");
+  assert.equal(controlButtonElement.textContent, "近邻");
+  assert.equal(controlButtonElement.attrs["aria-label"], "当前上下文层级：近邻。点击展开到扩展");
+  assert.equal(nextActionElement.textContent, "展开到扩展");
+  assert.equal(visibleSummaryElement.textContent, "已显示：前相邻块、后相邻块");
+  assert.equal(budgetHintElement.textContent, "部分上下文已裁剪");
   assert.equal(previousButton.disabled, false);
   assert.equal(nextButton.disabled, false);
 });
@@ -93,6 +133,11 @@ test("createBacklinkDocumentListItemElement wires toggle and navigation events",
       listeners[`toggle:${type}`] = handler;
     },
   };
+  const advanceButton = {
+    addEventListener(type, handler) {
+      listeners[`advance:${type}`] = handler;
+    },
+  };
   const documentLiElement = {
     classList: { add() {} },
     attrs: {},
@@ -107,6 +152,7 @@ test("createBacklinkDocumentListItemElement wires toggle and navigation events",
       if (selector === ".b3-list-item__toggle") return toggleButton;
       if (selector === ".previous-backlink-icon") return previousButton;
       if (selector === ".next-backlink-icon") return nextButton;
+      if (selector === ".backlink-context-level-button") return advanceButton;
       return null;
     },
   };
@@ -138,6 +184,12 @@ test("createBacklinkDocumentListItemElement wires toggle and navigation events",
     onContextMenu: () => calls.push("contextmenu"),
     onToggle: () => calls.push("toggle"),
     onNavigate: (_, direction) => calls.push(direction),
+    onAdvanceContextLevel: () => calls.push("advance"),
+    contextControlState: {
+      levelLabel: "核心",
+      nextActionLabel: "展开到近邻",
+      hasMoreContext: true,
+    },
   });
 
   listeners.click({});
@@ -152,6 +204,11 @@ test("createBacklinkDocumentListItemElement wires toggle and navigation events",
   listeners["next:click"]({
     stopPropagation() {},
   });
+  listeners["advance:click"]({
+    preventDefault() {},
+    stopPropagation() {},
+    currentTarget: advanceButton,
+  });
 
   assert.equal(created, documentLiElement);
   assert.equal(appended[0], documentLiElement);
@@ -163,5 +220,6 @@ test("createBacklinkDocumentListItemElement wires toggle and navigation events",
     "toggle",
     "previous",
     "next",
+    "advance",
   ]);
 });

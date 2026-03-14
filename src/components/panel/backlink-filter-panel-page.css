@@ -172,6 +172,43 @@ input {
     color: var(--b3-theme-on-surface-light);
 }
 
+.backlink-context-control-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 4px 8px 0 26px;
+    padding: 4px 0 0;
+    width: calc(100% - 26px);
+}
+
+.backlink-context-level-button {
+    min-height: 22px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 11px;
+}
+
+.backlink-context-next-action,
+.backlink-context-visible-summary,
+.backlink-context-budget-hint {
+    display: inline-flex;
+    align-items: center;
+    min-height: 20px;
+    font-size: 11px;
+    color: var(--b3-theme-on-surface-light);
+}
+
+.backlink-context-next-action:empty,
+.backlink-context-visible-summary:empty,
+.backlink-context-budget-hint:empty {
+    display: none;
+}
+
+.backlink-context-budget-hint {
+    color: var(--b3-theme-warning);
+}
+
 .backlink-pagination {
     display: inline-flex;
     align-items: center;

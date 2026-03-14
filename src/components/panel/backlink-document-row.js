@@ -1,5 +1,16 @@
 import { getBacklinkContextSourceRule } from "../../service/backlink/backlink-context-rules.js";
 
+const BACKLINK_CONTEXT_LEVEL_LABELS = {
+  core: "核心",
+  nearby: "近邻",
+  extended: "扩展",
+  full: "全文",
+};
+
+export function getBacklinkContextLevelLabel(level = "core") {
+  return BACKLINK_CONTEXT_LEVEL_LABELS[level] || BACKLINK_CONTEXT_LEVEL_LABELS.core;
+}
+
 function getBacklinkMatchMeta(backlinkData = null) {
   const primaryMatchSourceType =
     backlinkData?.contextBundle?.primaryMatchSourceType || "";
@@ -14,12 +25,52 @@ function getBacklinkMatchMeta(backlinkData = null) {
   };
 }
 
+function normalizeBacklinkContextControlState(contextControlState = {}) {
+  const contextVisibilityLevel =
+    contextControlState.contextVisibilityLevel || "core";
+  const levelLabel =
+    contextControlState.levelLabel ||
+    getBacklinkContextLevelLabel(contextVisibilityLevel);
+  const nextActionLabel = contextControlState.nextActionLabel || "";
+  const visibleSummaryText = contextControlState.visibleSummaryText || "";
+  const budgetHintText = contextControlState.budgetHintText || "";
+  const hasMoreContext = contextControlState.hasMoreContext !== false;
+  return {
+    contextVisibilityLevel,
+    levelLabel,
+    nextActionLabel,
+    visibleSummaryText,
+    budgetHintText,
+    hasMoreContext,
+  };
+}
+
+function buildBacklinkContextControlRowHtml(contextControlState = {}) {
+  const normalizedState = normalizeBacklinkContextControlState(
+    contextControlState,
+  );
+  const advanceAriaLabel = normalizedState.nextActionLabel
+    ? `当前上下文层级：${normalizedState.levelLabel}。点击${normalizedState.nextActionLabel}`
+    : `当前上下文层级：${normalizedState.levelLabel}`;
+
+  return `
+<div class="backlink-context-control-row" data-context-level="${normalizedState.levelLabel}" data-has-more-context="${normalizedState.hasMoreContext}">
+<button type="button" class="b3-button b3-button--outline backlink-context-level-button ariaLabel" aria-label="${advanceAriaLabel}">
+${normalizedState.levelLabel}
+</button>
+<span class="b3-list-item__meta backlink-context-next-action">${normalizedState.nextActionLabel}</span>
+<span class="b3-list-item__meta backlink-context-visible-summary">${normalizedState.visibleSummaryText}</span>
+<span class="b3-list-item__meta backlink-context-budget-hint">${normalizedState.budgetHintText}</span>
+</div>`;
+}
+
 export function buildBacklinkDocumentListItemHtml({
   documentName = "",
   docAriaText = "",
   progressText = "",
   matchSourceLabel = "",
   matchSummaryText = "",
+  contextControlState = {},
 } = {}) {
   const truncatedAriaText = docAriaText ? docAriaText.substring(0, 100) : "";
 
@@ -36,12 +87,65 @@ ${documentName}
 <svg class="b3-list-item__graphic counter ariaLabel backlink-nav-button previous-backlink-icon" aria-label="上一个反链块"><use xlink:href="#iconLeft"></use></svg>
 <span class="b3-list-item__meta backlink-nav-progress">${progressText}</span>
 <svg class="b3-list-item__graphic counter ariaLabel backlink-nav-button next-backlink-icon" aria-label="下一个反链块"><use xlink:href="#iconRight"></use></svg>
+${buildBacklinkContextControlRowHtml(contextControlState)}
 `;
+}
+
+function updateBacklinkContextControlRow(
+  documentLiElement,
+  contextControlState = {},
+) {
+  const controlRowElement = documentLiElement.querySelector(
+    ".backlink-context-control-row",
+  );
+  const controlButtonElement = documentLiElement.querySelector(
+    ".backlink-context-level-button",
+  );
+  const nextActionElement = documentLiElement.querySelector(
+    ".backlink-context-next-action",
+  );
+  const visibleSummaryElement = documentLiElement.querySelector(
+    ".backlink-context-visible-summary",
+  );
+  const budgetHintElement = documentLiElement.querySelector(
+    ".backlink-context-budget-hint",
+  );
+  const normalizedState = normalizeBacklinkContextControlState(
+    contextControlState,
+  );
+  const controlAriaLabel = normalizedState.nextActionLabel
+    ? `当前上下文层级：${normalizedState.levelLabel}。点击${normalizedState.nextActionLabel}`
+    : `当前上下文层级：${normalizedState.levelLabel}`;
+
+  if (controlRowElement) {
+    controlRowElement.setAttribute(
+      "data-context-level",
+      normalizedState.levelLabel,
+    );
+    controlRowElement.setAttribute(
+      "data-has-more-context",
+      String(normalizedState.hasMoreContext),
+    );
+  }
+  if (controlButtonElement) {
+    controlButtonElement.textContent = normalizedState.levelLabel;
+    controlButtonElement.setAttribute("aria-label", controlAriaLabel);
+  }
+  if (nextActionElement) {
+    nextActionElement.textContent = normalizedState.nextActionLabel;
+  }
+  if (visibleSummaryElement) {
+    visibleSummaryElement.textContent = normalizedState.visibleSummaryText;
+  }
+  if (budgetHintElement) {
+    budgetHintElement.textContent = normalizedState.budgetHintText;
+  }
 }
 
 export function updateBacklinkDocumentLiNavigation(
   documentLiElement,
   documentGroup,
+  contextControlState = {},
 ) {
   if (!documentLiElement || !documentGroup || !documentGroup.activeBacklink) {
     return;
@@ -81,18 +185,21 @@ export function updateBacklinkDocumentLiNavigation(
   if (summaryElement) {
     summaryElement.textContent = matchSummaryText;
   }
+  updateBacklinkContextControlRow(documentLiElement, contextControlState);
   previousButton?.classList.toggle("disabled", disableNavigation);
   nextButton?.classList.toggle("disabled", disableNavigation);
 }
 
 export function createBacklinkDocumentListItemElement({
   documentGroup,
+  contextControlState = {},
   parentElement,
   documentRef = globalThis.document,
   onDocumentClick,
   onContextMenu,
   onToggle,
   onNavigate,
+  onAdvanceContextLevel,
 } = {}) {
   if (!documentGroup || !documentRef?.createElement) {
     return null;
@@ -114,6 +221,7 @@ export function createBacklinkDocumentListItemElement({
     documentName: documentGroup.documentName,
     docAriaText: activeBacklink?.backlinkBlock?.content,
     progressText: documentGroup.progressText,
+    contextControlState,
     ...getBacklinkMatchMeta(activeBacklink),
   });
 
@@ -140,6 +248,14 @@ export function createBacklinkDocumentListItemElement({
     event.preventDefault();
     onToggle?.(event.currentTarget);
   });
+
+  documentLiElement
+    .querySelector(".backlink-context-level-button")
+    ?.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      onAdvanceContextLevel?.(documentLiElement);
+    });
 
   documentLiElement
     .querySelector(".previous-backlink-icon")

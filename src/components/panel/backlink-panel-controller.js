@@ -37,10 +37,12 @@ import {
   buildBacklinkDocumentRenderOptions,
   getBacklinkDocumentClickAction,
   getBacklinkDocumentTargetRole,
+  getNextBacklinkContextVisibilityLevel,
   shouldHandleBacklinkDocumentClick,
 } from "./backlink-document-interaction.js";
 import {
   createBacklinkDocumentListItemElement,
+  getBacklinkContextLevelLabel,
   updateBacklinkDocumentLiNavigation,
 } from "./backlink-document-row.js";
 import {
@@ -223,7 +225,12 @@ export function createBacklinkPanelController(state) {
       backlinkDocumentEditorMap: state.backlinkDocumentEditorMap,
       backlinkDocumentViewState: state.backlinkDocumentViewState,
       deps: {
-        updateBacklinkDocumentLiNavigation,
+        updateBacklinkDocumentLiNavigation: (documentLiElement, documentGroup) =>
+          updateBacklinkDocumentLiNavigation(
+            documentLiElement,
+            documentGroup,
+            getBacklinkContextControlState(documentGroup),
+          ),
         syncBacklinkDocumentProtyleState: (editor) =>
           syncBacklinkDocumentProtyleState(editor, {
             backlinkDocumentFoldMap: state.backlinkDocumentFoldMap,
@@ -300,16 +307,38 @@ export function createBacklinkPanelController(state) {
         createDocumentListItemElement: (documentGroup) =>
           createBacklinkDocumentListItemElement({
             documentGroup,
+            contextControlState: getBacklinkContextControlState(documentGroup),
             parentElement: state.backlinkULElement,
             documentRef: document,
             onDocumentClick: clickBacklinkDocumentLiElement,
             onContextMenu: contextmenuBacklinkDocumentLiElement,
             onToggle: toggleBacklinkDocument,
             onNavigate: navigateBacklinkDocument,
+            onAdvanceContextLevel: expandBacklinkDocumentContext,
           }),
         renderDocumentGroup: renderBacklinkDocumentGroup,
       },
     });
+  }
+
+  function getBacklinkContextControlState(documentGroup) {
+    const renderState = getBacklinkDocumentRenderState(
+      state.backlinkDocumentViewState,
+      documentGroup?.documentId,
+    );
+    const contextVisibilityLevel = renderState.contextVisibilityLevel;
+    const nextVisibilityLevel =
+      getNextBacklinkContextVisibilityLevel(contextVisibilityLevel);
+    const hasMoreContext = contextVisibilityLevel !== "full";
+
+    return {
+      contextVisibilityLevel,
+      levelLabel: getBacklinkContextLevelLabel(contextVisibilityLevel),
+      nextActionLabel: hasMoreContext
+        ? `展开到${getBacklinkContextLevelLabel(nextVisibilityLevel)}`
+        : "",
+      hasMoreContext,
+    };
   }
 
   function clearBacklinkProtyleList() {

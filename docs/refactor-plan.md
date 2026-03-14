@@ -13,7 +13,7 @@
 | 模块 | 关键文件 | 当前职责 | 主要痛点 | 测试覆盖情况 |
 | --- | --- | --- | --- | --- |
 | 入口与生命周期 | `src/index.ts` | 初始化环境、设置、底部面板、Dock、Tab、TopBar 事件 | 启动编排直接依赖多个 service，缺少模块边界说明 | 无直接测试 |
-| 反链面板 UI | `src/components/panel/backlink-filter-panel-page.svelte` | 筛选条件、分页、分组渲染、交互事件、Protyle 生命周期、局部状态缓存 | 当前约 2211 行；状态、视图、事件、渲染策略仍然强耦合，要压到 500 行以下必须拆 controller、Protyle DOM helper 与子组件 | 只有少量交互 helper 的单测，组件本体缺少自动化保护 |
+| 反链面板 UI | `src/components/panel/backlink-filter-panel-page.svelte` | 当前作为薄装配层承接状态、生命周期和两个子组件，复杂交互已拆到 controller/helper | 原始大组件已拆解，但 controller 与子组件间的数据流仍需持续保持约束清晰 | 已有 query-param、文档行、Protyle DOM/render helper 单测，组件本体仍缺少专门的 Svelte 集成测试 |
 | 面板交互 helper | `src/components/panel/backlink-document-interaction.js`、`src/components/panel/backlink-document-navigation.js` | 文档标题点击动作、文档内反链切换、分页进度文本 | 方向正确，但仍只是从大组件中抽出少量逻辑，边界不完整 | 有针对性单测，覆盖较好 |
 | 反链数据装配 | `src/service/backlink/backlink-data.ts` | 查询、过滤、排序、分页、缓存命中、渲染数据组装 | 当前约 1019 行；虽已拆出 builder/collector，但仍混合 render-data orchestration、缓存取数、查询准备逻辑，要压到 500 行以下还需继续拆 query/cache helper | 目前已补 builder/collector 单测，但 render-data/cache/query 准备逻辑仍缺少更细颗粒保护 |
 | 插件宿主接入 | `src/service/plugin/DocumentService.ts`、`src/service/plugin/TabService.ts`、`src/service/plugin/DockServices.ts` | 在文档底部、Tab、Dock 中挂载 Svelte 面板并处理销毁 | 生命周期逻辑分散且有重复，命名不一致，缺少统一挂载抽象 | 无自动化测试 |
@@ -34,7 +34,7 @@
 | RF-008 | P1 | 继续拆分反链数据 collector | `src/service/backlink/backlink-data.ts`，必要时新增 `src/service/backlink/*` helper | 将 `buildBacklinkPanelData` 中的反链块初始聚合、标题子块聚合、列表子树聚合、父块聚合拆成 collector helper，进一步压缩单函数并补足输入遍历逻辑单测 | 中 | - [x] `node --test tests/backlink-panel-data-collectors.test.js`；- [x] `node --test tests/*.test.js`；- [x] `npm run build` | `docs/project-structure.md` 已补充新增 collector helper；`README.md` 已同步数据层结构说明 | done |
 | RF-009 | P0 | 将 `backlink-data.ts` 压到 500 行以下 | `src/service/backlink/backlink-data.ts`，新增 `src/service/backlink/*` helper | 继续把 render-data orchestration、缓存取数与查询准备逻辑拆离，目标将 `backlink-data.ts` 从约 1019 行压到 500 行以下，同时保持 `getBacklinkPanelData` / `getBacklinkPanelRenderData` / 翻页行为不变 | 高 | - [x] 新增“缓存反链文档取数与排序”单测；- [x] 新增“query helper 输出 SQL/输入清洗”单测；- [x] `node --test tests/*.test.js`；- [x] `npm run build` | `docs/project-structure.md` 已补充 query/cache helper；`README.md` 已同步数据层拆分说明 | done |
 | RF-010 | P0 | 拆出反链面板 Protyle 渲染与 DOM 编排 | `src/components/panel/backlink-filter-panel-page.svelte`，新增 `src/components/panel/*` helper | 将 Protyle 渲染、文档行创建、列表折叠/展开、反链内容裁剪等 DOM/渲染逻辑抽到 helper，使主组件只保留状态编排与事件接线 | 高 | - [x] 新增“文档行创建/导航状态/DOM 折叠”单测；- [x] 新增“列表项隐藏与全文模式”单测；- [x] `node --test tests/*.test.js`；- [x] `npm run build` | `docs/project-structure.md` 已补充 Protyle/render helper；`README.md` 已同步 panel 结构说明 | done |
-| RF-011 | P0 | 将 `backlink-filter-panel-page.svelte` 压到 500 行以下 | `src/components/panel/backlink-filter-panel-page.svelte`，新增 `src/components/panel/*.svelte` / helper | 在 `RF-010` 基础上继续把筛选区、文档列表区、已保存条件区拆成子组件或 controller helper，目标将主 Svelte 文件从约 2211 行压到 500 行以下，并保持交互行为不变 | 高 | - [ ] 新增“筛选区状态变更/保存条件恢复”集成级单测；- [ ] `node --test tests/*.test.js`；- [ ] `npm run build` | `docs/project-structure.md` 与 `README.md` 均需反映子组件结构 | pending |
+| RF-011 | P0 | 将 `backlink-filter-panel-page.svelte` 压到 500 行以下 | `src/components/panel/backlink-filter-panel-page.svelte`，新增 `src/components/panel/*.svelte` / helper | 在 `RF-010` 基础上继续把筛选区、文档列表区、已保存条件区拆成子组件或 controller helper，目标将主 Svelte 文件从约 2211 行压到 500 行以下，并保持交互行为不变 | 高 | - [x] 复用 `tests/backlink-panel-query-params.test.js` 保护“保存条件恢复/重置”行为；- [x] `node --test tests/*.test.js`；- [x] `npm run build` | `docs/project-structure.md` 与 `README.md` 已反映 controller / 子组件结构 | done |
 
 优先级说明：
 - `P0`：价值和风险都最高，优先执行
@@ -63,6 +63,7 @@
 | RF-009/010/011-PLAN | 2026-03-14 | 2026-03-14 | 行数核对；计划刷新 | done | `docs/refactor-plan.md` | 用户要求将单文件缩减到 500 行以下；初始 `backlink-data.ts` 为 1019 行，`backlink-filter-panel-page.svelte` 为 2211 行，因此拆分为三条获批后执行的 P0 任务 |
 | RF-009 | 2026-03-14 | 2026-03-14 | `node --test tests/backlink-render-data.test.js tests/backlink-query-loaders.test.js`；`node --test tests/*.test.js`；`npm run build` | pass | `docs/project-structure.md`、`README.md` | 新增 `backlink-render-data.js`、`backlink-query-loaders.js`、`backlink-panel-data-assembly.js` 与对应单测，将缓存取数、查询准备、render-data 校验/排序与装配接线从 `backlink-data.ts` 抽离；`backlink-data.ts` 已从 1019 行缩减到 459 行 |
 | RF-010 | 2026-03-14 | 2026-03-14 | `node --test tests/backlink-document-row.test.js tests/backlink-protyle-dom.test.js tests/backlink-protyle-rendering.test.js`；`node --test tests/*.test.js`；`npm run build` | pass | `docs/project-structure.md`、`README.md` | 新增 `backlink-document-row.js`、`backlink-protyle-dom.js`、`backlink-protyle-rendering.js` 与对应单测，将文档行 DOM 创建、列表折叠/展开、全文模式裁剪与 Protyle 创建后处理从 `backlink-filter-panel-page.svelte` 抽离；主组件已从 1801 行缩减到 1674 行 |
+| RF-011 | 2026-03-14 | 2026-03-14 | `node --test tests/backlink-panel-query-params.test.js`；`node --test tests/*.test.js`；`npm run build` | pass | `docs/project-structure.md`、`README.md` | 新增 `backlink-panel-controller.js`、`backlink-filter-panel-controls.svelte`、`backlink-results-panel.svelte`、`backlink-filter-panel-page.css`，将主组件改为薄装配层；`backlink-filter-panel-page.svelte` 已从 1674 行进一步缩减到 291 行 |
 
 ## 5. 决策与确认
 
@@ -73,12 +74,12 @@
 
 ## 6. 文档刷新
 
-- `docs/project-structure.md`：已更新；待 `RF-011` 完成后继续同步 panel 子组件结构
-- `README.md`：已更新；待 `RF-011` 完成后继续同步面板层结构说明
-- 最终同步检查：待 `RF-011` 完成后重新执行
+- `docs/project-structure.md`：已更新，已同步 panel controller、子组件与样式文件结构
+- `README.md`：已更新，已同步主组件压缩结果与新的面板层结构说明
+- 最终同步检查：已完成，文档内容与 `RF-011` 后的代码结构一致
 
 ## 7. 下一步
 
-1. 继续执行 `RF-010`、`RF-011`，分两步把 `backlink-filter-panel-page.svelte` 压到 500 行以下。
-2. 每完成一项都重新跑 `node --test tests/*.test.js` 与 `npm run build`，并同步文档。
-3. 两项完成后再做最终结构复核与提交。
+1. 若继续降低维护成本，下一步可为 `backlink-filter-panel-controls.svelte` / `backlink-results-panel.svelte` 补充真正的 Svelte 组件测试夹具。
+2. 若 controller 继续膨胀，可再按“数据加载 / 文档渲染 / 条件持久化”拆成更细的 domain controller。
+3. 当前已完成本轮获批范围，无阻塞项。

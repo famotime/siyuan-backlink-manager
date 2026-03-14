@@ -46,7 +46,11 @@ docs/                              Product and maintenance docs
 ### Backlink Panel UI
 
 - `src/components/panel/backlink-filter-panel-page.svelte`
-  The main backlink panel component. It still owns UI orchestration, but pure logic has been extracted into helper modules.
+  Thin panel shell that now wires state, lifecycle, and child components in under 500 lines.
+- `src/components/panel/backlink-filter-panel-controls.svelte`
+  Filter-panel child component for current-document blocks, related blocks, backlink-document filters, and saved criteria.
+- `src/components/panel/backlink-results-panel.svelte`
+  Backlink-result child component for header controls, pagination, and the Protyle host list container.
 - `src/components/panel/backlink-document-interaction.js`
   Click-action routing and Protyle render option selection.
 - `src/components/panel/backlink-document-navigation.js`
@@ -55,6 +59,8 @@ docs/                              Product and maintenance docs
   Backlink document-row HTML, navigation state refresh, and DOM event wiring helpers.
 - `src/components/panel/backlink-panel-query-params.js`
   Filter-query reset, include/exclude toggling, and saved-criteria restore helpers extracted from the Svelte component.
+- `src/components/panel/backlink-panel-controller.js`
+  Controller helper that centralizes data loading, Protyle rendering orchestration, document visibility actions, and saved-criteria handlers.
 - `src/components/panel/backlink-document-view-state.js`
   Fold/full-view/active-index state helpers for document-level rendering.
 - `src/components/panel/backlink-panel-header.js`
@@ -65,6 +71,8 @@ docs/                              Product and maintenance docs
   DOM-level list folding, heading expansion, Protyle state capture, and list-item visibility helpers.
 - `src/components/panel/backlink-protyle-rendering.js`
   Protyle render orchestration helpers for state sync, grouped document rendering, and post-create DOM application.
+- `src/components/panel/backlink-filter-panel-page.css`
+  Shared panel CSS extracted from the Svelte shell so child components can reuse the same presentation.
 
 ### Backlink Data Layer
 
@@ -120,6 +128,7 @@ Current automated tests are in `tests/` and cover:
 - document click and render interaction helpers
 - document grouping and navigation
 - document-based pagination
+- panel controller-adjacent query-param helpers
 - panel header formatting/state helpers
 - document view state helpers
 - document row helpers

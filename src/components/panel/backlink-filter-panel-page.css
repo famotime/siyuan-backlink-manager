@@ -1,0 +1,164 @@
+.tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 17px 3px 3px;
+    margin: 4px 4px 4px 2px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    position: relative;
+    max-width: 120px;
+    max-height: 30px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: top;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0.9;
+}
+
+.selected {
+    background-color: rgba(26, 188, 156, 1);
+    color: white;
+    border: 1px solid rgba(26, 188, 156, 0.4);
+}
+
+.tag.selected:hover {
+    background-color: rgba(26, 188, 156, 0.9);
+}
+
+.excluded {
+    background-color: black;
+    color: white;
+    border: 1px solid rgba(0, 0, 0, 0.6);
+}
+
+.tag.excluded:hover {
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+.optional {
+    background-color: var(--b3-theme-background);
+    color: var(--b3-theme-on-background);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.tag.optional:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
+.tag:active {
+    transform: scale(0.95);
+}
+
+.b3-list-item__graphic {
+    margin: 1px 0 0;
+    height: 11px;
+    padding: 0;
+}
+
+.block-content {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    flex-shrink: 1;
+}
+
+.count {
+    position: absolute;
+    top: 0;
+    right: 0;
+    border-radius: 20%;
+    padding: 2px 5px;
+    font-size: 10px;
+}
+
+.panel__title {
+    cursor: pointer;
+    border: 0;
+    opacity: 1;
+    background: transparent;
+    flex-shrink: 0;
+    padding: 2px 10px;
+    display: flex;
+    align-items: center;
+    border-radius: 10px;
+    transition:
+        var(--b3-transition),
+        opacity 0.3s cubic-bezier(0, 0, 0.2, 1) 0ms;
+    line-height: 14px;
+    min-height: 25px;
+    height: 30px;
+}
+
+.filter-panel__title:hover,
+.backlink-panel__title:hover {
+    color: var(--b3-theme-on-background);
+    background-color: var(--b3-list-icon-hover);
+}
+
+.backlink-panel-filter {
+    margin: 5px;
+    padding: 0 3px 3px 13px;
+    transition:
+        transform 0.3s ease,
+        box-shadow 0.3s ease;
+}
+
+.defblock-list {
+    min-height: 33px;
+    max-height: 96px;
+    overflow-y: auto;
+    padding: 6px 0 6px 10px;
+    border-radius: 6px;
+}
+
+select {
+    padding-right: 23px;
+    width: 100%;
+    flex: 1;
+}
+
+input {
+    width: 100%;
+    flex: 1;
+}
+
+.filter-panel__sub_title {
+    font-size: 1.06em;
+    font-weight: bold;
+    margin: 6px 0;
+}
+
+.block__icon {
+    opacity: 1;
+}
+
+.backlink-nav-progress {
+    min-width: 2.75em;
+    text-align: center;
+}
+
+.backlink-pagination {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.backlink-nav-button {
+    cursor: pointer;
+}
+
+.backlink-nav-button.disabled {
+    opacity: 0.38;
+    cursor: default;
+}
+
+.backlink-panel__header {
+    position: sticky;
+    top: 0;
+    text-align: center;
+    padding: 0;
+    z-index: 2;
+}

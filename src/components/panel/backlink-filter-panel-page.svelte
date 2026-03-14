@@ -56,6 +56,10 @@
     import { delayedTwiceRefresh } from "@/utils/timing-util";
     import { getBlockIsFolded } from "@/utils/api";
     import { getOpenTabActionByZoomIn } from "@/utils/siyuan-util";
+    import {
+        getCyclicBacklinkIndex,
+        groupBacklinksByDocument,
+    } from "./backlink-document-navigation.js";
 
     export let rootId: string;
     export let focusBlockId: string;
@@ -90,6 +94,9 @@
     let backlinkDocumentFoldMap: Map<string, boolean> = new Map();
     let backlinkProtyleItemFoldMap: Map<string, Set<string>> = new Map();
     let backlinkProtyleHeadingExpandMap: Map<string, boolean> = new Map();
+    let backlinkDocumentActiveIndexMap: Map<string, number> = new Map();
+    let backlinkDocumentEditorMap: Map<string, Protyle> = new Map();
+    let backlinkDocumentGroupArray = [];
 
     /* 控制页面元素的 */
     let panelFilterViewExpand: boolean = false;
@@ -265,18 +272,6 @@
         // }
     }
 
-    function clickExpandAllListItemNode(event: MouseEvent) {
-        const target = event.target as HTMLElement;
-
-        const parentLiElement = target.closest(".list-item__document-name");
-        if (!parentLiElement) {
-            return;
-        }
-        expandAllListItemNode(
-            parentLiElement.nextElementSibling as HTMLElement,
-        );
-    }
-
     function expandAllListItemNode(element: HTMLElement) {
         if (!element) {
             return;
@@ -354,16 +349,6 @@
                 node.setAttribute("fold", "1");
             }
         });
-    }
-
-    function clickCollapseAllListItemNode(event: MouseEvent) {
-        const target = event.target as HTMLElement;
-
-        const parentLiElement = target.closest(".list-item__document-name");
-        if (!parentLiElement) {
-            return;
-        }
-        collapseAllListItemNode(parentLiElement.nextElementSibling);
     }
 
     function collapseAllListItemNode(element: Element) {
@@ -467,6 +452,7 @@
             return;
         }
         clearBacklinkProtyleList();
+        backlinkDocumentActiveIndexMap.clear();
 
         previousRootId = rootId;
         previousFocusBlockId = focusBlockId;
@@ -657,6 +643,7 @@
             });
         }
         clearEditors();
+        backlinkDocumentEditorMap.clear();
         if (backlinkULElement) {
             backlinkULElement.innerHTML = "";
         }
@@ -678,9 +665,12 @@
         let backlinkBlockId = documentLiElement.getAttribute(
             "data-backlink-block-id",
         );
+        let backlinkRootId = documentLiElement.getAttribute("data-node-id");
         let closeStatus = documentLiElement.classList.contains("backlink-hide");
         if (closeStatus) {
-            backlinkDocumentFoldMap.set(backlinkBlockId, true);
+            backlinkDocumentFoldMap.set(backlinkRootId, true);
+        } else {
+            backlinkDocumentFoldMap.delete(backlinkRootId);
         }
 
         let protyleWysiwygElement = editor.protyle.contentElement.querySelector(
@@ -716,58 +706,81 @@
         backlinkDocumentArray: DefBlock[],
         backlinkDataArray: IBacklinkData[],
     ) {
-        if (isArrayEmpty(backlinkDataArray)) {
+        backlinkDocumentGroupArray = groupBacklinksByDocument(
+            backlinkDocumentArray,
+            backlinkDataArray,
+            backlinkDocumentActiveIndexMap,
+        );
+
+        if (isArrayEmpty(backlinkDocumentGroupArray)) {
             let pElement = document.createElement("p");
             pElement.style.padding = "5px 15px";
             pElement.innerText = window.siyuan.languages.emptyContent;
             backlinkULElement.append(pElement);
+            return;
         }
 
-        for (const backlinkDoc of backlinkDataArray) {
-            let backlinkNode = backlinkDoc.backlinkBlock;
-            let backlinkBlockId = backlinkNode.id;
-            let notebookId = backlinkNode.box;
-
-            let documentName: string = "";
-            for (const document of backlinkDocumentArray) {
-                if (document.id == backlinkNode.root_id) {
-                    documentName = document.content;
-                    break;
-                }
-            }
-            let backlinkRootId = backlinkNode.root_id;
-            // let backlinkRootId = backlinkDoc.blockPaths[0].id;
-
-            let documentLiElement = createdDocumentLiElement(
-                documentName,
-                backlinkBlockId,
-                backlinkRootId,
-                backlinkNode.content,
-            );
-
-            let backlinks: IBacklinkData[] = [backlinkDoc];
+        for (const documentGroup of backlinkDocumentGroupArray) {
+            let documentLiElement = createdDocumentLiElement(documentGroup);
             const editorElement = document.createElement("div");
             editorElement.style.minHeight = "auto";
+            editorElement.setAttribute(
+                "data-backlink-root-id",
+                documentGroup.documentId,
+            );
 
             backlinkULElement.append(editorElement);
-            const editor = new Protyle(EnvConfig.ins.app, editorElement, {
-                blockId: backlinkRootId,
-                backlinkData: backlinks,
-                render: {
-                    background: false,
-                    title: false,
-                    gutter: true,
-                    scroll: false,
-                    breadcrumb: false,
-                },
-            });
-            afterCreateBacklinkProtyle(backlinkDoc, documentLiElement, editor);
-
-            editor.protyle.notebookId = notebookId;
-
-            let editorsTemp = getEditors();
-            editorsTemp.push(editor);
+            renderBacklinkDocumentGroup(
+                documentGroup,
+                documentLiElement,
+                editorElement,
+            );
         }
+    }
+
+    function renderBacklinkDocumentGroup(
+        documentGroup,
+        documentLiElement: HTMLElement,
+        editorElement: HTMLElement,
+    ) {
+        if (
+            !documentGroup ||
+            !documentLiElement ||
+            !editorElement ||
+            !documentGroup.activeBacklink
+        ) {
+            return;
+        }
+
+        updateDocumentLiNavigation(documentLiElement, documentGroup);
+
+        let existingEditor = backlinkDocumentEditorMap.get(
+            documentGroup.documentId,
+        );
+        if (existingEditor) {
+            updateBacklinkDocumentAndProtyleItemAndHeadlineFoldMap(existingEditor);
+            existingEditor.destroy();
+            removeEditor(existingEditor);
+        }
+
+        editorElement.innerHTML = "";
+        const activeBacklink = documentGroup.activeBacklink;
+        const editor = new Protyle(EnvConfig.ins.app, editorElement, {
+            blockId: documentGroup.documentId,
+            backlinkData: [activeBacklink],
+            render: {
+                background: false,
+                title: false,
+                gutter: true,
+                scroll: false,
+                breadcrumb: false,
+            },
+        });
+        afterCreateBacklinkProtyle(activeBacklink, documentLiElement, editor);
+
+        editor.protyle.notebookId = activeBacklink.backlinkBlock.box;
+        backlinkDocumentEditorMap.set(documentGroup.documentId, editor);
+        addEditor(editor);
     }
 
     function afterCreateBacklinkProtyle(
@@ -787,9 +800,10 @@
         let protyleContentElement = protyle.protyle.contentElement;
 
         let backlinkBlockId = backlinkData.backlinkBlock.id;
+        let backlinkRootId = backlinkData.backlinkBlock.root_id;
 
         // 是否折叠反链文档
-        if (backlinkDocumentFoldMap.get(backlinkBlockId) === true) {
+        if (backlinkDocumentFoldMap.get(backlinkRootId) === true) {
             collapseBacklinkDocument(documentLiElement);
         }
 
@@ -948,13 +962,13 @@
     //        return itemElement;
     //    }
 
-    function createdDocumentLiElement(
-        documentName: string,
-        backlinkBlockId: string,
-        backlinkRootId: string,
-        docAriaText: string,
-    ): HTMLElement {
+    function createdDocumentLiElement(documentGroup): HTMLElement {
         let documentLiElement = document.createElement("li");
+        let activeBacklink = documentGroup.activeBacklink;
+        let backlinkBlockId = activeBacklink.backlinkBlock.id;
+        let backlinkRootId = documentGroup.documentId;
+        let docAriaText = activeBacklink.backlinkBlock.content;
+        let documentName = documentGroup.documentName;
 
         documentLiElement.classList.add(
             "b3-list-item",
@@ -978,8 +992,9 @@
 <span class="b3-list-item__text ariaLabel"  aria-label="${docAriaText}"  >
 ${documentName}
 </span>
-<svg class="b3-list-item__graphic counter ariaLabel expand-listitem-icon" aria-label="展开所有列表项"><use xlink:href="#iconLiElementExpand"></use></svg>
-<svg class="b3-list-item__graphic counter ariaLabel collapse-listitem-icon" aria-label="折叠所有列表项"><use xlink:href="#iconLiElementCollapse"></use></svg>
+<svg class="b3-list-item__graphic counter ariaLabel backlink-nav-button previous-backlink-icon" aria-label="上一个反链块"><use xlink:href="#iconLeft"></use></svg>
+<span class="b3-list-item__meta backlink-nav-progress">${documentGroup.progressText}</span>
+<svg class="b3-list-item__graphic counter ariaLabel backlink-nav-button next-backlink-icon" aria-label="下一个反链块"><use xlink:href="#iconRight"></use></svg>
 `;
         documentLiElement.addEventListener("click", (event: MouseEvent) => {
             clickBacklinkDocumentLiElement(event);
@@ -1003,25 +1018,103 @@ ${documentName}
         });
 
         documentLiElement
-            .querySelector(
-                "li > svg.b3-list-item__graphic.counter.ariaLabel.expand-listitem-icon",
-            )
+            .querySelector(".previous-backlink-icon")
             .addEventListener("click", (event: MouseEvent) => {
-                clickExpandAllListItemNode(event);
+                navigateBacklinkDocument(event, "previous");
                 event.stopPropagation();
             });
 
         documentLiElement
-            .querySelector(
-                "li > svg.b3-list-item__graphic.counter.ariaLabel.collapse-listitem-icon",
-            )
+            .querySelector(".next-backlink-icon")
             .addEventListener("click", (event: MouseEvent) => {
-                clickCollapseAllListItemNode(event);
+                navigateBacklinkDocument(event, "next");
                 event.stopPropagation();
             });
 
         backlinkULElement.append(documentLiElement);
         return documentLiElement;
+    }
+
+    function updateDocumentLiNavigation(
+        documentLiElement: HTMLElement,
+        documentGroup,
+    ) {
+        if (!documentLiElement || !documentGroup || !documentGroup.activeBacklink) {
+            return;
+        }
+        const progressElement = documentLiElement.querySelector(
+            ".backlink-nav-progress",
+        );
+        const previousButton = documentLiElement.querySelector(
+            ".previous-backlink-icon",
+        );
+        const nextButton = documentLiElement.querySelector(".next-backlink-icon");
+        const textElement = documentLiElement.querySelector(".b3-list-item__text");
+        const disableNavigation = documentGroup.backlinks.length <= 1;
+
+        documentLiElement.setAttribute(
+            "data-backlink-block-id",
+            documentGroup.activeBacklink.backlinkBlock.id,
+        );
+        if (progressElement) {
+            progressElement.textContent = documentGroup.progressText;
+        }
+        if (textElement) {
+            textElement.setAttribute(
+                "aria-label",
+                documentGroup.activeBacklink.backlinkBlock.content.substring(
+                    0,
+                    100,
+                ),
+            );
+        }
+        previousButton?.classList.toggle("disabled", disableNavigation);
+        nextButton?.classList.toggle("disabled", disableNavigation);
+    }
+
+    function navigateBacklinkDocument(
+        event: MouseEvent,
+        direction: "previous" | "next",
+    ) {
+        event.preventDefault();
+
+        const target = event.currentTarget as HTMLElement;
+        const documentLiElement = target.closest(
+            ".list-item__document-name",
+        ) as HTMLElement;
+        if (!documentLiElement) {
+            return;
+        }
+
+        const documentId = documentLiElement.getAttribute("data-node-id");
+        const editorElement = documentLiElement.nextElementSibling as HTMLElement;
+        const documentGroup = backlinkDocumentGroupArray.find(
+            (group) => group.documentId === documentId,
+        );
+        if (!documentGroup || isArrayEmpty(documentGroup.backlinks)) {
+            return;
+        }
+
+        const nextIndex = getCyclicBacklinkIndex(
+            documentGroup.backlinks.length,
+            documentGroup.activeIndex,
+            direction,
+        );
+        backlinkDocumentActiveIndexMap.set(documentId, nextIndex);
+        backlinkDocumentGroupArray = groupBacklinksByDocument(
+            backlinkFilterPanelRenderData.backlinkDocumentArray,
+            backlinkFilterPanelRenderData.backlinkDataArray,
+            backlinkDocumentActiveIndexMap,
+        );
+
+        const nextDocumentGroup = backlinkDocumentGroupArray.find(
+            (group) => group.documentId === documentId,
+        );
+        renderBacklinkDocumentGroup(
+            nextDocumentGroup,
+            documentLiElement,
+            editorElement,
+        );
     }
 
     function getDefBlockAriaLabel(
@@ -1340,6 +1433,19 @@ ${documentName}
 
     function handleKeyDownDefault(event) {
         console.log(event.key);
+    }
+
+    function addEditor(editor: Protyle) {
+        let editorsTemp = getEditors();
+        editorsTemp.push(editor);
+    }
+
+    function removeEditor(editor: Protyle) {
+        let editorsTemp = getEditors();
+        let editorIndex = editorsTemp.indexOf(editor);
+        if (editorIndex >= 0) {
+            editorsTemp.splice(editorIndex, 1);
+        }
     }
 
     function getEditors(): Protyle[] {
@@ -2035,6 +2141,20 @@ ${documentName}
     }
     .block__icon {
         opacity: 1;
+    }
+
+    .backlink-nav-progress {
+        min-width: 2.75em;
+        text-align: center;
+    }
+
+    .backlink-nav-button {
+        cursor: pointer;
+    }
+
+    .backlink-nav-button.disabled {
+        opacity: 0.38;
+        cursor: default;
     }
 
     .backlink-panel__header {

@@ -28,7 +28,6 @@ import {
     matchKeywords
 } from "@/utils/string-util";
 import { intersectionSet, isArrayEmpty, isArrayNotEmpty, isSetEmpty, isSetNotEmpty } from "@/utils/array-util";
-import { DefinitionBlockStatus } from "@/models/backlink-constant";
 import { CacheManager } from "@/config/CacheManager";
 import { SettingService } from "../setting/SettingService";
 import { stringToDom } from "@/utils/html-util";
@@ -48,6 +47,14 @@ import {
     updateDynamicAnchorMap,
     updateStaticAnchorMap,
 } from "./backlink-markdown.js";
+import {
+    applyAnchorsToCurrentDocumentBlocks,
+    attachDocumentBlocksToBacklinkNodes,
+    buildBacklinkDocumentArray,
+    buildRelatedDefBlockArray,
+    createBacklinkBlockNode,
+    getBlockIds,
+} from "./backlink-panel-base-data-builder.js";
 
 
 export async function getBacklinkPanelRenderData(
@@ -725,22 +732,6 @@ async function getParentBlockArray(queryParams: IBacklinkBlockQueryParams)
 
 }
 
-
-function getBlockIds(blockList: DefBlock[]): string[] {
-    let blockIds: string[] = [];
-    if (!blockList || blockList.length == 0) {
-        return blockIds
-    }
-    for (const block of blockList) {
-        if (!block) {
-            continue;
-        }
-        blockIds.push(block.id);
-    }
-
-    return blockIds;
-}
-
 async function buildBacklinkPanelData(
     paramObj: {
         rootId,
@@ -764,20 +755,7 @@ async function buildBacklinkPanelData(
     let backlinkBlockUpdatedMap = new Map<string, string>();
 
     for (const backlinkBlock of paramObj.backlinkBlockArray) {
-        let backlinkBlockNode: IBacklinkBlockNode = {
-            block: { ...backlinkBlock, refCount: null },
-            documentBlock: null,
-            parentMarkdown: "",
-            listItemChildMarkdown: "",
-            headlineChildMarkdown: "",
-            includeDirectDefBlockIds: new Set<string>(),
-            includeRelatedDefBlockIds: new Set<string>(),
-            includeCurBlockDefBlockIds: new Set<string>(),
-            // includeChildDefBlockIds: new Set<string>(),
-            includeParentDefBlockIds: new Set<string>(),
-            dynamicAnchorMap: new Map<string, Set<string>>(),
-            staticAnchorMap: new Map<string, Set<string>>(),
-        };
+        let backlinkBlockNode: IBacklinkBlockNode = createBacklinkBlockNode(backlinkBlock);
 
         let relatedDefBlockIdArray: string[] = [];
         if (backlinkBlock.type == "query_embed") {
@@ -914,103 +892,31 @@ async function buildBacklinkPanelData(
 
     let relatedDefBlockAndDocumentMap = await getBlockInfoMap(blockIdArray);
 
-    let relatedDefBlockArray: DefBlock[] = [];
-    let backlinkDocumentArray: DefBlock[] = [];
+    applyAnchorsToCurrentDocumentBlocks(
+        paramObj.curDocDefBlockArray,
+        relatedDefBlockDynamicAnchorMap,
+        relatedDefBlockStaticAnchorMap,
+    );
 
-    for (const defBlock of paramObj.curDocDefBlockArray) {
-        let blockId = defBlock.id;
-        let dnaymicAnchor = "";
-        let staticAnchor = "";
-        let dynamicAnchorSet = relatedDefBlockDynamicAnchorMap.get(blockId);
-        if (isSetNotEmpty(dynamicAnchorSet)) {
-            dnaymicAnchor = Array.from(dynamicAnchorSet).join(' ');
-        }
-        let staticAnchorSet = relatedDefBlockStaticAnchorMap.get(blockId);
-        if (isSetNotEmpty(staticAnchorSet)) {
-            staticAnchor = Array.from(staticAnchorSet).join(' ');
-        }
-        defBlock.dynamicAnchor = dnaymicAnchor
-        defBlock.staticAnchor = staticAnchor;
-    }
+    let relatedDefBlockArray: DefBlock[] = buildRelatedDefBlockArray({
+        relatedDefBlockCountMap,
+        relatedDefBlockAndDocumentMap,
+        backlinkBlockCreatedMap,
+        backlinkBlockUpdatedMap,
+        relatedDefBlockDynamicAnchorMap,
+        relatedDefBlockStaticAnchorMap,
+    });
+    let backlinkDocumentArray: DefBlock[] = buildBacklinkDocumentArray({
+        backlinkDocumentCountMap,
+        relatedDefBlockAndDocumentMap,
+        backlinkBlockCreatedMap,
+        backlinkBlockUpdatedMap,
+    });
 
-
-    for (const blockId of relatedDefBlockCountMap.keys()) {
-        let blockCount = relatedDefBlockCountMap.get(blockId);
-        let blockInfo = relatedDefBlockAndDocumentMap.get(blockId);
-
-        let created = backlinkBlockCreatedMap.get(blockId);
-        let updated = backlinkBlockUpdatedMap.get(blockId);
-
-        let dnaymicAnchor = "";
-        let staticAnchor = "";
-        let dynamicAnchorSet = relatedDefBlockDynamicAnchorMap.get(blockId);
-        if (isSetNotEmpty(dynamicAnchorSet)) {
-            dnaymicAnchor = Array.from(dynamicAnchorSet).join(' ');
-        }
-        let staticAnchorSet = relatedDefBlockStaticAnchorMap.get(blockId);
-        if (isSetNotEmpty(staticAnchorSet)) {
-            staticAnchor = Array.from(staticAnchorSet).join(' ');
-        }
-
-
-        if (blockInfo) {
-            let refBlockInfo: DefBlock = {
-                ...blockInfo,
-                refCount: blockCount,
-                selectionStatus: DefinitionBlockStatus.OPTIONAL
-            };
-
-            refBlockInfo.created = created ? created : refBlockInfo.created;
-            refBlockInfo.updated = updated ? updated : refBlockInfo.updated;
-
-            refBlockInfo.dynamicAnchor = dnaymicAnchor
-            refBlockInfo.staticAnchor = staticAnchor;
-
-            relatedDefBlockArray.push(refBlockInfo);
-        } else {
-            let refBlockInfo = {} as DefBlock;
-            if (isSetEmpty(dynamicAnchorSet) && isSetEmpty(staticAnchorSet)) {
-                continue;
-            }
-            let dnaymicAnchor = "";
-            let staticAnchor = "";
-            let content = isSetNotEmpty(dynamicAnchorSet) ? dynamicAnchorSet.values().next().value : staticAnchorSet.values().next().value;
-
-            refBlockInfo.id = blockId;
-            refBlockInfo.content = content;
-            refBlockInfo.refCount = blockCount;
-            refBlockInfo.created = created;
-            refBlockInfo.updated = updated;
-            refBlockInfo.dynamicAnchor = dnaymicAnchor
-            refBlockInfo.staticAnchor = staticAnchor;
-            refBlockInfo.selectionStatus = DefinitionBlockStatus.OPTIONAL
-            // console.log("不存在的定义块 : ", refBlockInfo)
-            relatedDefBlockArray.push(refBlockInfo);
-        }
-    }
-
-    for (const key of backlinkDocumentCountMap.keys()) {
-        let blockCount = backlinkDocumentCountMap.get(key);
-        let blockInfo = relatedDefBlockAndDocumentMap.get(key);
-        if (blockInfo) {
-            let documentBlockInfo: DefBlock = {
-                ...blockInfo,
-                refCount: blockCount,
-                selectionStatus: DefinitionBlockStatus.OPTIONAL
-            };
-            let created = backlinkBlockCreatedMap.get(blockInfo.id);
-            documentBlockInfo.created = created ? created : documentBlockInfo.created;
-            let updated = backlinkBlockUpdatedMap.get(blockInfo.id);
-            documentBlockInfo.updated = updated ? updated : documentBlockInfo.updated;
-            backlinkDocumentArray.push(documentBlockInfo);
-        }
-    }
-
-    // 关联反链块所在的文档块信息
-    for (const node of Object.values(backlinkBlockMap)) {
-        let docBlockInfo = relatedDefBlockAndDocumentMap.get(node.block.root_id);
-        node.documentBlock = docBlockInfo;
-    }
+    attachDocumentBlocksToBacklinkNodes(
+        backlinkBlockMap,
+        relatedDefBlockAndDocumentMap,
+    );
 
     // let rootId = paramObj.curDocDefBlockArray[0].root_id;
     let backlinkBlockNodeArray: IBacklinkBlockNode[] = Object.values(backlinkBlockMap);

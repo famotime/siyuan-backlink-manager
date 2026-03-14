@@ -98,9 +98,10 @@
 - `src/components/panel/backlink-filter-panel-page.svelte` 继续保留面板编排，但筛选条件重置、包含/排除切换、已保存条件恢复已拆到 `src/components/panel/backlink-panel-query-params.js`
 - `src/service/backlink/backlink-data.ts` 继续负责反链数据主流程，但定义块排序/筛选已拆到 `src/service/backlink/backlink-def-blocks.js`
 - markdown 引用解析、锚文本提取和搜索语法解析已拆到 `src/service/backlink/backlink-markdown.js`，供 `backlink-data.ts` 与 `src/models/backlink-model.ts` 复用
+- 基线数据装配中的当前文档锚文本回填、关联块物化、来源文档物化和文档块回挂已拆到 `src/service/backlink/backlink-panel-base-data-builder.js`
 
 ## 开发验证
 
 - 全量测试：`node --test tests/*.test.js`
-- 本轮新增测试：`tests/backlink-panel-query-params.test.js`、`tests/backlink-def-blocks.test.js`、`tests/backlink-markdown.test.js`
+- 本轮新增测试：`tests/backlink-panel-query-params.test.js`、`tests/backlink-def-blocks.test.js`、`tests/backlink-markdown.test.js`、`tests/backlink-panel-base-data-builder.test.js`
 - 构建：`npm run build`

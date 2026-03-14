@@ -72,6 +72,8 @@ docs/                              Product and maintenance docs
   Query cleanup, definition-block filtering, and backlink-document filtering helpers.
 - `src/service/backlink/backlink-markdown.js`
   Markdown ref parsing, anchor extraction, and search-syntax helpers shared by backlink data assembly and models.
+- `src/service/backlink/backlink-panel-base-data-builder.js`
+  Base-data builder helpers for current-document anchor enrichment, related-block materialization, source-document materialization, and backlink-node document attachment.
 - `src/service/backlink/backlink-sql.ts`
   SQL builders used by the backlink queries.
 
@@ -108,6 +110,7 @@ Current automated tests are in `tests/` and cover:
 - document view state helpers
 - backlink filtering helpers
 - backlink markdown parsing helpers
+- backlink panel base-data builder helpers
 - panel host lifecycle helpers
 - panel query-parameter helpers
 - setting config resolution helpers

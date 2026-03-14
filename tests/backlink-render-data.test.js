@@ -20,12 +20,20 @@ test("getBatchBacklinkDoc deduplicates backlink dom results and preserves backli
       block: { id: "block-a", parent_id: "parent-a", root_id: "doc-a", content: "Alpha" },
       includeCurBlockDefBlockIds: new Set(["def-a"]),
       includeDirectDefBlockIds: new Set(["def-a"]),
+      contextBundle: {
+        primaryMatchSourceType: "parent",
+        matchSummaryList: ["父级：Alpha"],
+      },
       parentListItemTreeNode: null,
     },
     {
       block: { id: "block-b", parent_id: "parent-b", root_id: "doc-b", content: "Beta" },
       includeCurBlockDefBlockIds: new Set(["def-b"]),
       includeDirectDefBlockIds: new Set(["def-b"]),
+      contextBundle: {
+        primaryMatchSourceType: "sibling_prev",
+        matchSummaryList: ["前相邻块：Beta"],
+      },
       parentListItemTreeNode: {
         includeChildIdArray: ["child-1"],
         excludeChildIdArray: ["child-2"],
@@ -61,6 +69,8 @@ test("getBatchBacklinkDoc deduplicates backlink dom results and preserves backli
     result.backlinks.map((item) => item.backlinkBlock.id),
     ["block-a", "block-b"],
   );
+  assert.equal(result.backlinks[0].contextBundle.primaryMatchSourceType, "parent");
+  assert.equal(result.backlinks[1].contextBundle.matchSummaryList[0], "前相邻块：Beta");
   assert.deepEqual(result.backlinks[1].includeChildListItemIdArray, ["child-1"]);
   assert.deepEqual(result.backlinks[1].excludeChildLisetItemIdArray, ["child-2"]);
 });

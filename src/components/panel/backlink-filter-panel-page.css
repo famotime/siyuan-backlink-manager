@@ -140,6 +140,38 @@ input {
     text-align: center;
 }
 
+.backlink-context-source,
+.backlink-context-summary {
+    display: inline-flex;
+    align-items: center;
+    min-height: 20px;
+    max-width: 10em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.backlink-context-source:empty,
+.backlink-context-summary:empty {
+    display: none;
+}
+
+.backlink-context-source {
+    margin-left: 6px;
+    padding: 0 6px;
+    border-radius: 999px;
+    font-size: 11px;
+    color: var(--b3-theme-primary);
+    background: rgba(26, 188, 156, 0.12);
+}
+
+.backlink-context-summary {
+    max-width: 14em;
+    font-size: 11px;
+    color: var(--b3-theme-on-surface-light);
+}
+
 .backlink-pagination {
     display: inline-flex;
     align-items: center;

@@ -12,11 +12,15 @@ test("buildBacklinkDocumentListItemHtml renders title aria text and progress tex
     documentName: "Document A",
     docAriaText: "A".repeat(120),
     progressText: "2/3",
+    matchSourceLabel: "父级",
+    matchSummaryText: "父级：命中说明",
   });
 
   assert.match(html, /Document A/);
   assert.match(html, /2\/3/);
   assert.match(html, /aria-label="A{100}"/);
+  assert.match(html, /父级/);
+  assert.match(html, /命中说明/);
 });
 
 test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and disabled state", () => {
@@ -29,6 +33,8 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and 
       this.attrs[name] = value;
     },
   };
+  const sourceElement = { textContent: "" };
+  const summaryElement = { textContent: "" };
   const documentLiElement = {
     attrs: {},
     setAttribute(name, value) {
@@ -39,6 +45,8 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and 
       if (selector === ".previous-backlink-icon") return previousButton;
       if (selector === ".next-backlink-icon") return nextButton;
       if (selector === ".b3-list-item__text") return textElement;
+      if (selector === ".backlink-context-source") return sourceElement;
+      if (selector === ".backlink-context-summary") return summaryElement;
       return null;
     },
   };
@@ -51,12 +59,18 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and 
         id: "block-a",
         content: "content",
       },
+      contextBundle: {
+        primaryMatchSourceType: "parent",
+        matchSummaryList: ["父级：命中说明"],
+      },
     },
   });
 
   assert.equal(documentLiElement.attrs["data-backlink-block-id"], "block-a");
   assert.equal(progressElement.textContent, "1/1");
   assert.equal(textElement.attrs["aria-label"], "content");
+  assert.equal(sourceElement.textContent, "父级");
+  assert.equal(summaryElement.textContent, "父级：命中说明");
   assert.equal(previousButton.disabled, false);
   assert.equal(nextButton.disabled, false);
 });

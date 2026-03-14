@@ -1,7 +1,25 @@
+import { getBacklinkContextSourceRule } from "../../service/backlink/backlink-context-rules.js";
+
+function getBacklinkMatchMeta(backlinkData = null) {
+  const primaryMatchSourceType =
+    backlinkData?.contextBundle?.primaryMatchSourceType || "";
+  const matchSourceLabel = primaryMatchSourceType
+    ? getBacklinkContextSourceRule(primaryMatchSourceType).label
+    : "";
+  const matchSummaryText =
+    backlinkData?.contextBundle?.matchSummaryList?.[0] || "";
+  return {
+    matchSourceLabel,
+    matchSummaryText,
+  };
+}
+
 export function buildBacklinkDocumentListItemHtml({
   documentName = "",
   docAriaText = "",
   progressText = "",
+  matchSourceLabel = "",
+  matchSummaryText = "",
 } = {}) {
   const truncatedAriaText = docAriaText ? docAriaText.substring(0, 100) : "";
 
@@ -13,6 +31,8 @@ export function buildBacklinkDocumentListItemHtml({
 <span class="b3-list-item__text ariaLabel"  aria-label="${truncatedAriaText}"  >
 ${documentName}
 </span>
+<span class="b3-list-item__meta backlink-context-source">${matchSourceLabel}</span>
+<span class="b3-list-item__meta backlink-context-summary">${matchSummaryText}</span>
 <svg class="b3-list-item__graphic counter ariaLabel backlink-nav-button previous-backlink-icon" aria-label="上一个反链块"><use xlink:href="#iconLeft"></use></svg>
 <span class="b3-list-item__meta backlink-nav-progress">${progressText}</span>
 <svg class="b3-list-item__graphic counter ariaLabel backlink-nav-button next-backlink-icon" aria-label="下一个反链块"><use xlink:href="#iconRight"></use></svg>
@@ -35,7 +55,12 @@ export function updateBacklinkDocumentLiNavigation(
   );
   const nextButton = documentLiElement.querySelector(".next-backlink-icon");
   const textElement = documentLiElement.querySelector(".b3-list-item__text");
+  const sourceElement = documentLiElement.querySelector(".backlink-context-source");
+  const summaryElement = documentLiElement.querySelector(".backlink-context-summary");
   const disableNavigation = documentGroup.backlinks.length <= 1;
+  const { matchSourceLabel, matchSummaryText } = getBacklinkMatchMeta(
+    documentGroup.activeBacklink,
+  );
 
   documentLiElement.setAttribute(
     "data-backlink-block-id",
@@ -49,6 +74,12 @@ export function updateBacklinkDocumentLiNavigation(
       "aria-label",
       documentGroup.activeBacklink.backlinkBlock.content.substring(0, 100),
     );
+  }
+  if (sourceElement) {
+    sourceElement.textContent = matchSourceLabel;
+  }
+  if (summaryElement) {
+    summaryElement.textContent = matchSummaryText;
   }
   previousButton?.classList.toggle("disabled", disableNavigation);
   nextButton?.classList.toggle("disabled", disableNavigation);
@@ -83,6 +114,7 @@ export function createBacklinkDocumentListItemElement({
     documentName: documentGroup.documentName,
     docAriaText: activeBacklink?.backlinkBlock?.content,
     progressText: documentGroup.progressText,
+    ...getBacklinkMatchMeta(activeBacklink),
   });
 
   documentLiElement.addEventListener("click", (event) => {

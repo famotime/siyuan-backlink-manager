@@ -165,6 +165,7 @@ export async function getBatchBacklinkDoc({
 
     backlink.dom = backlink.dom.replace(/search-mark/g, "");
     backlink.backlinkBlock = backlinkBlockNode.block;
+    backlink.contextBundle = backlinkBlockNode.contextBundle;
     backlinkDataMap.set(backlinkBlockId, backlink);
     if (backlinkBlockNode.parentListItemTreeNode) {
       backlink.includeChildListItemIdArray =

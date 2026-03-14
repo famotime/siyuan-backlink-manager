@@ -8,6 +8,11 @@ import {
   hydrateBacklinkContextBundles,
   matchBacklinkContextBundle,
 } from "../src/service/backlink/backlink-context.js";
+import {
+  BACKLINK_CONTEXT_SOURCE_RULES,
+  getBacklinkContextSourceRule,
+  getBacklinkContextVisibilityLevelOrder,
+} from "../src/service/backlink/backlink-context-rules.js";
 
 function createBundleDeps() {
   return {
@@ -72,8 +77,36 @@ test("buildBacklinkContextBundle materializes ordered fragments and default visi
     bundle.visibleFragments.map((fragment) => fragment.sourceType),
     ["self", "document"],
   );
+  assert.equal(bundle.fragments[0].budgetPriority, 1);
+  assert.equal(bundle.fragments[2].budgetPriority, 3);
   assert.ok(bundle.includeCurDocDefBlockIds.has("def-current"));
   assert.ok(bundle.includeRelatedDefBlockIds.has("def-parent"));
+});
+
+test("backlink context source rules cover every supported source with unified rule fields", () => {
+  assert.deepEqual(Object.keys(BACKLINK_CONTEXT_SOURCE_RULES), [
+    "self",
+    "document",
+    "parent",
+    "child_headline",
+    "child_list",
+    "sibling_prev",
+    "sibling_next",
+    "expanded",
+  ]);
+  assert.deepEqual(getBacklinkContextSourceRule("self"), {
+    label: "反链块",
+    visibilityLevel: "core",
+    defaultVisible: true,
+    searchable: true,
+    filterable: true,
+    budgetPriority: 1,
+    matchPriority: 1,
+  });
+  assert.equal(getBacklinkContextSourceRule("expanded").visibilityLevel, "extended");
+  assert.equal(getBacklinkContextSourceRule("expanded").searchable, false);
+  assert.equal(getBacklinkContextVisibilityLevelOrder("nearby"), 2);
+  assert.equal(getBacklinkContextVisibilityLevelOrder("full"), 4);
 });
 
 test("hydrateBacklinkContextBundles attaches context fragments and bundle to backlink nodes", () => {

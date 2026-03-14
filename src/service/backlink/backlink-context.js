@@ -1,74 +1,7 @@
-const SOURCE_RULES = {
-  self: {
-    visibilityLevel: "core",
-    defaultVisible: true,
-    searchable: true,
-    filterable: true,
-  },
-  document: {
-    visibilityLevel: "core",
-    defaultVisible: true,
-    searchable: true,
-    filterable: false,
-  },
-  parent: {
-    visibilityLevel: "nearby",
-    defaultVisible: false,
-    searchable: true,
-    filterable: true,
-  },
-  child_headline: {
-    visibilityLevel: "nearby",
-    defaultVisible: false,
-    searchable: true,
-    filterable: true,
-  },
-  child_list: {
-    visibilityLevel: "nearby",
-    defaultVisible: false,
-    searchable: true,
-    filterable: true,
-  },
-  sibling_prev: {
-    visibilityLevel: "nearby",
-    defaultVisible: false,
-    searchable: true,
-    filterable: true,
-  },
-  sibling_next: {
-    visibilityLevel: "nearby",
-    defaultVisible: false,
-    searchable: true,
-    filterable: true,
-  },
-};
-
-const VISIBILITY_LEVEL_ORDER = {
-  core: 1,
-  nearby: 2,
-  extended: 3,
-  full: 4,
-};
-
-const MATCH_SOURCE_PRIORITY = {
-  self: 1,
-  sibling_prev: 2,
-  sibling_next: 2,
-  parent: 3,
-  child_list: 4,
-  child_headline: 4,
-  document: 5,
-};
-
-const SOURCE_LABELS = {
-  self: "反链块",
-  document: "文档",
-  parent: "父级",
-  child_headline: "标题子级",
-  child_list: "列表子级",
-  sibling_prev: "前相邻块",
-  sibling_next: "后相邻块",
-};
+import {
+  getBacklinkContextSourceRule,
+  getBacklinkContextVisibilityLevelOrder,
+} from "./backlink-context-rules.js";
 
 function pushFragment(fragmentArray, fragment) {
   if (!fragment || !fragment.text) {
@@ -86,7 +19,7 @@ function createContextFragment({
   anchorText,
   searchText,
 }) {
-  const rule = SOURCE_RULES[sourceType];
+  const rule = getBacklinkContextSourceRule(sourceType);
   const directDefBlockIds = backlinkBlockNode.includeDirectDefBlockIds || new Set();
   const curBlockDefIds = backlinkBlockNode.includeCurBlockDefBlockIds || new Set();
   const includeCurDocDefBlockIds = [];
@@ -122,6 +55,7 @@ function createContextFragment({
     searchable: rule.searchable,
     filterable: rule.filterable,
     defaultVisible: rule.defaultVisible,
+    budgetPriority: rule.budgetPriority,
     matched: false,
     matchTypes: [],
     matchKeywords: [],
@@ -273,10 +207,11 @@ export function hydrateBacklinkContextBundles(backlinkBlockNodeArray = [], deps)
 }
 
 export function applyBacklinkContextVisibility(bundle, visibilityLevel = "core") {
-  const levelOrder = VISIBILITY_LEVEL_ORDER[visibilityLevel] || VISIBILITY_LEVEL_ORDER.core;
+  const levelOrder = getBacklinkContextVisibilityLevelOrder(visibilityLevel);
   bundle.visibleFragments = (bundle.fragments || []).filter((fragment) => {
-    const fragmentLevelOrder =
-      VISIBILITY_LEVEL_ORDER[fragment.visibilityLevel] || VISIBILITY_LEVEL_ORDER.full;
+    const fragmentLevelOrder = getBacklinkContextVisibilityLevelOrder(
+      fragment.visibilityLevel || "full",
+    );
     return fragmentLevelOrder <= levelOrder;
   });
   return bundle;
@@ -307,7 +242,7 @@ function resetBundleMatches(bundle) {
 }
 
 function buildMatchSummary(fragment) {
-  const label = SOURCE_LABELS[fragment.sourceType] || fragment.sourceType;
+  const label = getBacklinkContextSourceRule(fragment.sourceType).label;
   const useAnchor = fragment.matchTypes.includes("anchor") && fragment.anchorText;
   const text = useAnchor ? fragment.anchorText : fragment.displayText;
   const compactText = String(text || "").replace(/\s+/g, " ").trim().slice(0, 48);
@@ -368,8 +303,8 @@ export function matchBacklinkContextBundle(bundle, { keywordObj, matchKeywords }
 
   if (bundle.matchedFragments.length > 0) {
     bundle.matchedFragments.sort((a, b) => {
-      const priorityA = MATCH_SOURCE_PRIORITY[a.sourceType] || Infinity;
-      const priorityB = MATCH_SOURCE_PRIORITY[b.sourceType] || Infinity;
+      const priorityA = getBacklinkContextSourceRule(a.sourceType).matchPriority;
+      const priorityB = getBacklinkContextSourceRule(b.sourceType).matchPriority;
       if (priorityA !== priorityB) {
         return priorityA - priorityB;
       }

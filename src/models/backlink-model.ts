@@ -35,7 +35,8 @@ export type BacklinkContextSourceType =
     | "child_headline"
     | "child_list"
     | "sibling_prev"
-    | "sibling_next";
+    | "sibling_next"
+    | "expanded";
 
 export type BacklinkContextVisibilityLevel =
     | "core"
@@ -59,10 +60,21 @@ export interface IBacklinkContextFragment {
     searchable: boolean;
     filterable: boolean;
     defaultVisible: boolean;
+    budgetPriority: number;
     matched: boolean;
     matchTypes: string[];
     matchKeywords: string[];
     order: number;
+}
+
+export interface IBacklinkContextSourceRule {
+    label: string;
+    visibilityLevel: BacklinkContextVisibilityLevel;
+    defaultVisible: boolean;
+    searchable: boolean;
+    filterable: boolean;
+    budgetPriority: number;
+    matchPriority: number;
 }
 
 export interface IBacklinkContextBundle {

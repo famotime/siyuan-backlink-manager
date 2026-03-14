@@ -17,6 +17,7 @@ test("resolveSettingConfig merges persistent values over defaults", () => {
   assert.equal(resolved.pageSize, 12);
   assert.equal(resolved.dockDisplay, false);
   assert.equal(resolved.documentBottomDisplay, false);
+  assert.equal(resolved.backlinkContextPreset, "balanced");
   assert.equal(resolved.backlinkContextMaxVisibleChars, 320);
 });
 
@@ -32,8 +33,45 @@ test("shouldPersistSettingConfig only persists changed config payloads", () => {
 test("createDefaultSettingConfig includes backlink context budget defaults", () => {
   const current = createDefaultSettingConfig();
 
+  assert.equal(current.backlinkContextPreset, "balanced");
   assert.equal(current.backlinkContextMaxVisibleFragments, 6);
   assert.equal(current.backlinkContextMaxVisibleChars, 240);
   assert.equal(current.backlinkContextMaxDepth, 3);
   assert.equal(current.backlinkContextMaxExpandedNodes, 12);
+});
+
+test("resolveSettingConfig derives compact preset from legacy context switches", () => {
+  const resolved = resolveSettingConfig({
+    queryParentDefBlock: false,
+    querrChildDefBlockForListItem: false,
+    queryChildDefBlockForHeadline: false,
+  });
+
+  assert.equal(resolved.backlinkContextPreset, "compact");
+  assert.equal(resolved.queryParentDefBlock, false);
+  assert.equal(resolved.querrChildDefBlockForListItem, false);
+  assert.equal(resolved.queryChildDefBlockForHeadline, false);
+});
+
+test("resolveSettingConfig derives expanded preset from legacy headline expansion config", () => {
+  const resolved = resolveSettingConfig({
+    queryParentDefBlock: true,
+    querrChildDefBlockForListItem: true,
+    queryChildDefBlockForHeadline: true,
+  });
+
+  assert.equal(resolved.backlinkContextPreset, "expanded");
+});
+
+test("resolveSettingConfig applies explicit preset defaults but preserves advanced overrides", () => {
+  const resolved = resolveSettingConfig({
+    backlinkContextPreset: "compact",
+    backlinkContextMaxVisibleChars: 500,
+    queryParentDefBlock: true,
+  });
+
+  assert.equal(resolved.backlinkContextPreset, "compact");
+  assert.equal(resolved.backlinkContextMaxVisibleFragments, 4);
+  assert.equal(resolved.backlinkContextMaxVisibleChars, 500);
+  assert.equal(resolved.queryParentDefBlock, true);
 });

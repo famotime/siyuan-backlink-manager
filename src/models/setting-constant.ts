@@ -40,6 +40,7 @@ export function getSettingTabArray(): TabProperty[] {
                 new ItemProperty({ key: "docBottomBacklinkPanelViewExpand", type: "switch", name: "文档底部默认展开反链面板", description: "", tips: "" }),
                 new ItemProperty({ key: "pageSize", type: "number", name: "每页反链块数量", description: "每页反链块显示的数量", tips: "", min: 1, max: 50 }),
                 new ItemProperty({ key: "backlinkBlockSortMethod", type: "select", name: "反链块排序方式", description: "", tips: "", options: getBacklinkBlockSortMethodOptions() }),
+                new ItemProperty({ key: "backlinkContextPreset", type: "select", name: "上下文策略预设", description: "用更易理解的预设统一控制默认上下文范围。", tips: "", options: getBacklinkContextPresetOptions() }),
                 new ItemProperty({ key: "defaultExpandedListItemLevel", type: "number", name: "默认展开列表项层数", description: "如果反链所在是列表项，默认展开的子列表深度。", tips: "", min: 0, max: 10 }),
                 new ItemProperty({ key: "hideBacklinkProtyleBreadcrumb", type: "switch", name: "隐藏面包屑", description: "", tips: "" }),
 
@@ -50,6 +51,14 @@ export function getSettingTabArray(): TabProperty[] {
     );
 
     return tabProperties;
+}
+
+function getBacklinkContextPresetOptions(): IOption[] {
+    return [
+        { value: "compact", name: "紧凑", desc: "核心层优先" },
+        { value: "balanced", name: "平衡", desc: "核心 + 近邻" },
+        { value: "expanded", name: "扩展", desc: "核心 + 近邻 + 扩展" },
+    ];
 }
 
 function getBacklinkBlockSortMethodOptions(): IOption[] {

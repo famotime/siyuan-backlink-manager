@@ -1,5 +1,6 @@
 import { isStrNotBlank } from "@/utils/string-util";
 
+export type BacklinkContextPreset = "compact" | "balanced" | "expanded";
 
 export class SettingConfig {
     /* 插件设置 */
@@ -40,6 +41,7 @@ export class SettingConfig {
     backlinkBlockSortMethod: BlockSortMethod;
     hideBacklinkProtyleBreadcrumb: boolean;
     defaultExpandedListItemLevel: number;
+    backlinkContextPreset: BacklinkContextPreset;
     backlinkContextMaxVisibleFragments: number;
     backlinkContextMaxVisibleChars: number;
     backlinkContextMaxDepth: number;

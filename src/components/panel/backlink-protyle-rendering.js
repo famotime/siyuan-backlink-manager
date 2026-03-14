@@ -114,16 +114,19 @@ export function renderBacklinkDocumentGroup({
 
   editorElement.innerHTML = "";
   const activeBacklink = documentGroup.activeBacklink;
-  const showFullDocument = getBacklinkDocumentRenderState(
+  const renderState = getBacklinkDocumentRenderState(
     backlinkDocumentViewState,
     documentGroup.documentId,
-  ).showFullDocument;
+  );
+  const showFullDocument = renderState.showFullDocument;
+  const contextVisibilityLevel = renderState.contextVisibilityLevel;
   const editor = new ProtyleCtor(
     app,
     editorElement,
     buildBacklinkDocumentRenderOptions({
       documentId: documentGroup.documentId,
       activeBacklink,
+      contextVisibilityLevel,
       showFullDocument,
     }),
   );
@@ -132,6 +135,7 @@ export function renderBacklinkDocumentGroup({
     backlinkData: activeBacklink,
     documentLiElement,
     protyle: editor,
+    contextVisibilityLevel,
     showFullDocument,
   });
 
@@ -145,6 +149,7 @@ export function applyCreatedBacklinkProtyleState({
   backlinkData,
   documentLiElement,
   protyle,
+  contextVisibilityLevel = "core",
   showFullDocument = false,
   deps,
 }) {
@@ -201,6 +206,21 @@ export function applyCreatedBacklinkProtyleState({
     const foldIdSet = backlinkProtyleItemFoldMap.get(backlinkBlockId);
     if (foldIdSet) {
       foldListItemNodeByIdSet(protyleContentElement, foldIdSet);
+    } else if (contextVisibilityLevel === "extended") {
+      expandAllListItemNode(protyleContentElement);
+    } else if (
+      contextVisibilityLevel === "nearby" &&
+      defaultExpandedListItemLevel >= 0
+    ) {
+      expandListItemNodeByDepth(
+        protyleContentElement,
+        Math.max(defaultExpandedListItemLevel + 1, 1),
+        {
+          getElementsBeforeDepth,
+          getElementsAtDepth,
+          syHasChildListNode,
+        },
+      );
     } else if (defaultExpandedListItemLevel > 0) {
       expandListItemNodeByDepth(
         protyleContentElement,
@@ -213,7 +233,11 @@ export function applyCreatedBacklinkProtyleState({
       );
     }
 
-    if (backlinkProtyleHeadingExpandMap.get(backlinkBlockId)) {
+    if (
+      contextVisibilityLevel === "nearby" ||
+      contextVisibilityLevel === "extended" ||
+      backlinkProtyleHeadingExpandMap.get(backlinkBlockId)
+    ) {
       expandBacklinkHeadingMore(protyleContentElement);
     }
   }

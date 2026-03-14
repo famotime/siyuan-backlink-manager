@@ -2,11 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  advanceBacklinkDocumentVisibilityLevel,
   createBacklinkDocumentViewState,
   getBacklinkDocumentRenderState,
   markBacklinkDocumentExpanded,
   markBacklinkDocumentFoldState,
   markBacklinkDocumentFullView,
+  markBacklinkDocumentVisibilityLevel,
 } from "../src/components/panel/backlink-document-view-state.js";
 
 test("creates isolated maps for backlink document view state", () => {
@@ -14,7 +16,20 @@ test("creates isolated maps for backlink document view state", () => {
 
   assert.ok(state.documentFoldMap instanceof Map);
   assert.ok(state.documentShowFullMap instanceof Map);
+  assert.ok(state.documentVisibilityLevelMap instanceof Map);
   assert.ok(state.documentActiveIndexMap instanceof Map);
+});
+
+test("advancing document visibility level stops at full", () => {
+  const state = createBacklinkDocumentViewState();
+
+  assert.equal(advanceBacklinkDocumentVisibilityLevel(state, "doc-a"), "nearby");
+  assert.equal(advanceBacklinkDocumentVisibilityLevel(state, "doc-a"), "extended");
+  assert.equal(advanceBacklinkDocumentVisibilityLevel(state, "doc-a"), "full");
+  assert.equal(advanceBacklinkDocumentVisibilityLevel(state, "doc-a"), "full");
+
+  assert.equal(state.documentVisibilityLevelMap.get("doc-a"), "full");
+  assert.equal(state.documentShowFullMap.get("doc-a"), true);
 });
 
 test("marking full view clears folded state for the document", () => {
@@ -34,15 +49,26 @@ test("render state reflects folded and full-view flags", () => {
 
   assert.deepEqual(getBacklinkDocumentRenderState(state, "doc-a"), {
     isFolded: true,
+    contextVisibilityLevel: "core",
     showFullDocument: false,
     activeIndex: 2,
   });
 
   markBacklinkDocumentExpanded(state.documentFoldMap, "doc-a");
+  markBacklinkDocumentVisibilityLevel(state, "doc-a", "extended");
+
+  assert.deepEqual(getBacklinkDocumentRenderState(state, "doc-a"), {
+    isFolded: false,
+    contextVisibilityLevel: "extended",
+    showFullDocument: false,
+    activeIndex: 2,
+  });
+
   markBacklinkDocumentFullView(state, "doc-a");
 
   assert.deepEqual(getBacklinkDocumentRenderState(state, "doc-a"), {
     isFolded: false,
+    contextVisibilityLevel: "full",
     showFullDocument: true,
     activeIndex: 2,
   });

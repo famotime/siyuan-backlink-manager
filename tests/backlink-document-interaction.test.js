@@ -4,17 +4,18 @@ import assert from "node:assert/strict";
 import {
   buildBacklinkDocumentRenderOptions,
   getBacklinkDocumentClickAction,
+  getNextBacklinkContextVisibilityLevel,
   getBacklinkDocumentTargetRole,
   shouldHandleBacklinkDocumentClick,
 } from "../src/components/panel/backlink-document-interaction.js";
 
-test("uses full-document action when left-clicking a backlink document title", () => {
+test("uses progressive expansion action when left-clicking a backlink document title", () => {
   const action = getBacklinkDocumentClickAction({
     ctrlKey: false,
     targetRole: "title",
   });
 
-  assert.equal(action, "show-full-document");
+  assert.equal(action, "expand-context");
 });
 
 test("keeps fold toggle action on the left toggle button", () => {
@@ -54,6 +55,13 @@ test("ctrl-click still opens the backlink block directly", () => {
   assert.equal(action, "open-block");
 });
 
+test("returns the next document visibility level until full", () => {
+  assert.equal(getNextBacklinkContextVisibilityLevel("core"), "nearby");
+  assert.equal(getNextBacklinkContextVisibilityLevel("nearby"), "extended");
+  assert.equal(getNextBacklinkContextVisibilityLevel("extended"), "full");
+  assert.equal(getNextBacklinkContextVisibilityLevel("full"), "full");
+});
+
 test("skips row-level handling when the click comes from the dedicated toggle button", () => {
   assert.equal(
     shouldHandleBacklinkDocumentClick({
@@ -85,7 +93,7 @@ test("omits backlinkData when rendering a full document", () => {
     buildBacklinkDocumentRenderOptions({
       documentId: "doc-1",
       activeBacklink,
-      showFullDocument: true,
+      contextVisibilityLevel: "full",
     }),
     {
       blockId: "doc-1",
@@ -113,7 +121,7 @@ test("keeps backlinkData restriction in the default preview mode", () => {
     buildBacklinkDocumentRenderOptions({
       documentId: "doc-1",
       activeBacklink,
-      showFullDocument: false,
+      contextVisibilityLevel: "nearby",
     }),
     {
       blockId: "doc-1",

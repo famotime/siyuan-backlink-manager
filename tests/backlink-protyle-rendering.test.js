@@ -128,3 +128,125 @@ test("applyCreatedBacklinkProtyleState expands full document mode and skips item
     "touchend",
   ]);
 });
+
+test("applyCreatedBacklinkProtyleState expands one more local layer in nearby mode", () => {
+  const calls = [];
+
+  applyCreatedBacklinkProtyleState({
+    backlinkData: {
+      backlinkBlock: {
+        id: "block-a",
+        root_id: "doc-a",
+      },
+    },
+    documentLiElement: { id: "li-a" },
+    protyle: {
+      protyle: {
+        contentElement: {
+          addEventListener(type) {
+            calls.push(type);
+          },
+        },
+      },
+    },
+    contextVisibilityLevel: "nearby",
+    deps: {
+      emitLoadedProtyleStatic: () => calls.push("emit"),
+      getBacklinkDocumentRenderState: () => ({ isFolded: false }),
+      backlinkDocumentViewState: {},
+      expandBacklinkDocument: () => calls.push("expand-document"),
+      collapseBacklinkDocument: () => calls.push("collapse-document"),
+      expandAllListItemNode: () => calls.push("expand-all-items"),
+      expandBacklinkHeadingMore: () => calls.push("expand-heading"),
+      backlinkProtyleItemFoldMap: new Map(),
+      foldListItemNodeByIdSet: () => calls.push("fold-by-id-set"),
+      defaultExpandedListItemLevel: 1,
+      expandListItemNodeByDepth: (_element, depth) =>
+        calls.push(`expand-by-depth:${depth}`),
+      getElementsBeforeDepth: () => [],
+      getElementsAtDepth: () => [],
+      syHasChildListNode: () => false,
+      backlinkProtyleHeadingExpandMap: new Map(),
+      hideOtherListItemElement: () => calls.push("hide-items"),
+      queryParams: { backlinkKeywordStr: "" },
+      isSetEmpty: () => true,
+      isSetNotEmpty: () => false,
+      isArrayNotEmpty: () => false,
+      sanitizeBacklinkKeywords: () => [],
+      splitKeywordStringToArray: () => [],
+      highlightElementTextByCss: () => calls.push("highlight"),
+      delayedTwiceRefresh: (callback) => callback(),
+    },
+  });
+
+  assert.deepEqual(calls, [
+    "emit",
+    "expand-by-depth:2",
+    "expand-heading",
+    "hide-items",
+    "highlight",
+    "highlight",
+    "touchend",
+  ]);
+});
+
+test("applyCreatedBacklinkProtyleState fully expands the local preview in extended mode", () => {
+  const calls = [];
+
+  applyCreatedBacklinkProtyleState({
+    backlinkData: {
+      backlinkBlock: {
+        id: "block-a",
+        root_id: "doc-a",
+      },
+    },
+    documentLiElement: { id: "li-a" },
+    protyle: {
+      protyle: {
+        contentElement: {
+          addEventListener(type) {
+            calls.push(type);
+          },
+        },
+      },
+    },
+    contextVisibilityLevel: "extended",
+    deps: {
+      emitLoadedProtyleStatic: () => calls.push("emit"),
+      getBacklinkDocumentRenderState: () => ({ isFolded: false }),
+      backlinkDocumentViewState: {},
+      expandBacklinkDocument: () => calls.push("expand-document"),
+      collapseBacklinkDocument: () => calls.push("collapse-document"),
+      expandAllListItemNode: () => calls.push("expand-all-items"),
+      expandBacklinkHeadingMore: () => calls.push("expand-heading"),
+      backlinkProtyleItemFoldMap: new Map(),
+      foldListItemNodeByIdSet: () => calls.push("fold-by-id-set"),
+      defaultExpandedListItemLevel: 1,
+      expandListItemNodeByDepth: (_element, depth) =>
+        calls.push(`expand-by-depth:${depth}`),
+      getElementsBeforeDepth: () => [],
+      getElementsAtDepth: () => [],
+      syHasChildListNode: () => false,
+      backlinkProtyleHeadingExpandMap: new Map(),
+      hideOtherListItemElement: () => calls.push("hide-items"),
+      queryParams: { backlinkKeywordStr: "" },
+      isSetEmpty: () => true,
+      isSetNotEmpty: () => false,
+      isArrayNotEmpty: () => false,
+      sanitizeBacklinkKeywords: () => [],
+      splitKeywordStringToArray: () => [],
+      highlightElementTextByCss: () => calls.push("highlight"),
+      delayedTwiceRefresh: (callback) => callback(),
+    },
+  });
+
+  assert.deepEqual(calls, [
+    "emit",
+    "expand-all-items",
+    "expand-heading",
+    "hide-items",
+    "highlight",
+    "highlight",
+    "touchend",
+  ]);
+});

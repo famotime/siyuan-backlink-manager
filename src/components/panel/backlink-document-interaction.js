@@ -6,6 +6,13 @@ export const BACKLINK_DOCUMENT_RENDER_CONFIG = {
   breadcrumb: false,
 };
 
+const BACKLINK_CONTEXT_VISIBILITY_LEVEL_ORDER = [
+  "core",
+  "nearby",
+  "extended",
+  "full",
+];
+
 export function getBacklinkDocumentClickAction({
   ctrlKey = false,
   targetRole = "other",
@@ -19,7 +26,7 @@ export function getBacklinkDocumentClickAction({
   }
 
   if (targetRole === "title") {
-    return "show-full-document";
+    return "expand-context";
   }
 
   return "noop";
@@ -34,18 +41,36 @@ export function shouldHandleBacklinkDocumentClick({
 export function buildBacklinkDocumentRenderOptions({
   documentId,
   activeBacklink,
+  contextVisibilityLevel = "core",
   showFullDocument = false,
 } = {}) {
+  const normalizedVisibilityLevel =
+    BACKLINK_CONTEXT_VISIBILITY_LEVEL_ORDER.includes(contextVisibilityLevel)
+      ? contextVisibilityLevel
+      : "core";
+  const useFullDocument =
+    showFullDocument || normalizedVisibilityLevel === "full";
   const options = {
     blockId: documentId,
     render: { ...BACKLINK_DOCUMENT_RENDER_CONFIG },
   };
 
-  if (!showFullDocument && activeBacklink) {
+  if (!useFullDocument && activeBacklink) {
     options.backlinkData = [activeBacklink];
   }
 
   return options;
+}
+
+export function getNextBacklinkContextVisibilityLevel(level = "core") {
+  const currentIndex = BACKLINK_CONTEXT_VISIBILITY_LEVEL_ORDER.includes(level)
+    ? BACKLINK_CONTEXT_VISIBILITY_LEVEL_ORDER.indexOf(level)
+    : 0;
+  const nextIndex = Math.min(
+    currentIndex + 1,
+    BACKLINK_CONTEXT_VISIBILITY_LEVEL_ORDER.length - 1,
+  );
+  return BACKLINK_CONTEXT_VISIBILITY_LEVEL_ORDER[nextIndex];
 }
 
 export function getBacklinkDocumentTargetRole(target) {

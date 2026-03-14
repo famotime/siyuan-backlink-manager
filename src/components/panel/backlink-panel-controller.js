@@ -67,6 +67,7 @@ import {
   toggleRelatedDocumentCondition,
 } from "./backlink-panel-query-params.js";
 import {
+  advanceBacklinkDocumentVisibilityLevel,
   getBacklinkDocumentRenderState,
   markBacklinkDocumentExpanded,
   markBacklinkDocumentFoldState,
@@ -168,8 +169,8 @@ export function createBacklinkPanelController(state) {
       return;
     }
 
-    if (action === "show-full-document") {
-      showFullBacklinkDocument(target);
+    if (action === "expand-context") {
+      expandBacklinkDocumentContext(target);
     }
   }
 
@@ -348,7 +349,7 @@ export function createBacklinkPanelController(state) {
     );
   }
 
-  function showFullBacklinkDocument(documentLiElement) {
+  function expandBacklinkDocumentContext(documentLiElement) {
     if (!documentLiElement) {
       return;
     }
@@ -359,12 +360,21 @@ export function createBacklinkPanelController(state) {
       return;
     }
 
-    markBacklinkDocumentFullView(state.backlinkDocumentViewState, documentId);
+    const nextVisibilityLevel = advanceBacklinkDocumentVisibilityLevel(
+      state.backlinkDocumentViewState,
+      documentId,
+    );
     expandBacklinkDocument(documentLiElement);
 
     const documentGroup = state.backlinkDocumentGroupArray.find(
       (group) => group.documentId === documentId,
     );
+    if (!documentGroup) {
+      return;
+    }
+    if (nextVisibilityLevel === "full") {
+      markBacklinkDocumentFullView(state.backlinkDocumentViewState, documentId);
+    }
     renderBacklinkDocumentGroup(documentGroup, documentLiElement, editorElement);
   }
 

@@ -51,6 +51,8 @@ docs/                              Product and maintenance docs
   Click-action routing and Protyle render option selection.
 - `src/components/panel/backlink-document-navigation.js`
   Grouping backlinks by document and cyclic in-document navigation.
+- `src/components/panel/backlink-document-row.js`
+  Backlink document-row HTML, navigation state refresh, and DOM event wiring helpers.
 - `src/components/panel/backlink-panel-query-params.js`
   Filter-query reset, include/exclude toggling, and saved-criteria restore helpers extracted from the Svelte component.
 - `src/components/panel/backlink-document-view-state.js`
@@ -59,6 +61,10 @@ docs/                              Product and maintenance docs
   Pagination header view-model and summary text helpers.
 - `src/components/panel/backlink-panel-formatting.js`
   Highlight keyword sanitization and aria-label formatting helpers.
+- `src/components/panel/backlink-protyle-dom.js`
+  DOM-level list folding, heading expansion, Protyle state capture, and list-item visibility helpers.
+- `src/components/panel/backlink-protyle-rendering.js`
+  Protyle render orchestration helpers for state sync, grouped document rendering, and post-create DOM application.
 
 ### Backlink Data Layer
 
@@ -116,6 +122,9 @@ Current automated tests are in `tests/` and cover:
 - document-based pagination
 - panel header formatting/state helpers
 - document view state helpers
+- document row helpers
+- Protyle DOM helpers
+- Protyle rendering helpers
 - backlink filtering helpers
 - backlink markdown parsing helpers
 - backlink panel base-data builder helpers

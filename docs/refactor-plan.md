@@ -33,7 +33,7 @@
 | RF-007 | P1 | 继续拆分反链基线数据装配 | `src/service/backlink/backlink-data.ts`，必要时新增 `src/service/backlink/*` helper | 将 `buildBacklinkPanelData` 中的当前文档锚文本回填、关联定义块物化、来源文档物化、文档块回挂等纯装配逻辑拆到独立 builder helper，降低单函数体积并补足核心输出单测 | 中 | - [x] `node --test tests/backlink-panel-base-data-builder.test.js`；- [x] `node --test tests/*.test.js`；- [x] `npm run build` | `docs/project-structure.md` 已补充新增 builder helper；`README.md` 已同步数据层结构说明 | done |
 | RF-008 | P1 | 继续拆分反链数据 collector | `src/service/backlink/backlink-data.ts`，必要时新增 `src/service/backlink/*` helper | 将 `buildBacklinkPanelData` 中的反链块初始聚合、标题子块聚合、列表子树聚合、父块聚合拆成 collector helper，进一步压缩单函数并补足输入遍历逻辑单测 | 中 | - [x] `node --test tests/backlink-panel-data-collectors.test.js`；- [x] `node --test tests/*.test.js`；- [x] `npm run build` | `docs/project-structure.md` 已补充新增 collector helper；`README.md` 已同步数据层结构说明 | done |
 | RF-009 | P0 | 将 `backlink-data.ts` 压到 500 行以下 | `src/service/backlink/backlink-data.ts`，新增 `src/service/backlink/*` helper | 继续把 render-data orchestration、缓存取数与查询准备逻辑拆离，目标将 `backlink-data.ts` 从约 1019 行压到 500 行以下，同时保持 `getBacklinkPanelData` / `getBacklinkPanelRenderData` / 翻页行为不变 | 高 | - [x] 新增“缓存反链文档取数与排序”单测；- [x] 新增“query helper 输出 SQL/输入清洗”单测；- [x] `node --test tests/*.test.js`；- [x] `npm run build` | `docs/project-structure.md` 已补充 query/cache helper；`README.md` 已同步数据层拆分说明 | done |
-| RF-010 | P0 | 拆出反链面板 Protyle 渲染与 DOM 编排 | `src/components/panel/backlink-filter-panel-page.svelte`，新增 `src/components/panel/*` helper | 将 Protyle 渲染、文档行创建、列表折叠/展开、反链内容裁剪等 DOM/渲染逻辑抽到 helper，使主组件只保留状态编排与事件接线 | 高 | - [ ] 新增“文档行创建/导航状态/DOM 折叠”单测；- [ ] 新增“列表项隐藏与全文模式”单测；- [ ] `node --test tests/*.test.js`；- [ ] `npm run build` | `docs/project-structure.md` 需补充 Protyle helper；`README.md` 需同步 panel 结构说明 | pending |
+| RF-010 | P0 | 拆出反链面板 Protyle 渲染与 DOM 编排 | `src/components/panel/backlink-filter-panel-page.svelte`，新增 `src/components/panel/*` helper | 将 Protyle 渲染、文档行创建、列表折叠/展开、反链内容裁剪等 DOM/渲染逻辑抽到 helper，使主组件只保留状态编排与事件接线 | 高 | - [x] 新增“文档行创建/导航状态/DOM 折叠”单测；- [x] 新增“列表项隐藏与全文模式”单测；- [x] `node --test tests/*.test.js`；- [x] `npm run build` | `docs/project-structure.md` 已补充 Protyle/render helper；`README.md` 已同步 panel 结构说明 | done |
 | RF-011 | P0 | 将 `backlink-filter-panel-page.svelte` 压到 500 行以下 | `src/components/panel/backlink-filter-panel-page.svelte`，新增 `src/components/panel/*.svelte` / helper | 在 `RF-010` 基础上继续把筛选区、文档列表区、已保存条件区拆成子组件或 controller helper，目标将主 Svelte 文件从约 2211 行压到 500 行以下，并保持交互行为不变 | 高 | - [ ] 新增“筛选区状态变更/保存条件恢复”集成级单测；- [ ] `node --test tests/*.test.js`；- [ ] `npm run build` | `docs/project-structure.md` 与 `README.md` 均需反映子组件结构 | pending |
 
 优先级说明：
@@ -62,6 +62,7 @@
 | RF-008 | 2026-03-14 | 2026-03-14 | `node --test tests/backlink-panel-data-collectors.test.js`；`node --test tests/*.test.js`；`npm run build` | pass | `docs/project-structure.md`、`README.md` | 新增 `backlink-panel-data-collectors.js` 与对应单测，将 `buildBacklinkPanelData` 内部四段 collector 遍历逻辑抽离；`backlink-data.ts` 约从 46.0 KB 缩减到 40.6 KB |
 | RF-009/010/011-PLAN | 2026-03-14 | 2026-03-14 | 行数核对；计划刷新 | done | `docs/refactor-plan.md` | 用户要求将单文件缩减到 500 行以下；初始 `backlink-data.ts` 为 1019 行，`backlink-filter-panel-page.svelte` 为 2211 行，因此拆分为三条获批后执行的 P0 任务 |
 | RF-009 | 2026-03-14 | 2026-03-14 | `node --test tests/backlink-render-data.test.js tests/backlink-query-loaders.test.js`；`node --test tests/*.test.js`；`npm run build` | pass | `docs/project-structure.md`、`README.md` | 新增 `backlink-render-data.js`、`backlink-query-loaders.js`、`backlink-panel-data-assembly.js` 与对应单测，将缓存取数、查询准备、render-data 校验/排序与装配接线从 `backlink-data.ts` 抽离；`backlink-data.ts` 已从 1019 行缩减到 459 行 |
+| RF-010 | 2026-03-14 | 2026-03-14 | `node --test tests/backlink-document-row.test.js tests/backlink-protyle-dom.test.js tests/backlink-protyle-rendering.test.js`；`node --test tests/*.test.js`；`npm run build` | pass | `docs/project-structure.md`、`README.md` | 新增 `backlink-document-row.js`、`backlink-protyle-dom.js`、`backlink-protyle-rendering.js` 与对应单测，将文档行 DOM 创建、列表折叠/展开、全文模式裁剪与 Protyle 创建后处理从 `backlink-filter-panel-page.svelte` 抽离；主组件已从 1801 行缩减到 1674 行 |
 
 ## 5. 决策与确认
 
@@ -72,9 +73,9 @@
 
 ## 6. 文档刷新
 
-- `docs/project-structure.md`：已更新；待 `RF-010`、`RF-011` 完成后继续同步 panel 子组件结构
-- `README.md`：已更新；待 `RF-010`、`RF-011` 完成后继续同步面板层结构说明
-- 最终同步检查：待 `RF-010`、`RF-011` 完成后重新执行
+- `docs/project-structure.md`：已更新；待 `RF-011` 完成后继续同步 panel 子组件结构
+- `README.md`：已更新；待 `RF-011` 完成后继续同步面板层结构说明
+- 最终同步检查：待 `RF-011` 完成后重新执行
 
 ## 7. 下一步
 

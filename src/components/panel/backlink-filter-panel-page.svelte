@@ -82,6 +82,25 @@
         sanitizeBacklinkKeywords,
     } from "./backlink-panel-formatting.js";
     import {
+        createBacklinkDocumentListItemElement,
+        updateBacklinkDocumentLiNavigation,
+    } from "./backlink-document-row.js";
+    import {
+        captureBacklinkProtyleState,
+        collapseAllListItemNode,
+        expandAllListItemNode,
+        expandBacklinkHeadingMore,
+        expandListItemNodeByDepth,
+        foldListItemNodeByIdSet,
+        hideOtherListItemElement,
+    } from "./backlink-protyle-dom.js";
+    import {
+        applyCreatedBacklinkProtyleState,
+        batchRenderBacklinkDocumentGroups,
+        renderBacklinkDocumentGroup as renderBacklinkDocumentGroupByHelper,
+        syncBacklinkDocumentProtyleState,
+    } from "./backlink-protyle-rendering.js";
+    import {
         applySavedPanelCriteria,
         clonePanelQueryParamsForSave,
         resetBacklinkQueryParameters,
@@ -349,137 +368,12 @@
             backlinkULElement.querySelectorAll("div.protyle");
 
         for (const backlinkProtyle of backlinkProtyleElementArray) {
-            collapseAllListItemNode(backlinkProtyle as HTMLElement);
+            collapseAllListItemNode(backlinkProtyle as HTMLElement, {
+                syHasChildListNode,
+            });
         }
         return;
         // }
-    }
-
-    function expandAllListItemNode(element: HTMLElement) {
-        if (!element) {
-            return;
-        }
-        let protyleWysiwygElement = element.querySelector(
-            "div.protyle-wysiwyg.protyle-wysiwyg--attr",
-        );
-        if (!protyleWysiwygElement) {
-            return;
-        }
-        const liNodes = protyleWysiwygElement.querySelectorAll<HTMLElement>(
-            'div[data-type="NodeListItem"].li[fold="1"]',
-        );
-
-        liNodes.forEach((node) => {
-            node.removeAttribute("fold");
-        });
-    }
-
-    function foldListItemNodeByIdSet(element: Element, idSet: Set<string>) {
-        if (!element || !idSet) {
-            return;
-        }
-        let protyleWysiwygElement = element.querySelector(
-            "div.protyle-wysiwyg.protyle-wysiwyg--attr",
-        );
-        if (!protyleWysiwygElement) {
-            return;
-        }
-        // 先展开所有，然后再折叠对应的
-        expandAllListItemNode(element as HTMLElement);
-        for (const nodeId of idSet) {
-            let foldItemElement = protyleWysiwygElement.querySelector(
-                `div[data-type="NodeListItem"].li[data-node-id="${nodeId}"]`,
-            );
-            if (!foldItemElement) {
-                continue;
-            }
-            foldItemElement.setAttribute("fold", "1");
-        }
-    }
-
-    function expandListItemNodeByDepth(element: Element, depth: number) {
-        if (!element || depth < 1) {
-            return;
-        }
-        let protyleWysiwygElement = element.querySelector(
-            "div.protyle-wysiwyg.protyle-wysiwyg--attr",
-        );
-        if (!protyleWysiwygElement) {
-            return;
-        }
-
-        // 先递归展开到指定深度
-        depth = depth - 1;
-        const liNodes = getElementsBeforeDepth(
-            protyleWysiwygElement as HTMLElement,
-            'div[data-type="NodeListItem"].li',
-            depth,
-        );
-
-        liNodes.forEach((node) => {
-            node.removeAttribute("fold");
-        });
-
-        // 然后获取指定深度的列表节点，如果存在子节点加上折叠。
-        const collapseLiNodes = getElementsAtDepth(
-            protyleWysiwygElement as HTMLElement,
-            'div[data-type="NodeListItem"].li',
-            depth,
-        );
-
-        collapseLiNodes.forEach((node) => {
-            if (syHasChildListNode(node)) {
-                node.setAttribute("fold", "1");
-            }
-        });
-    }
-
-    function collapseAllListItemNode(element: Element) {
-        if (!element) {
-            return;
-        }
-        let protyleWysiwygElement = element.querySelector(
-            "div.protyle-wysiwyg.protyle-wysiwyg--attr",
-        );
-        if (!protyleWysiwygElement) {
-            return;
-        }
-        const liNodes = protyleWysiwygElement.querySelectorAll<HTMLElement>(
-            'div[data-type="NodeListItem"].li:not([fold])',
-        );
-        liNodes.forEach((node) => {
-            if (syHasChildListNode(node)) {
-                node.setAttribute("fold", "1");
-            }
-        });
-    }
-
-    function expandBacklinkHeadingMore(element: Element) {
-        if (!element) {
-            return;
-        }
-
-        let protyleWysiwygElement = element.querySelector(
-            "div.protyle-wysiwyg.protyle-wysiwyg--attr",
-        );
-
-        if (!protyleWysiwygElement) {
-            return;
-        }
-        let moreElement = protyleWysiwygElement.querySelector(
-            `div.protyle-breadcrumb__item`,
-        );
-        if (moreElement) {
-            let nextElement = moreElement.nextElementSibling;
-            while (
-                nextElement &&
-                !nextElement.classList.contains("protyle-breadcrumb__bar")
-            ) {
-                nextElement.classList.remove("fn__none");
-                nextElement = nextElement.nextElementSibling;
-            }
-            moreElement.remove();
-        }
     }
 
     // function openDocumentTab(rootId: string) {
@@ -724,7 +618,13 @@
         if (isArrayNotEmpty(editorsTemp)) {
             editorsTemp.forEach((editor) => {
                 // 清理前先保存列表项折叠状态。
-                updateBacklinkDocumentAndProtyleItemAndHeadlineFoldMap(editor);
+                syncBacklinkDocumentProtyleState(editor, {
+                    backlinkDocumentFoldMap,
+                    backlinkProtyleItemFoldMap,
+                    backlinkProtyleHeadingExpandMap,
+                    captureBacklinkProtyleState,
+                    markBacklinkDocumentFoldState,
+                });
                 editor.destroy();
             });
         }
@@ -735,154 +635,7 @@
         }
     }
 
-    function updateBacklinkDocumentAndProtyleItemAndHeadlineFoldMap(
-        editor: Protyle,
-    ) {
-        if (!editor || !editor.protyle || !editor.protyle.contentElement) {
-            return;
-        }
-        let documentLiElement =
-            editor.protyle.contentElement.parentElement.previousElementSibling;
-
-        if (!documentLiElement) {
-            return;
-        }
-
-        let backlinkBlockId = documentLiElement.getAttribute(
-            "data-backlink-block-id",
-        );
-        let backlinkRootId = documentLiElement.getAttribute("data-node-id");
-        let closeStatus = documentLiElement.classList.contains("backlink-hide");
-        markBacklinkDocumentFoldState(
-            backlinkDocumentFoldMap,
-            backlinkRootId,
-            closeStatus,
-        );
-
-        let protyleWysiwygElement = editor.protyle.contentElement.querySelector(
-            "div.protyle-wysiwyg",
-        );
-        let foldItemElementArray = [];
-        let expandHeadingMore: boolean = false;
-        if (protyleWysiwygElement) {
-            foldItemElementArray = protyleWysiwygElement.querySelectorAll(
-                `div[data-type="NodeListItem"].li[fold="1"]`,
-            );
-            expandHeadingMore = !Boolean(
-                protyleWysiwygElement.querySelector(
-                    `div.protyle-breadcrumb__item use`,
-                ),
-            );
-        }
-        let foldSet = backlinkProtyleItemFoldMap.get(backlinkBlockId);
-        if (!foldSet) {
-            foldSet = new Set<string>();
-        }
-        foldSet.clear();
-        for (const itemElement of foldItemElementArray) {
-            let nodeId = itemElement.getAttribute("data-node-id");
-            foldSet.add(nodeId);
-        }
-        backlinkProtyleItemFoldMap.set(backlinkBlockId, foldSet);
-
-        backlinkProtyleHeadingExpandMap.set(backlinkBlockId, expandHeadingMore);
-    }
-
-    function batchCreateOfficialBacklinkProtyle(
-        backlinkDocumentArray: DefBlock[],
-        backlinkDataArray: IBacklinkData[],
-    ) {
-        backlinkDocumentGroupArray = groupBacklinksByDocument(
-            backlinkDocumentArray,
-            backlinkDataArray,
-            backlinkDocumentActiveIndexMap,
-        );
-
-        if (isArrayEmpty(backlinkDocumentGroupArray)) {
-            let pElement = document.createElement("p");
-            pElement.style.padding = "5px 15px";
-            pElement.innerText = window.siyuan.languages.emptyContent;
-            backlinkULElement.append(pElement);
-            return;
-        }
-
-        for (const documentGroup of backlinkDocumentGroupArray) {
-            let documentLiElement = createdDocumentLiElement(documentGroup);
-            const editorElement = document.createElement("div");
-            editorElement.style.minHeight = "auto";
-            editorElement.setAttribute(
-                "data-backlink-root-id",
-                documentGroup.documentId,
-            );
-
-            backlinkULElement.append(editorElement);
-            renderBacklinkDocumentGroup(
-                documentGroup,
-                documentLiElement,
-                editorElement,
-            );
-        }
-    }
-
-    function renderBacklinkDocumentGroup(
-        documentGroup,
-        documentLiElement: HTMLElement,
-        editorElement: HTMLElement,
-    ) {
-        if (
-            !documentGroup ||
-            !documentLiElement ||
-            !editorElement ||
-            !documentGroup.activeBacklink
-        ) {
-            return;
-        }
-
-        updateDocumentLiNavigation(documentLiElement, documentGroup);
-
-        let existingEditor = backlinkDocumentEditorMap.get(
-            documentGroup.documentId,
-        );
-        if (existingEditor) {
-            updateBacklinkDocumentAndProtyleItemAndHeadlineFoldMap(existingEditor);
-            existingEditor.destroy();
-            removeEditor(existingEditor);
-        }
-
-        editorElement.innerHTML = "";
-        const activeBacklink = documentGroup.activeBacklink;
-        const showFullDocument = getBacklinkDocumentRenderState(
-            backlinkDocumentViewState,
-            documentGroup.documentId,
-        ).showFullDocument;
-        const editor = new Protyle(
-            EnvConfig.ins.app,
-            editorElement,
-            buildBacklinkDocumentRenderOptions({
-                documentId: documentGroup.documentId,
-                activeBacklink,
-                showFullDocument,
-            }),
-        );
-        afterCreateBacklinkProtyle(
-            activeBacklink,
-            documentLiElement,
-            editor,
-            showFullDocument,
-        );
-
-        editor.protyle.notebookId = activeBacklink.backlinkBlock.box;
-        backlinkDocumentEditorMap.set(documentGroup.documentId, editor);
-        addEditor(editor);
-    }
-
-    function afterCreateBacklinkProtyle(
-        backlinkData: IBacklinkData,
-        documentLiElement: HTMLElement,
-        protyle: Protyle,
-        showFullDocument: boolean = false,
-    ) {
-        // 手动发送一下加载 Protyle 事件，实验方法，仅对自己的插件起效
+    function emitLoadedProtyleStatic(protyle: Protyle) {
         EnvConfig.ins.plugin.app.plugins.forEach((item) => {
             if (item.name != "syplugin-image-pin-preview") {
                 return;
@@ -891,163 +644,111 @@
                 protyle: protyle.protyle,
             });
         });
-        let protyleContentElement = protyle.protyle.contentElement;
+    }
 
-        let backlinkBlockId = backlinkData.backlinkBlock.id;
-        let backlinkRootId = backlinkData.backlinkBlock.root_id;
-
-        // 是否折叠反链文档
-        if (showFullDocument) {
-            expandBacklinkDocument(documentLiElement);
-        } else if (
-            getBacklinkDocumentRenderState(
-                backlinkDocumentViewState,
-                backlinkRootId,
-            ).isFolded
-        ) {
-            collapseBacklinkDocument(documentLiElement);
-        }
-
-        if (showFullDocument) {
-            expandAllListItemNode(protyleContentElement);
-            expandBacklinkHeadingMore(protyleContentElement);
-        } else {
-            // 展开列表项，首先判断有没有历史记录，存在历史记录则用记录
-            let foldIdSet = backlinkProtyleItemFoldMap.get(backlinkBlockId);
-            if (foldIdSet) {
-                foldListItemNodeByIdSet(protyleContentElement, foldIdSet);
-            } else {
-                let defaultExpandedListItemLevel =
-                    SettingService.ins.SettingConfig.defaultExpandedListItemLevel;
-                if (defaultExpandedListItemLevel > 0) {
-                    expandListItemNodeByDepth(
-                        protyleContentElement,
-                        defaultExpandedListItemLevel,
-                    );
-                }
-            }
-
-            // 展开大纲下的子内容
-            let expandHeadingMore =
-                backlinkProtyleHeadingExpandMap.get(backlinkBlockId);
-
-            if (expandHeadingMore) {
-                expandBacklinkHeadingMore(protyleContentElement);
-            }
-        }
-
-        // 全文模式下不再施加反链内容裁剪
-        if (!showFullDocument) {
-            hideOtherListItemElement(backlinkData, protyle);
-        }
-
-        // 高亮搜索内容
-        let keywordArray = sanitizeBacklinkKeywords(
-            splitKeywordStringToArray(queryParams.backlinkKeywordStr),
-        );
-        highlightElementTextByCss(documentLiElement, keywordArray);
-        delayedTwiceRefresh(() => {
-            highlightElementTextByCss(protyleContentElement, keywordArray);
-        }, 100);
-
-        // 主要防止手机端侧边栏上下滑动导致退回
-        protyleContentElement.addEventListener("touchend", (event) => {
-            event.stopPropagation();
+    function batchCreateOfficialBacklinkProtyle(
+        backlinkDocumentArray: DefBlock[],
+        backlinkDataArray: IBacklinkData[],
+    ) {
+        backlinkDocumentGroupArray = batchRenderBacklinkDocumentGroups({
+            backlinkDocumentArray,
+            backlinkDataArray,
+            backlinkDocumentActiveIndexMap,
+            backlinkULElement,
+            deps: {
+                groupBacklinksByDocument,
+                isArrayEmpty,
+                documentRef: document,
+                emptyContentText: window.siyuan.languages.emptyContent,
+                createDocumentListItemElement: (documentGroup) =>
+                    createBacklinkDocumentListItemElement({
+                        documentGroup,
+                        parentElement: backlinkULElement,
+                        documentRef: document,
+                        onDocumentClick: clickBacklinkDocumentLiElement,
+                        onContextMenu: contextmenuBacklinkDocumentLiElement,
+                        onToggle: toggleBacklinkDocument,
+                        onNavigate: navigateBacklinkDocument,
+                    }),
+                renderDocumentGroup: (documentGroup, documentLiElement, editorElement) =>
+                    renderBacklinkDocumentGroup(
+                        documentGroup,
+                        documentLiElement,
+                        editorElement,
+                    ),
+            },
         });
     }
 
-    function hideOtherListItemElement(
-        backlinkData: IBacklinkData,
-        protyle: Protyle,
+    function renderBacklinkDocumentGroup(
+        documentGroup,
+        documentLiElement: HTMLElement,
+        editorElement: HTMLElement,
     ) {
-        // 因为之前筛选面板的设计没有考虑到选择一个关联定义块后，隐藏其他没有这个定义块的列表这个功能，所以这里隐藏了，筛选面板不会隐藏，暂时不处理
-        // return;
-        let protyleContentElement = protyle.protyle.contentElement;
-
-        let inclucdeRelatedDefBlockIds = queryParams.includeRelatedDefBlockIds;
-        let excludeRelatedDefBlockIds = queryParams.excludeRelatedDefBlockIds;
-        if (
-            isSetEmpty(inclucdeRelatedDefBlockIds) &&
-            isSetEmpty(excludeRelatedDefBlockIds)
-        ) {
-            return;
-        }
-
-        // 首先判断反链块是否是列表项
-        let targetBlockParentElement = protyleContentElement.querySelector(
-            `div[data-node-id='${backlinkData.backlinkBlock.id}']`,
-        ).parentElement;
-        if (
-            !targetBlockParentElement.matches(`div[data-type="NodeListItem"]`)
-        ) {
-            return;
-        }
-        let includeChildListItemIdArray =
-            backlinkData.includeChildListItemIdArray;
-        let excludeChildLisetItemIdArray =
-            backlinkData.excludeChildLisetItemIdArray;
-
-        if (
-            isSetNotEmpty(inclucdeRelatedDefBlockIds) &&
-            isArrayNotEmpty(includeChildListItemIdArray)
-        ) {
-            // 获取所有子列表项块
-            let allListItemElement = targetBlockParentElement.querySelectorAll(
-                `div[data-type="NodeListItem"]`,
-            );
-            // 先把所有列表项块隐藏
-            for (const itemElement of allListItemElement) {
-                itemElement.classList.add("fn__none");
-            }
-            for (const itemId of includeChildListItemIdArray) {
-                let targetElement = targetBlockParentElement.querySelector(
-                    `div[data-type="NodeListItem"][data-node-id="${itemId}"]`,
-                );
-                if (targetElement) {
-                    targetElement.classList.remove("fn__none");
-                }
-            }
-        }
-        if (
-            isSetNotEmpty(excludeRelatedDefBlockIds) &&
-            isArrayNotEmpty(excludeChildLisetItemIdArray)
-        ) {
-            for (const itemId of excludeChildLisetItemIdArray) {
-                let targetElement = targetBlockParentElement.querySelector(
-                    `div[data-type="NodeListItem"][data-node-id="${itemId}"]`,
-                );
-                if (targetElement) {
-                    targetElement.classList.add("fn__none");
-                }
-            }
-        }
-
-        // 遍历列表项节点，把符合条件的列表项节点显示出来：包含定义块的列表项块；定义块下的列表项块。
-        // for (const itemElement of allListItemElement) {
-        // if (!itemElement.classList.contains("fn__none")) {
-        // continue;
-        // }
-        // for (const blockId of inclucdeRelatedDefBlockIds) {
-        // let refBlockElement = itemElement.querySelector(
-        // `span[data-type="block-ref"][data-id="${blockId}"]`,
-        // );
-        // if (!refBlockElement) {
-        // continue;
-        // }
-        // itemElement.classList.remove("fn__none");
-        // let refBlockParentItemElement =
-        // getParentListItemElement(refBlockElement);
-        // if (refBlockParentItemElement) {
-        // let refBlockChildListItemElement =
-        // refBlockParentItemElement.querySelectorAll(
-        // `div[data-type="NodeListItem"]`,
-        // );
-        // for (const itemElement of refBlockChildListItemElement) {
-        // itemElement.classList.remove("fn__none");
-        // }
-        // }
-        // }
-        // }
+        renderBacklinkDocumentGroupByHelper({
+            documentGroup,
+            documentLiElement,
+            editorElement,
+            backlinkDocumentEditorMap,
+            backlinkDocumentViewState,
+            deps: {
+                updateBacklinkDocumentLiNavigation,
+                syncBacklinkDocumentProtyleState: (editor) =>
+                    syncBacklinkDocumentProtyleState(editor, {
+                        backlinkDocumentFoldMap,
+                        backlinkProtyleItemFoldMap,
+                        backlinkProtyleHeadingExpandMap,
+                        captureBacklinkProtyleState,
+                        markBacklinkDocumentFoldState,
+                    }),
+                removeEditor,
+                ProtyleCtor: Protyle,
+                app: EnvConfig.ins.app,
+                buildBacklinkDocumentRenderOptions,
+                getBacklinkDocumentRenderState,
+                applyCreatedBacklinkProtyleState: ({
+                    backlinkData,
+                    documentLiElement,
+                    protyle,
+                    showFullDocument,
+                }) =>
+                    applyCreatedBacklinkProtyleState({
+                        backlinkData,
+                        documentLiElement,
+                        protyle,
+                        showFullDocument,
+                        deps: {
+                            emitLoadedProtyleStatic,
+                            getBacklinkDocumentRenderState,
+                            backlinkDocumentViewState,
+                            expandBacklinkDocument,
+                            collapseBacklinkDocument,
+                            expandAllListItemNode,
+                            expandBacklinkHeadingMore,
+                            backlinkProtyleItemFoldMap,
+                            foldListItemNodeByIdSet,
+                            defaultExpandedListItemLevel:
+                                SettingService.ins.SettingConfig
+                                    .defaultExpandedListItemLevel,
+                            expandListItemNodeByDepth,
+                            getElementsBeforeDepth,
+                            getElementsAtDepth,
+                            syHasChildListNode,
+                            backlinkProtyleHeadingExpandMap,
+                            hideOtherListItemElement,
+                            queryParams,
+                            isSetEmpty,
+                            isSetNotEmpty,
+                            isArrayNotEmpty,
+                            sanitizeBacklinkKeywords,
+                            splitKeywordStringToArray,
+                            highlightElementTextByCss,
+                            delayedTwiceRefresh,
+                        },
+                    }),
+                addEditor,
+            },
+        });
     }
 
     //    function getParentListItemElement(element: Element): Element {
@@ -1060,124 +761,6 @@
     //        }
     //        return itemElement;
     //    }
-
-    function createdDocumentLiElement(documentGroup): HTMLElement {
-        let documentLiElement = document.createElement("li");
-        let activeBacklink = documentGroup.activeBacklink;
-        let backlinkBlockId = activeBacklink.backlinkBlock.id;
-        let backlinkRootId = documentGroup.documentId;
-        let docAriaText = activeBacklink.backlinkBlock.content;
-        let documentName = documentGroup.documentName;
-
-        documentLiElement.classList.add(
-            "b3-list-item",
-            "b3-list-item--hide-action",
-            "list-item__document-name",
-        );
-        documentLiElement.setAttribute("data-node-id", backlinkRootId);
-        documentLiElement.setAttribute(
-            "data-backlink-block-id",
-            backlinkBlockId,
-        );
-        if (docAriaText) {
-            docAriaText = docAriaText.substring(0, 100);
-        }
-
-        documentLiElement.innerHTML = `
-<span style="padding-left: 4px;margin-right: 2px" class="b3-list-item__toggle b3-list-item__toggle--hl">
-<svg class="b3-list-item__arrow b3-list-item__arrow--open"><use xlink:href="#iconRight"></use></svg>
-</span>
-<svg class="b3-list-item__graphic popover__block"><use xlink:href="#iconFile"></use></svg>
-<span class="b3-list-item__text ariaLabel"  aria-label="${docAriaText}"  >
-${documentName}
-</span>
-<svg class="b3-list-item__graphic counter ariaLabel backlink-nav-button previous-backlink-icon" aria-label="上一个反链块"><use xlink:href="#iconLeft"></use></svg>
-<span class="b3-list-item__meta backlink-nav-progress">${documentGroup.progressText}</span>
-<svg class="b3-list-item__graphic counter ariaLabel backlink-nav-button next-backlink-icon" aria-label="下一个反链块"><use xlink:href="#iconRight"></use></svg>
-`;
-        documentLiElement.addEventListener("click", (event: MouseEvent) => {
-            clickBacklinkDocumentLiElement(event);
-        });
-
-        documentLiElement.addEventListener(
-            "contextmenu",
-            (event: MouseEvent) => {
-                contextmenuBacklinkDocumentLiElement(event);
-            },
-        );
-
-        documentLiElement
-            .querySelector(".b3-list-item__toggle")
-            .addEventListener("click", (event: MouseEvent) => {
-                event.preventDefault();
-                event.stopPropagation();
-                toggleBacklinkDocument(documentLiElement);
-            });
-
-        documentLiElement.addEventListener("mousedown", (event: MouseEvent) => {
-            if (event.button !== 1) {
-                return;
-            }
-            event.stopPropagation();
-            event.preventDefault();
-            const target = event.currentTarget as HTMLElement;
-            toggleBacklinkDocument(target);
-        });
-
-        documentLiElement
-            .querySelector(".previous-backlink-icon")
-            .addEventListener("click", (event: MouseEvent) => {
-                navigateBacklinkDocument(event, "previous");
-                event.stopPropagation();
-            });
-
-        documentLiElement
-            .querySelector(".next-backlink-icon")
-            .addEventListener("click", (event: MouseEvent) => {
-                navigateBacklinkDocument(event, "next");
-                event.stopPropagation();
-            });
-
-        backlinkULElement.append(documentLiElement);
-        return documentLiElement;
-    }
-
-    function updateDocumentLiNavigation(
-        documentLiElement: HTMLElement,
-        documentGroup,
-    ) {
-        if (!documentLiElement || !documentGroup || !documentGroup.activeBacklink) {
-            return;
-        }
-        const progressElement = documentLiElement.querySelector(
-            ".backlink-nav-progress",
-        );
-        const previousButton = documentLiElement.querySelector(
-            ".previous-backlink-icon",
-        );
-        const nextButton = documentLiElement.querySelector(".next-backlink-icon");
-        const textElement = documentLiElement.querySelector(".b3-list-item__text");
-        const disableNavigation = documentGroup.backlinks.length <= 1;
-
-        documentLiElement.setAttribute(
-            "data-backlink-block-id",
-            documentGroup.activeBacklink.backlinkBlock.id,
-        );
-        if (progressElement) {
-            progressElement.textContent = documentGroup.progressText;
-        }
-        if (textElement) {
-            textElement.setAttribute(
-                "aria-label",
-                documentGroup.activeBacklink.backlinkBlock.content.substring(
-                    0,
-                    100,
-                ),
-            );
-        }
-        previousButton?.classList.toggle("disabled", disableNavigation);
-        nextButton?.classList.toggle("disabled", disableNavigation);
-    }
 
     function navigateBacklinkDocument(
         event: MouseEvent,

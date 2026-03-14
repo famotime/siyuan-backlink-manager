@@ -101,9 +101,10 @@
 - 基线数据装配中的当前文档锚文本回填、关联块物化、来源文档物化和文档块回挂已拆到 `src/service/backlink/backlink-panel-base-data-builder.js`
 - `buildBacklinkPanelData` 内部的反链块、标题子块、列表子树和父块遍历已拆到 `src/service/backlink/backlink-panel-data-collectors.js`
 - `backlink-data.ts` 的查询准备、缓存取数、render-data 校验与装配接线已继续拆到 `src/service/backlink/backlink-query-loaders.js`、`src/service/backlink/backlink-render-data.js`、`src/service/backlink/backlink-panel-data-assembly.js`，主文件现已压到 500 行以下
+- `backlink-filter-panel-page.svelte` 的文档行创建、列表折叠/展开、反链裁剪与 Protyle 创建后处理已拆到 `src/components/panel/backlink-document-row.js`、`src/components/panel/backlink-protyle-dom.js`、`src/components/panel/backlink-protyle-rendering.js`
 
 ## 开发验证
 
 - 全量测试：`node --test tests/*.test.js`
-- 本轮新增测试：`tests/backlink-panel-query-params.test.js`、`tests/backlink-def-blocks.test.js`、`tests/backlink-markdown.test.js`、`tests/backlink-panel-base-data-builder.test.js`、`tests/backlink-panel-data-collectors.test.js`、`tests/backlink-render-data.test.js`、`tests/backlink-query-loaders.test.js`
+- 本轮新增测试：`tests/backlink-panel-query-params.test.js`、`tests/backlink-def-blocks.test.js`、`tests/backlink-markdown.test.js`、`tests/backlink-panel-base-data-builder.test.js`、`tests/backlink-panel-data-collectors.test.js`、`tests/backlink-render-data.test.js`、`tests/backlink-query-loaders.test.js`、`tests/backlink-document-row.test.js`、`tests/backlink-protyle-dom.test.js`、`tests/backlink-protyle-rendering.test.js`
 - 构建：`npm run build`

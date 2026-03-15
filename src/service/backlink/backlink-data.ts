@@ -1,4 +1,4 @@
-import { getBacklink2, getBacklinkDoc, sql } from "@/utils/api";
+import { getBacklink2, getBacklinkDoc, getBlockKramdown, getChildBlocks, sql } from "@/utils/api";
 import {
     generateGetBacklinkBlockArraySql,
     generateGetBacklinkListItemBlockArraySql,
@@ -399,6 +399,8 @@ export async function getBacklinkPanelData(
         {
             generateGetBacklinkSiblingBlockArraySql,
             generateGetListItemtSubMarkdownArraySql,
+            getBlockKramdown,
+            getChildBlocks,
             sql,
             isArrayEmpty,
             isStrNotBlank,

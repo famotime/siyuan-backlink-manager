@@ -1,22 +1,24 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import {
+import * as backlinkDocumentInteraction from "../src/components/panel/backlink-document-interaction.js";
+
+const {
   buildBacklinkDocumentRenderOptions,
   getBacklinkDocumentClickAction,
   getNextBacklinkContextVisibilityLevel,
   getPreviousBacklinkContextVisibilityLevel,
   getBacklinkDocumentTargetRole,
   shouldHandleBacklinkDocumentClick,
-} from "../src/components/panel/backlink-document-interaction.js";
+} = backlinkDocumentInteraction;
 
-test("uses title click as a context expansion shortcut", () => {
+test("uses title click as a document open shortcut", () => {
   const action = getBacklinkDocumentClickAction({
     ctrlKey: false,
     targetRole: "title",
   });
 
-  assert.equal(action, "expand-context");
+  assert.equal(action, "open-block");
 });
 
 test("keeps fold toggle action on the left toggle button", () => {
@@ -54,6 +56,39 @@ test("ctrl-click still opens the backlink block directly", () => {
   });
 
   assert.equal(action, "open-block");
+});
+
+test("ctrl-click on the title follows the current focus area", () => {
+  const openArea =
+    backlinkDocumentInteraction.getBacklinkDocumentOpenArea?.({
+      trigger: "click",
+      ctrlKey: true,
+      targetRole: "title",
+    }) ?? null;
+
+  assert.equal(openArea, "focus");
+});
+
+test("left-click on the backlink document title opens the document in the main area", () => {
+  const openArea =
+    backlinkDocumentInteraction.getBacklinkDocumentOpenArea?.({
+      trigger: "click",
+      ctrlKey: false,
+      targetRole: "title",
+    }) ?? null;
+
+  assert.equal(openArea, "main");
+});
+
+test("right-click on the backlink document title opens the document in the right area", () => {
+  const openArea =
+    backlinkDocumentInteraction.getBacklinkDocumentOpenArea?.({
+      trigger: "contextmenu",
+      ctrlKey: false,
+      targetRole: "title",
+    }) ?? null;
+
+  assert.equal(openArea, "right");
 });
 
 test("returns the next document visibility level until full", () => {
@@ -134,6 +169,38 @@ test("keeps backlinkData restriction in the default preview mode", () => {
     {
       blockId: "doc-1",
       backlinkData: [activeBacklink],
+      render: {
+        background: false,
+        title: false,
+        gutter: true,
+        scroll: false,
+        breadcrumb: false,
+      },
+    },
+  );
+});
+
+test("uses assembled preview backlink data when nearby content is available", () => {
+  const activeBacklink = {
+    backlinkBlock: {
+      id: "backlink-1",
+      root_id: "doc-1",
+      box: "box-1",
+    },
+  };
+
+  assert.deepEqual(
+    buildBacklinkDocumentRenderOptions({
+      documentId: "doc-1",
+      activeBacklink,
+      contextVisibilityLevel: "nearby",
+      deps: {
+        buildBacklinkPreviewBacklinkData: () => [{ dom: "<div>assembled</div>" }],
+      },
+    }),
+    {
+      blockId: "doc-1",
+      backlinkData: [{ dom: "<div>assembled</div>" }],
       render: {
         background: false,
         title: false,

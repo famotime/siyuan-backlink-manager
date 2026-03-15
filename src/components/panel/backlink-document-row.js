@@ -8,7 +8,7 @@ const BACKLINK_CONTEXT_LEVEL_LABELS = {
   full: "全文",
 };
 const BACKLINK_DOCUMENT_TITLE_TOOLTIP =
-  "单击逐级展开上下文，Ctrl+单击打开反链块";
+  "左键在主窗口打开文档，右键在右侧打开文档，Ctrl+左键跟随当前焦点打开文档";
 
 export function getBacklinkContextLevelLabel(level = "core") {
   return BACKLINK_CONTEXT_LEVEL_LABELS[level] || BACKLINK_CONTEXT_LEVEL_LABELS.core;
@@ -196,6 +196,7 @@ export function createBacklinkDocumentListItemElement({
   parentElement,
   documentRef = globalThis.document,
   onDocumentClick,
+  onMouseDown,
   onContextMenu,
   onToggle,
   onNavigate,
@@ -225,6 +226,9 @@ export function createBacklinkDocumentListItemElement({
     ...getBacklinkMatchMeta(activeBacklink),
   });
 
+  documentLiElement.addEventListener("mousedown", (event) => {
+    onMouseDown?.(event);
+  });
   documentLiElement.addEventListener("click", (event) => {
     onDocumentClick?.(event);
   });

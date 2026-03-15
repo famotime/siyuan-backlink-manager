@@ -53,15 +53,21 @@ test("buildBacklinkContextBundle materializes ordered fragments and default visi
         root_id: "doc-a",
         markdown: "self ((def-current 'cur-anchor'))",
       },
+      selfRenderMarkdown: "- 当前列表项",
       documentBlock: {
         id: "doc-a",
         root_id: "doc-a",
         markdown: "document title",
       },
       parentMarkdown: "parent ((def-parent 'parent-anchor'))",
+      parentRenderMarkdown: "## parent ((def-parent 'parent-anchor'))",
       headlineChildMarkdown: "headline child",
       previousSiblingMarkdown: "previous sibling",
       nextSiblingMarkdown: "next sibling",
+      beforeExpandedRenderMarkdown: "before sibling",
+      expandedMarkdown: "expanded sibling",
+      expandedRenderMarkdown: "- expanded sibling",
+      afterExpandedRenderMarkdown: "after sibling",
       includeCurBlockDefBlockIds: new Set(["def-current"]),
       includeDirectDefBlockIds: new Set(["def-current"]),
       includeRelatedDefBlockIds: new Set(["def-parent"]),
@@ -72,14 +78,29 @@ test("buildBacklinkContextBundle materializes ordered fragments and default visi
 
   assert.deepEqual(
     bundle.fragments.map((fragment) => fragment.sourceType),
-    ["self", "document", "parent", "child_headline", "sibling_prev", "sibling_next"],
+    ["self", "document", "parent", "child_headline", "sibling_prev", "sibling_next", "expanded"],
   );
   assert.deepEqual(
     bundle.visibleFragments.map((fragment) => fragment.sourceType),
     ["self", "document"],
   );
   assert.equal(bundle.fragments[0].budgetPriority, 1);
+  assert.equal(bundle.fragments[0].renderMarkdown, "- 当前列表项");
   assert.equal(bundle.fragments[2].budgetPriority, 3);
+  assert.equal(bundle.fragments[2].renderMarkdown, "## parent ((def-parent 'parent-anchor'))");
+  assert.equal(bundle.fragments[6].renderMarkdown, "- expanded sibling");
+  assert.deepEqual(
+    bundle.previewSequence.extended.map((item) => item.sequenceRole),
+    [
+      "parent",
+      "expanded_before",
+      "sibling_prev",
+      "self",
+      "sibling_next",
+      "expanded_after",
+      "child_headline",
+    ],
+  );
   assert.ok(bundle.includeCurDocDefBlockIds.has("def-current"));
   assert.ok(bundle.includeRelatedDefBlockIds.has("def-parent"));
 });
@@ -188,6 +209,50 @@ test("matchBacklinkContextBundle records matched fragments, primary source, and 
   assert.equal(bundle.primaryMatchSourceType, "parent");
   assert.equal(bundle.matchSummaryList.length, 1);
   assert.match(bundle.matchSummaryList[0], /父级/);
+});
+
+test("matchBacklinkContextBundle strips markdown markers from match summaries", () => {
+  const bundle = buildBacklinkContextBundle(
+    {
+      block: {
+        id: "block-a",
+        root_id: "doc-a",
+        markdown: "self hit",
+      },
+      documentBlock: {
+        id: "doc-a",
+        root_id: "doc-a",
+        markdown: "doc title",
+      },
+      parentMarkdown:
+        "## 1. Skills 是什么？\n## 二、Skills：让 Claude 真正 target-hit\n{: id=\"20251116213835-gcqgbnw\"}",
+      headlineChildMarkdown: "",
+      previousSiblingMarkdown: "",
+      nextSiblingMarkdown: "",
+      includeCurBlockDefBlockIds: new Set(),
+      includeDirectDefBlockIds: new Set(),
+      includeRelatedDefBlockIds: new Set(),
+      parentListItemTreeNode: null,
+    },
+    createBundleDeps(),
+  );
+
+  matchBacklinkContextBundle(bundle, {
+    keywordObj: {
+      includeText: ["target-hit"],
+      excludeText: [],
+      includeAnchor: [],
+      excludeAnchor: [],
+    },
+    matchKeywords: (content, includeText, excludeText) =>
+      includeText.every((keyword) => content.includes(keyword)) &&
+      excludeText.every((keyword) => !content.includes(keyword)),
+  });
+
+  assert.equal(bundle.matchSummaryList.length, 1);
+  assert.equal(bundle.matchSummaryList[0].includes("##"), false);
+  assert.equal(bundle.matchSummaryList[0].includes("{: id="), false);
+  assert.match(bundle.matchSummaryList[0], /父级：1\. Skills 是什么？ 二、Skills：让 Claude 真正 target-hit/);
 });
 
 test("applyBacklinkContextVisibility exposes fragments by visibility level", () => {

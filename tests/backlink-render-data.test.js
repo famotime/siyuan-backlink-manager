@@ -181,6 +181,53 @@ test("getBatchBacklinkDoc deduplicates backlink dom results and preserves backli
   assert.deepEqual(result.backlinks[1].excludeChildLisetItemIdArray, ["child-2"]);
 });
 
+test("getBatchBacklinkDoc maps list item container dom back to the nested backlink block", async () => {
+  const backlinkBlockNodeArray = [
+    {
+      block: {
+        id: "block-brand-text",
+        parent_id: "item-brand",
+        root_id: "doc-a",
+        content: "品牌主色、辅色、渐变怎么用 skill",
+      },
+      includeCurBlockDefBlockIds: new Set(["def-skill"]),
+      includeDirectDefBlockIds: new Set(["def-skill"]),
+      contextBundle: {
+        primaryMatchSourceType: "sibling_prev",
+        matchSummaryList: ["前相邻块：近邻"],
+      },
+      parentListItemTreeNode: {
+        includeChildIdArray: ["item-nearby", "item-brand", "item-title"],
+        excludeChildIdArray: [],
+      },
+    },
+  ];
+
+  const result = await getBatchBacklinkDoc({
+    curRootId: "current-doc",
+    backlinkBlockNodeArray,
+    deps: {
+      intersectionSet: (setA, setB) => [...setA].filter((item) => setB.has(item)),
+      longestCommonSubstring: (a) => a,
+      getBacklinkDocByApiOrCache: async () => ({
+        usedCache: false,
+        backlinks: [{ dom: "<div data-node-id='item-brand'></div>" }],
+      }),
+      getBacklinkBlockId: (dom) => dom.match(/data-node-id='([^']+)'/)[1],
+      triggerIncompleteBacklinkFetch: () => {},
+    },
+  });
+
+  assert.equal(result.backlinks.length, 1);
+  assert.equal(result.backlinks[0].backlinkBlock.id, "block-brand-text");
+  assert.equal(result.backlinks[0].contextBundle.primaryMatchSourceType, "sibling_prev");
+  assert.deepEqual(result.backlinks[0].includeChildListItemIdArray, [
+    "item-nearby",
+    "item-brand",
+    "item-title",
+  ]);
+});
+
 test("isBacklinkBlockValid matches keywords from sibling markdown", () => {
   const result = isBacklinkBlockValid(
     {

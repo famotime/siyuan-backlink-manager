@@ -135,13 +135,21 @@ test("getSiblingBlockGroupArray groups immediate previous and next siblings by p
   assert.deepEqual(result, [
     {
       backlinkBlockId: "block-b",
+      currentSiblingBlock: { id: "block-b", parent_id: "parent-1", sort: 20, path: "/b" },
       previousSiblingBlock: { id: "block-a", parent_id: "parent-1", sort: 10, path: "/a" },
       nextSiblingBlock: { id: "block-c", parent_id: "parent-1", sort: 30, path: "/c" },
+      beforeSiblingBlocks: [],
+      afterSiblingBlocks: [],
+      expandedSiblingBlocks: [],
     },
     {
       backlinkBlockId: "block-e",
+      currentSiblingBlock: { id: "block-e", parent_id: "parent-2", sort: 20, path: "/e" },
       previousSiblingBlock: { id: "block-d", parent_id: "parent-2", sort: 10, path: "/d" },
       nextSiblingBlock: null,
+      beforeSiblingBlocks: [],
+      afterSiblingBlocks: [],
+      expandedSiblingBlocks: [],
     },
   ]);
 });
@@ -151,7 +159,8 @@ test("getSiblingBlockGroupArray uses sibling list items when backlink block is i
     {
       backlinkBlocks: [
         {
-          id: "block-in-item-b",
+          id: "block-b",
+          type: "p",
           parent_id: "item-b",
           parentBlockType: "i",
           parentListItemParentId: "list-root",
@@ -175,6 +184,7 @@ test("getSiblingBlockGroupArray uses sibling list items when backlink block is i
           { parent_id: "item-c", subMarkdown: "next item", subInAttrConcat: "", parentInAttrConcat: "" },
         ];
       },
+      getBlockKramdown: async (id) => ({ id, kramdown: `* ${id} kramdown` }),
       isArrayEmpty: (value) => !value || value.length === 0,
       isStrNotBlank: (value) => value !== "",
     },
@@ -182,7 +192,18 @@ test("getSiblingBlockGroupArray uses sibling list items when backlink block is i
 
   assert.deepEqual(result, [
     {
-      backlinkBlockId: "block-in-item-b",
+      backlinkBlockId: "block-b",
+      currentSiblingBlock: {
+        id: "item-b",
+        type: "i",
+        parent_id: "list-root",
+        sort: 20,
+        path: "/b",
+        parentInAttrConcat: "",
+        subMarkdown: "current item",
+        subInAttrConcat: "",
+        renderMarkdown: "* item-b kramdown",
+      },
       previousSiblingBlock: {
         id: "item-a",
         type: "i",
@@ -192,6 +213,7 @@ test("getSiblingBlockGroupArray uses sibling list items when backlink block is i
         parentInAttrConcat: "",
         subMarkdown: "prev item",
         subInAttrConcat: "",
+        renderMarkdown: "* item-a kramdown",
       },
       nextSiblingBlock: {
         id: "item-c",
@@ -202,7 +224,11 @@ test("getSiblingBlockGroupArray uses sibling list items when backlink block is i
         parentInAttrConcat: "",
         subMarkdown: "next item",
         subInAttrConcat: "",
+        renderMarkdown: "* item-c kramdown",
       },
+      beforeSiblingBlocks: [],
+      afterSiblingBlocks: [],
+      expandedSiblingBlocks: [],
     },
   ]);
 });
@@ -214,7 +240,8 @@ test("getSiblingBlockGroupArray queries list item sibling containers instead of 
     {
       backlinkBlocks: [
         {
-          id: "block-in-item-b",
+          id: "block-b",
+          type: "p",
           parent_id: "item-b",
           parentBlockType: "i",
           parentListItemParentId: "list-root",
@@ -239,4 +266,59 @@ test("getSiblingBlockGroupArray queries list item sibling containers instead of 
   );
 
   assert.deepEqual(sqlCalls, ["list-root"]);
+});
+
+test("getSiblingBlockGroupArray keeps list item neighbors in the actual parent list order when sorts are identical", async () => {
+  const result = await getSiblingBlockGroupArray(
+    {
+      backlinkBlocks: [
+        {
+          id: "block-brand",
+          type: "p",
+          parent_id: "item-brand",
+          parentBlockType: "i",
+          parentListItemParentId: "list-root",
+        },
+      ],
+    },
+    {
+      generateGetBacklinkSiblingBlockArraySql: () => "SIBLING_SQL",
+      generateGetListItemtSubMarkdownArraySql: () => "SUB_MARKDOWN_SQL",
+      sql: async (query) => {
+        if (query === "SIBLING_SQL") {
+          return [
+            { id: "item-expand", type: "i", parent_id: "list-root", sort: 20, path: "/same" },
+            { id: "item-nearby", type: "i", parent_id: "list-root", sort: 20, path: "/same" },
+            { id: "item-title", type: "i", parent_id: "list-root", sort: 20, path: "/same" },
+            { id: "item-logo", type: "i", parent_id: "list-root", sort: 20, path: "/same" },
+            { id: "item-error", type: "i", parent_id: "list-root", sort: 20, path: "/same" },
+            { id: "item-brand", type: "i", parent_id: "list-root", sort: 20, path: "/same" },
+          ];
+        }
+        return [
+          { parent_id: "item-expand", subMarkdown: "扩展", subInAttrConcat: "", parentInAttrConcat: "" },
+          { parent_id: "item-nearby", subMarkdown: "近邻", subInAttrConcat: "", parentInAttrConcat: "" },
+          { parent_id: "item-brand", subMarkdown: "品牌主色", subInAttrConcat: "", parentInAttrConcat: "" },
+          { parent_id: "item-title", subMarkdown: "标题字体", subInAttrConcat: "", parentInAttrConcat: "" },
+          { parent_id: "item-logo", subMarkdown: "LOGO", subInAttrConcat: "", parentInAttrConcat: "" },
+          { parent_id: "item-error", subMarkdown: "低级错误", subInAttrConcat: "", parentInAttrConcat: "" },
+        ];
+      },
+      getBlockKramdown: async (id) => ({ id, kramdown: `* ${id}` }),
+      getChildBlocks: async () => [
+        { id: "item-expand" },
+        { id: "item-nearby" },
+        { id: "item-brand" },
+        { id: "item-title" },
+        { id: "item-logo" },
+        { id: "item-error" },
+      ],
+      isArrayEmpty: (value) => !value || value.length === 0,
+      isStrNotBlank: (value) => value !== "",
+    },
+  );
+
+  assert.equal(result.length, 1);
+  assert.equal(result[0].previousSiblingBlock.id, "item-nearby");
+  assert.equal(result[0].nextSiblingBlock.id, "item-title");
 });

@@ -23,7 +23,10 @@ test("buildBacklinkDocumentListItemHtml renders title aria text and progress tex
   assert.match(html, /Document A/);
   assert.match(html, /2\/3/);
   assert.match(html, /aria-label="A{100}"/);
-  assert.match(html, /title="单击逐级展开上下文，Ctrl\+单击打开反链块"/);
+  assert.match(
+    html,
+    /title="左键在主窗口打开文档，右键在右侧打开文档，Ctrl\+左键跟随当前焦点打开文档"/,
+  );
   assert.match(html, /父级/);
   assert.match(html, /命中说明/);
   assert.match(html, /backlink-document-header-row/);
@@ -116,7 +119,7 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and 
   assert.equal(textElement.attrs["aria-label"], "content");
   assert.equal(
     textElement.attrs.title,
-    "单击逐级展开上下文，Ctrl+单击打开反链块",
+    "左键在主窗口打开文档，右键在右侧打开文档，Ctrl+左键跟随当前焦点打开文档",
   );
   assert.equal(sourceElement.textContent, "父级");
   assert.equal(summaryElement.textContent, "父级：命中说明");
@@ -179,7 +182,10 @@ test("createBacklinkDocumentListItemElement wires toggle and navigation events",
       this.attrs[name] = value;
     },
     addEventListener(type, handler) {
-      listeners[type] = handler;
+      if (!listeners[type]) {
+        listeners[type] = [];
+      }
+      listeners[type].push(handler);
     },
     querySelector(selector) {
       if (selector === ".b3-list-item__toggle") return toggleButton;
@@ -222,6 +228,7 @@ test("createBacklinkDocumentListItemElement wires toggle and navigation events",
       },
     },
     onDocumentClick: () => calls.push("document-click"),
+    onMouseDown: () => calls.push("mousedown"),
     onContextMenu: () => calls.push("contextmenu"),
     onToggle: () => calls.push("toggle"),
     onNavigate: (_, direction) => calls.push(direction),
@@ -232,8 +239,11 @@ test("createBacklinkDocumentListItemElement wires toggle and navigation events",
     },
   });
 
-  listeners.click({});
-  listeners.contextmenu({});
+  listeners.mousedown[0]({
+    button: 0,
+  });
+  listeners.click[0]({});
+  listeners.contextmenu[0]({});
   listeners["toggle:click"]({
     preventDefault() {},
     stopPropagation() {},
@@ -276,6 +286,7 @@ test("createBacklinkDocumentListItemElement wires toggle and navigation events",
   assert.equal(documentLiElement.attrs["data-node-id"], "doc-a");
   assert.equal(documentLiElement.attrs["data-backlink-block-id"], "block-a");
   assert.deepEqual(calls, [
+    "mousedown",
     "document-click",
     "contextmenu",
     "toggle",

@@ -1,3 +1,5 @@
+import { buildBacklinkPreviewBacklinkData } from "../../service/backlink/backlink-preview-assembly.js";
+
 export const BACKLINK_DOCUMENT_RENDER_CONFIG = {
   background: false,
   title: false,
@@ -17,19 +19,39 @@ export function getBacklinkDocumentClickAction({
   ctrlKey = false,
   targetRole = "other",
 } = {}) {
-  if (ctrlKey) {
-    return "open-block";
-  }
-
   if (targetRole === "toggle") {
     return "toggle-fold";
   }
 
   if (targetRole === "title") {
-    return "expand-context";
+    return "open-block";
   }
 
   return "noop";
+}
+
+export function getBacklinkDocumentOpenArea({
+  trigger = "click",
+  ctrlKey = false,
+  targetRole = "other",
+} = {}) {
+  if (targetRole !== "title") {
+    return null;
+  }
+
+  if (trigger === "click" && ctrlKey) {
+    return "focus";
+  }
+
+  if (trigger === "click") {
+    return "main";
+  }
+
+  if (trigger === "contextmenu") {
+    return "right";
+  }
+
+  return null;
 }
 
 export function shouldHandleBacklinkDocumentClick({
@@ -38,11 +60,26 @@ export function shouldHandleBacklinkDocumentClick({
   return targetRole !== "toggle";
 }
 
+function getDefaultMarkdownToBlockDOM() {
+  const luteFactory = globalThis.Lute;
+  if (!luteFactory || typeof luteFactory.New !== "function") {
+    return null;
+  }
+
+  const lute = luteFactory.New();
+  if (!lute || typeof lute.Md2BlockDOM !== "function") {
+    return null;
+  }
+
+  return (markdown = "") => lute.Md2BlockDOM(markdown);
+}
+
 export function buildBacklinkDocumentRenderOptions({
   documentId,
   activeBacklink,
   contextVisibilityLevel = "core",
   showFullDocument = false,
+  deps = {},
 } = {}) {
   const normalizedVisibilityLevel =
     BACKLINK_CONTEXT_VISIBILITY_LEVEL_ORDER.includes(contextVisibilityLevel)
@@ -56,7 +93,20 @@ export function buildBacklinkDocumentRenderOptions({
   };
 
   if (!useFullDocument && activeBacklink) {
-    options.backlinkData = [activeBacklink];
+    const previewBacklinkData = (
+      deps.buildBacklinkPreviewBacklinkData || buildBacklinkPreviewBacklinkData
+    )({
+      activeBacklink,
+      contextVisibilityLevel: normalizedVisibilityLevel,
+      deps: {
+        markdownToBlockDOM:
+          deps.markdownToBlockDOM || getDefaultMarkdownToBlockDOM(),
+      },
+    });
+    options.backlinkData =
+      Array.isArray(previewBacklinkData) && previewBacklinkData.length > 0
+        ? previewBacklinkData
+        : [activeBacklink];
   }
 
   return options;

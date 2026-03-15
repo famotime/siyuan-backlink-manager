@@ -51,6 +51,7 @@ export interface IBacklinkContextFragment {
     sourceType: BacklinkContextSourceType;
     visibilityLevel: BacklinkContextVisibilityLevel;
     text: string;
+    renderMarkdown?: string;
     displayText: string;
     searchText: string;
     anchorText: string;
@@ -82,6 +83,11 @@ export interface IBacklinkContextBundle {
     rootId: string;
     fragments: IBacklinkContextFragment[];
     visibleFragments: IBacklinkContextFragment[];
+    previewSequence?: {
+        core?: Array<{ sequenceRole: string; sourceType: string; renderMarkdown: string; text?: string }>;
+        nearby?: Array<{ sequenceRole: string; sourceType: string; renderMarkdown: string; text?: string }>;
+        extended?: Array<{ sequenceRole: string; sourceType: string; renderMarkdown: string; text?: string }>;
+    };
     matchedFragments: IBacklinkContextFragment[];
     includeCurDocDefBlockIds: Set<string>;
     includeRelatedDefBlockIds: Set<string>;
@@ -105,11 +111,21 @@ export interface IBacklinkContextBudgetSummary {
 export interface IBacklinkBlockNode {
     block: DefBlock;
     documentBlock: DefBlock;
+    selfRenderMarkdown?: string;
     parentMarkdown: string;
+    parentRenderMarkdown?: string;
     listItemChildMarkdown: string;
     headlineChildMarkdown: string;
     previousSiblingMarkdown: string;
     nextSiblingMarkdown: string;
+    previousSiblingRenderMarkdown?: string;
+    nextSiblingRenderMarkdown?: string;
+    beforeExpandedMarkdown?: string;
+    beforeExpandedRenderMarkdown?: string;
+    expandedMarkdown?: string;
+    expandedRenderMarkdown?: string;
+    afterExpandedMarkdown?: string;
+    afterExpandedRenderMarkdown?: string;
     // 存放包含当前文档定义块的定义块id
     includeDirectDefBlockIds: Set<string>;
     // 存放包含关联定义块的id；关联的定义：非当前文档的定义块

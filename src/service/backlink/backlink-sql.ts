@@ -107,7 +107,7 @@ export function generateGetParentDefBlockArraySql(
         INNER JOIN parent_block p ON t.id = p.parent_id
     WHERE t.type NOT IN ( 'd', 'c', 'm', 't', 'p', 'tb', 'html', 'video', 'audio', 'widget', 'iframe', 'query_embed' )
     ) 
-    SELECT id, parent_id, type, childIdPath, inAttrConcat, CASE WHEN type = 'i' THEN '' ELSE markdown END AS markdown
+    SELECT id, parent_id, type, childIdPath, inAttrConcat, markdown
     FROM parent_block 
     WHERE 1 == 1 
     AND type IN ( 'i', 'h', 'b', 's' )

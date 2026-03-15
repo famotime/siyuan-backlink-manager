@@ -36,9 +36,18 @@ import {
 import {
   buildBacklinkDocumentRenderOptions,
   getBacklinkDocumentClickAction,
+  getBacklinkDocumentOpenArea,
   getBacklinkDocumentTargetRole,
   shouldHandleBacklinkDocumentClick,
 } from "./backlink-document-interaction.js";
+import {
+  activateBacklinkDocumentMainArea,
+  getBacklinkDocumentOpenDebugSnapshot,
+  getBacklinkDocumentOpenTarget,
+  getBacklinkDocumentPreClickOpenArea,
+  mergeBacklinkDocumentOpenTargetIntoTabOptions,
+  resolveBacklinkDocumentOpenArea,
+} from "./backlink-document-open-target.js";
 import {
   createBacklinkDocumentListItemElement,
   getBacklinkContextLevelLabel,
@@ -79,6 +88,13 @@ import { sanitizeBacklinkKeywords } from "./backlink-panel-formatting.js";
 import { mergeTurnPageBacklinkPanelRenderData } from "./backlink-panel-render-data.js";
 
 export function createBacklinkPanelController(state) {
+  const BACKLINK_OPEN_DEBUG_PREFIX = "[backlink-open-debug]";
+  let preClickOpenArea = "focus";
+
+  function logBacklinkOpenDebug(stage, payload = {}) {
+    console.log(BACKLINK_OPEN_DEBUG_PREFIX, stage, payload);
+  }
+
   function getEditors() {
     if (state.currentTab) {
       if (!Array.isArray(state.currentTab.editors)) {
@@ -160,10 +176,36 @@ export function createBacklinkPanelController(state) {
     });
 
     if (action === "open-block") {
+      const requestedOpenArea = getBacklinkDocumentOpenArea({
+        trigger: "click",
+        ctrlKey: event.ctrlKey,
+        targetRole,
+      });
+      const resolvedOpenArea = resolveBacklinkDocumentOpenArea(
+        requestedOpenArea,
+        preClickOpenArea,
+      );
+      logBacklinkOpenDebug("click-title", {
+        ctrlKey: Boolean(event.ctrlKey),
+        targetRole,
+        requestedOpenArea,
+        preClickOpenArea,
+        resolvedOpenArea,
+        rootId: target.getAttribute("data-node-id"),
+        blockId: target.getAttribute("data-backlink-block-id"),
+        snapshot: getBacklinkDocumentOpenDebugSnapshot({
+          currentTab: state.currentTab,
+          documentRef: document,
+        }),
+      });
       openBlockTab(
         target.getAttribute("data-node-id"),
         target.getAttribute("data-backlink-block-id"),
+        {
+          openArea: resolvedOpenArea,
+        },
       );
+      preClickOpenArea = "focus";
       return;
     }
 
@@ -172,18 +214,59 @@ export function createBacklinkPanelController(state) {
       return;
     }
 
-    if (action === "expand-context") {
-      stepBacklinkDocumentContext(target, "next");
+  }
+
+  function mouseDownBacklinkDocumentLiElement(event) {
+    const targetRole = getBacklinkDocumentTargetRole(event.target);
+    if (event.button !== 0 || targetRole !== "title") {
+      return;
     }
 
+    preClickOpenArea = getBacklinkDocumentPreClickOpenArea({
+      currentTab: state.currentTab,
+      documentRef: document,
+    });
+    logBacklinkOpenDebug("mousedown-title", {
+      button: event.button,
+      ctrlKey: Boolean(event.ctrlKey),
+      targetRole,
+      preClickOpenArea,
+      snapshot: getBacklinkDocumentOpenDebugSnapshot({
+        currentTab: state.currentTab,
+        documentRef: document,
+      }),
+    });
   }
 
   function contextmenuBacklinkDocumentLiElement(event) {
     const target = event.currentTarget;
+    const targetRole = getBacklinkDocumentTargetRole(event.target);
+    const openArea = getBacklinkDocumentOpenArea({
+      trigger: "contextmenu",
+      ctrlKey: event.ctrlKey,
+      targetRole,
+    });
+    if (!openArea) {
+      return;
+    }
+    event.preventDefault();
+    logBacklinkOpenDebug("contextmenu-title", {
+      ctrlKey: Boolean(event.ctrlKey),
+      targetRole,
+      openArea,
+      rootId: target.getAttribute("data-node-id"),
+      blockId: target.getAttribute("data-backlink-block-id"),
+      snapshot: getBacklinkDocumentOpenDebugSnapshot({
+        currentTab: state.currentTab,
+        documentRef: document,
+      }),
+    });
     openBlockTab(
       target.getAttribute("data-node-id"),
       target.getAttribute("data-backlink-block-id"),
+      { openArea },
     );
+    preClickOpenArea = "focus";
   }
 
   function expandBacklinkDocument(documentLiElement) {
@@ -312,6 +395,7 @@ export function createBacklinkPanelController(state) {
             contextControlState: getBacklinkContextControlState(documentGroup),
             parentElement: state.backlinkULElement,
             documentRef: document,
+            onMouseDown: mouseDownBacklinkDocumentLiElement,
             onDocumentClick: clickBacklinkDocumentLiElement,
             onContextMenu: contextmenuBacklinkDocumentLiElement,
             onToggle: toggleBacklinkDocument,
@@ -454,16 +538,51 @@ export function createBacklinkPanelController(state) {
     if (params.rootId === params.blockId) {
       params.actions = [Constants.CB_GET_FOCUS, Constants.CB_GET_SCROLL];
     }
-    openTab({
+    const openTarget = getBacklinkDocumentOpenTarget(params.openArea);
+    logBacklinkOpenDebug("open-desktop-before-activate", {
+      rootId: params.rootId,
+      blockId: params.blockId,
+      openArea: params.openArea,
+      openTarget,
+      actions: params.actions,
+      snapshot: getBacklinkDocumentOpenDebugSnapshot({
+        currentTab: state.currentTab,
+        documentRef: document,
+      }),
+    });
+    if (openTarget.shouldActivateMainArea) {
+      const activatedMainArea = activateBacklinkDocumentMainArea({
+        currentTab: state.currentTab,
+      });
+      logBacklinkOpenDebug("open-desktop-after-activate", {
+        rootId: params.rootId,
+        blockId: params.blockId,
+        activatedMainArea,
+        snapshot: getBacklinkDocumentOpenDebugSnapshot({
+          currentTab: state.currentTab,
+          documentRef: document,
+        }),
+      });
+    }
+    const tabOptions = mergeBacklinkDocumentOpenTargetIntoTabOptions({
       app: EnvConfig.ins.app,
       doc: {
         id: params.blockId,
         action: params.actions,
       },
+    }, openTarget);
+    logBacklinkOpenDebug("open-desktop-open-tab", {
+      rootId: params.rootId,
+      blockId: params.blockId,
+      openArea: params.openArea,
+      hasPosition: Object.prototype.hasOwnProperty.call(tabOptions, "position"),
+      position: tabOptions.position,
+      doc: tabOptions.doc,
     });
+    openTab(tabOptions);
   }
 
-  async function openBlockTab(rootId, blockId) {
+  async function openBlockTab(rootId, blockId, options = {}) {
     const zoomIn = await getBlockIsFolded(blockId);
     const actions = getOpenTabActionByZoomIn(zoomIn);
 
@@ -472,7 +591,13 @@ export function createBacklinkPanelController(state) {
       return;
     }
 
-    openDesktopBlockTab({ zoomIn, actions, rootId, blockId });
+    openDesktopBlockTab({
+      zoomIn,
+      actions,
+      rootId,
+      blockId,
+      openArea: options.openArea,
+    });
   }
 
   async function initBaseData() {

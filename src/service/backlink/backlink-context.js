@@ -14,6 +14,13 @@ function pushFragment(fragmentArray, fragment) {
   fragmentArray.push(fragment);
 }
 
+function pushPreviewSequenceItem(sequence = [], item = null) {
+  if (!item || !item.renderMarkdown) {
+    return;
+  }
+  sequence.push(item);
+}
+
 function buildBacklinkContextFragmentDedupeKey(fragment = {}) {
   return [
     fragment.sourceType || "",
@@ -44,6 +51,7 @@ function createContextFragment({
   sourceType,
   order,
   text,
+  renderMarkdown,
   refBlockIds,
   anchorText,
   searchText,
@@ -75,6 +83,7 @@ function createContextFragment({
     sourceType,
     visibilityLevel: rule.visibilityLevel,
     text,
+    renderMarkdown,
     displayText: text,
     searchText,
     anchorText,
@@ -97,6 +106,7 @@ function createMarkdownFragment({
   sourceType,
   order,
   text,
+  renderMarkdown,
   deps,
 }) {
   if (!text) {
@@ -108,6 +118,7 @@ function createMarkdownFragment({
     sourceType,
     order,
     text,
+    renderMarkdown,
     searchText: (deps.removeMarkdownRefBlockStyle
       ? deps.removeMarkdownRefBlockStyle(text)
       : text
@@ -147,6 +158,11 @@ export function buildBacklinkContextBundle(backlinkBlockNode, deps) {
       sourceType: "self",
       order: order++,
       text: deps.getQueryStrByBlock(backlinkBlockNode.block),
+      renderMarkdown:
+        backlinkBlockNode.selfRenderMarkdown ||
+        backlinkBlockNode.block?.markdown ||
+        backlinkBlockNode.block?.content ||
+        "",
       deps,
     }),
   );
@@ -157,6 +173,10 @@ export function buildBacklinkContextBundle(backlinkBlockNode, deps) {
       sourceType: "document",
       order: order++,
       text: deps.getQueryStrByBlock(backlinkBlockNode.documentBlock),
+      renderMarkdown:
+        backlinkBlockNode.documentBlock?.markdown ||
+        backlinkBlockNode.documentBlock?.content ||
+        "",
       deps,
     }),
   );
@@ -167,6 +187,8 @@ export function buildBacklinkContextBundle(backlinkBlockNode, deps) {
       sourceType: "parent",
       order: order++,
       text: backlinkBlockNode.parentMarkdown,
+      renderMarkdown:
+        backlinkBlockNode.parentRenderMarkdown || backlinkBlockNode.parentMarkdown,
       deps,
     }),
   );
@@ -177,6 +199,7 @@ export function buildBacklinkContextBundle(backlinkBlockNode, deps) {
       sourceType: "child_headline",
       order: order++,
       text: backlinkBlockNode.headlineChildMarkdown,
+      renderMarkdown: backlinkBlockNode.headlineChildMarkdown,
       deps,
     }),
   );
@@ -188,6 +211,9 @@ export function buildBacklinkContextBundle(backlinkBlockNode, deps) {
       sourceType: "sibling_prev",
       order: order++,
       text: backlinkBlockNode.previousSiblingMarkdown,
+      renderMarkdown:
+        backlinkBlockNode.previousSiblingRenderMarkdown ||
+        backlinkBlockNode.previousSiblingMarkdown,
       deps,
     }),
   );
@@ -198,6 +224,22 @@ export function buildBacklinkContextBundle(backlinkBlockNode, deps) {
       sourceType: "sibling_next",
       order: order++,
       text: backlinkBlockNode.nextSiblingMarkdown,
+      renderMarkdown:
+        backlinkBlockNode.nextSiblingRenderMarkdown ||
+        backlinkBlockNode.nextSiblingMarkdown,
+      deps,
+    }),
+  );
+  pushFragment(
+    fragments,
+    createMarkdownFragment({
+      backlinkBlockNode,
+      sourceType: "expanded",
+      order: order++,
+      text: backlinkBlockNode.expandedMarkdown,
+      renderMarkdown:
+        backlinkBlockNode.expandedRenderMarkdown ||
+        backlinkBlockNode.expandedMarkdown,
       deps,
     }),
   );
@@ -219,6 +261,7 @@ export function buildBacklinkContextBundle(backlinkBlockNode, deps) {
     rootId: backlinkBlockNode.block.root_id,
     fragments: dedupedFragments,
     visibleFragments: dedupedFragments.filter((fragment) => fragment.defaultVisible),
+    previewSequence: buildBacklinkPreviewSequence(backlinkBlockNode),
     matchedFragments: [],
     includeCurDocDefBlockIds,
     includeRelatedDefBlockIds,
@@ -228,6 +271,88 @@ export function buildBacklinkContextBundle(backlinkBlockNode, deps) {
   backlinkBlockNode.contextFragments = dedupedFragments;
   backlinkBlockNode.contextBundle = bundle;
   return bundle;
+}
+
+function buildBacklinkPreviewSequence(backlinkBlockNode = {}) {
+  const selfRenderMarkdown =
+    backlinkBlockNode.selfRenderMarkdown ||
+    backlinkBlockNode.block?.markdown ||
+    backlinkBlockNode.block?.content ||
+    "";
+  const nearby = [];
+  const extended = [];
+
+  pushPreviewSequenceItem(nearby, {
+    sequenceRole: "sibling_prev",
+    sourceType: "sibling_prev",
+    renderMarkdown:
+      backlinkBlockNode.previousSiblingRenderMarkdown ||
+      backlinkBlockNode.previousSiblingMarkdown ||
+      "",
+  });
+  pushPreviewSequenceItem(nearby, {
+    sequenceRole: "self",
+    sourceType: "self",
+    renderMarkdown: selfRenderMarkdown,
+  });
+  pushPreviewSequenceItem(nearby, {
+    sequenceRole: "sibling_next",
+    sourceType: "sibling_next",
+    renderMarkdown:
+      backlinkBlockNode.nextSiblingRenderMarkdown ||
+      backlinkBlockNode.nextSiblingMarkdown ||
+      "",
+  });
+
+  pushPreviewSequenceItem(extended, {
+    sequenceRole: "parent",
+    sourceType: "parent",
+    renderMarkdown:
+      backlinkBlockNode.parentRenderMarkdown || backlinkBlockNode.parentMarkdown || "",
+  });
+  pushPreviewSequenceItem(extended, {
+    sequenceRole: "expanded_before",
+    sourceType: "expanded",
+    renderMarkdown:
+      backlinkBlockNode.beforeExpandedRenderMarkdown ||
+      backlinkBlockNode.beforeExpandedMarkdown ||
+      "",
+  });
+  extended.push(...nearby);
+  pushPreviewSequenceItem(extended, {
+    sequenceRole: "expanded_after",
+    sourceType: "expanded",
+    renderMarkdown:
+      backlinkBlockNode.afterExpandedRenderMarkdown ||
+      backlinkBlockNode.afterExpandedMarkdown ||
+      "",
+  });
+  pushPreviewSequenceItem(extended, {
+    sequenceRole: "child_headline",
+    sourceType: "child_headline",
+    renderMarkdown: backlinkBlockNode.headlineChildMarkdown || "",
+  });
+  pushPreviewSequenceItem(extended, {
+    sequenceRole: "child_list",
+    sourceType: "child_list",
+    renderMarkdown:
+      backlinkBlockNode.parentListItemTreeNode?.getFilterMarkdown?.(
+        backlinkBlockNode.parentListItemTreeNode?.includeChildIdArray,
+        backlinkBlockNode.parentListItemTreeNode?.excludeChildIdArray,
+      ) || "",
+  });
+
+  return {
+    core: [
+      {
+        sequenceRole: "self",
+        sourceType: "self",
+        renderMarkdown: selfRenderMarkdown,
+      },
+    ].filter((item) => item.renderMarkdown),
+    nearby,
+    extended,
+  };
 }
 
 export function hydrateBacklinkContextBundles(backlinkBlockNodeArray = [], deps) {
@@ -273,11 +398,23 @@ function resetBundleMatches(bundle) {
   }
 }
 
+function normalizeMatchSummaryText(text = "") {
+  return String(text || "")
+    .replace(/\n?\{:[^}\n]+\}\s*/g, " ")
+    .replace(/\(\(\d{14}-\w{7}\s['"]([^'"]+)['"]\)\)/g, "$1")
+    .replace(/^\s*[-*+]\s+\[[ xX]\]\s+/gm, "")
+    .replace(/^\s*[-*+]\s+/gm, "")
+    .replace(/^\s*\d+\.\s+/gm, "")
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function buildMatchSummary(fragment) {
   const label = getBacklinkContextSourceRule(fragment.sourceType).label;
   const useAnchor = fragment.matchTypes.includes("anchor") && fragment.anchorText;
   const text = useAnchor ? fragment.anchorText : fragment.displayText;
-  const compactText = String(text || "").replace(/\s+/g, " ").trim().slice(0, 48);
+  const compactText = normalizeMatchSummaryText(text).slice(0, 48);
   return compactText ? `${label}：${compactText}` : label;
 }
 

@@ -14,6 +14,7 @@ import {
     buildBacklinkPanelPageProps,
     destroyBacklinkPanelHost,
 } from "./backlink-panel-host.js";
+import { shouldIgnoreDocumentBottomBacklinkForProtyle } from "./document-protyle-guard.js";
 
 
 let backlinkPanelPageSvelteMap: Map<string, BacklinkFilterPanelPageSvelte> = new Map();
@@ -69,6 +70,11 @@ async function handleSwitchProtyleOrLoadedProtyleStatic(e) {
     }
 
     let docuemntContentElement = e.detail.protyle.contentElement as HTMLElement;
+    if (shouldIgnoreDocumentBottomBacklinkForProtyle(docuemntContentElement, {
+        hasClosestByClassName,
+    })) {
+        return;
+    }
     let rootId = e.detail.protyle.block.rootID;
     // let focusBlockId = e.detail.protyle.block.id;
     if (!rootId) {
@@ -91,6 +97,11 @@ function handleDestroyProtyle(e) {
 }
 
 async function getDocumentBottomBacklinkPanelDisplay(docuemntContentElement: HTMLElement, rootId: string) {
+    if (shouldIgnoreDocumentBottomBacklinkForProtyle(docuemntContentElement, {
+        hasClosestByClassName,
+    })) {
+        return false;
+    }
     // 如果是闪卡界面，不显示底部反链面板
     let isCardBlock = hasClosestByClassName(docuemntContentElement, "card__block")
     if (isCardBlock) {

@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   expandBacklinkHeadingMore,
   foldListItemNodeByIdSet,
+  hideBlocksOutsideBacklinkSourceWindow,
   hideOtherListItemElement,
 } from "../src/components/panel/backlink-protyle-dom.js";
 
@@ -137,4 +138,109 @@ test("hideOtherListItemElement hides non-included children and excludes requeste
   assert.deepEqual(items.get("other").classList.added, ["fn__none"]);
   assert.deepEqual(items.get("inc").classList.removed, ["fn__none"]);
   assert.deepEqual(items.get("exc").classList.added, ["fn__none", "fn__none"]);
+});
+
+test("hideBlocksOutsideBacklinkSourceWindow keeps only blocks inside the current visibility window", () => {
+  const makeBlock = (id) => ({
+    id,
+    getAttribute(name) {
+      return name === "data-node-id" ? id : null;
+    },
+    classList: {
+      added: [],
+      removed: [],
+      add(name) {
+        this.added.push(name);
+      },
+      remove(name) {
+        this.removed.push(name);
+      },
+    },
+  });
+  const blockA = makeBlock("block-a");
+  const blockB = makeBlock("block-b");
+  const blockC = makeBlock("block-c");
+  const protyleContentElement = {
+    querySelector() {
+      return {
+        querySelectorAll() {
+          return [blockA, blockB, blockC];
+        },
+      };
+    },
+  };
+
+  hideBlocksOutsideBacklinkSourceWindow(
+    {
+      sourceWindows: {
+        nearby: {
+          windowBlockIds: ["block-b"],
+        },
+      },
+    },
+    protyleContentElement,
+    "nearby",
+  );
+
+  assert.deepEqual(blockA.classList.added, ["fn__none"]);
+  assert.deepEqual(blockB.classList.removed, ["fn__none"]);
+  assert.deepEqual(blockC.classList.added, ["fn__none"]);
+});
+
+test("hideBlocksOutsideBacklinkSourceWindow keeps ancestor list containers visible for nested backlink blocks", () => {
+  const makeBlock = (id) => ({
+    id,
+    parentElement: null,
+    getAttribute(name) {
+      return name === "data-node-id" ? id : null;
+    },
+    classList: {
+      added: [],
+      removed: [],
+      add(name) {
+        this.added.push(name);
+      },
+      remove(name) {
+        this.removed.push(name);
+      },
+    },
+  });
+  const outerItem = makeBlock("item-outer");
+  const nestedList = makeBlock("list-nested");
+  const innerItem = makeBlock("item-inner");
+  const childBlock = makeBlock("block-child");
+  const unrelatedBlock = makeBlock("block-other");
+  nestedList.parentElement = outerItem;
+  innerItem.parentElement = nestedList;
+  childBlock.parentElement = innerItem;
+  unrelatedBlock.parentElement = null;
+
+  const protyleWysiwygElement = {
+    querySelectorAll() {
+      return [outerItem, nestedList, innerItem, childBlock, unrelatedBlock];
+    },
+  };
+  const protyleContentElement = {
+    querySelector() {
+      return protyleWysiwygElement;
+    },
+  };
+
+  hideBlocksOutsideBacklinkSourceWindow(
+    {
+      sourceWindows: {
+        core: {
+          windowBlockIds: ["block-child"],
+        },
+      },
+    },
+    protyleContentElement,
+    "core",
+  );
+
+  assert.deepEqual(outerItem.classList.removed, ["fn__none"]);
+  assert.deepEqual(nestedList.classList.removed, ["fn__none"]);
+  assert.deepEqual(innerItem.classList.removed, ["fn__none"]);
+  assert.deepEqual(childBlock.classList.removed, ["fn__none"]);
+  assert.deepEqual(unrelatedBlock.classList.added, ["fn__none"]);
 });

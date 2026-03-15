@@ -215,3 +215,92 @@ export function hideOtherListItemElement(
     }
   }
 }
+
+function getBacklinkSourceWindowByLevel(backlinkData, contextVisibilityLevel = "core") {
+  if (!backlinkData) {
+    return null;
+  }
+
+  const sourceWindows = backlinkData.sourceWindows;
+  if (sourceWindows && sourceWindows[contextVisibilityLevel]) {
+    return sourceWindows[contextVisibilityLevel];
+  }
+
+  if (contextVisibilityLevel === "extended") {
+    return backlinkData.sourceWindow || null;
+  }
+
+  return null;
+}
+
+function collectVisibleBlockIdsWithAncestors(
+  visibleBlockIdSet,
+  blockElementArray = [],
+  protyleWysiwygElement,
+) {
+  if (!protyleWysiwygElement || !(visibleBlockIdSet instanceof Set)) {
+    return visibleBlockIdSet;
+  }
+
+  const blockElementMap = new Map();
+  for (const blockElement of blockElementArray) {
+    const blockId = blockElement?.getAttribute?.("data-node-id");
+    if (!blockId) {
+      continue;
+    }
+    blockElementMap.set(blockId, blockElement);
+  }
+
+  const expandedVisibleBlockIdSet = new Set(visibleBlockIdSet);
+  for (const blockId of visibleBlockIdSet) {
+    let currentElement = blockElementMap.get(blockId)?.parentElement;
+    while (currentElement && currentElement !== protyleWysiwygElement) {
+      const currentBlockId = currentElement?.getAttribute?.("data-node-id");
+      if (currentBlockId) {
+        expandedVisibleBlockIdSet.add(currentBlockId);
+      }
+      currentElement = currentElement.parentElement;
+    }
+  }
+
+  return expandedVisibleBlockIdSet;
+}
+
+export function hideBlocksOutsideBacklinkSourceWindow(
+  backlinkData,
+  protyleContentElement,
+  contextVisibilityLevel = "core",
+) {
+  const sourceWindow = getBacklinkSourceWindowByLevel(
+    backlinkData,
+    contextVisibilityLevel,
+  );
+  const windowBlockIds = sourceWindow?.windowBlockIds;
+  if (!Array.isArray(windowBlockIds) || windowBlockIds.length <= 0) {
+    return;
+  }
+
+  const protyleWysiwygElement = getProtyleWysiwygElement(protyleContentElement);
+  if (!protyleWysiwygElement) {
+    return;
+  }
+
+  const blockElementArray = protyleWysiwygElement.querySelectorAll("[data-node-id]");
+  const visibleBlockIdSet = collectVisibleBlockIdsWithAncestors(
+    new Set(windowBlockIds),
+    blockElementArray,
+    protyleWysiwygElement,
+  );
+  for (const blockElement of blockElementArray) {
+    const blockId = blockElement?.getAttribute?.("data-node-id");
+    if (!blockId) {
+      continue;
+    }
+
+    if (visibleBlockIdSet.has(blockId)) {
+      blockElement.classList?.remove?.("fn__none");
+      continue;
+    }
+    blockElement.classList?.add?.("fn__none");
+  }
+}

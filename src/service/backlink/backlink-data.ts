@@ -92,6 +92,17 @@ import {
     loadOrderedBacklinkSourceWindowBlocks,
 } from "./backlink-source-window.js";
 
+function shouldLogBacklinkDebug() {
+    return globalThis.__BACKLINK_DEBUG__ === true;
+}
+
+function logBacklinkDebug(...args) {
+    if (!shouldLogBacklinkDebug()) {
+        return;
+    }
+    console.log(...args);
+}
+
 
 export async function getBacklinkPanelRenderData(
     backlinkPanelData: IBacklinkFilterPanelData,
@@ -170,8 +181,8 @@ export async function getBacklinkPanelRenderData(
                 }),
             longestCommonSubstring,
             triggerIncompleteBacklinkFetch: (currentRootId, sourceNodes, backlinks) => {
-                console.log("反链管家插件 疑似 getBacklinkDoc 接口数据不全，如果清除缓存刷新后还是不全，请反馈开发者。 ");
-                console.log("backlinkBlockNodeArray ", sourceNodes, " ,backlinkDcoDataResult ", backlinks);
+                logBacklinkDebug("反链管家插件 疑似 getBacklinkDoc 接口数据不全，如果清除缓存刷新后还是不全，请反馈开发者。 ");
+                logBacklinkDebug("backlinkBlockNodeArray ", sourceNodes, " ,backlinkDcoDataResult ", backlinks);
                 getBacklink2(currentRootId, "", "", "3", "3");
             },
         },
@@ -235,7 +246,7 @@ export async function getBacklinkPanelRenderData(
 
     const endTime = performance.now(); // 记录结束时间
     const executionTime = endTime - startTime; // 计算时间差
-    console.log(
+    logBacklinkDebug(
         `反链面板 生成渲染数据 消耗时间 : ${executionTime} ms `,
         // `, backlinkPanelRenderDataResult `, backlinkPanelRenderDataResult,
     );
@@ -281,8 +292,8 @@ export async function getTurnPageBacklinkPanelRenderData(
                 }),
             longestCommonSubstring,
             triggerIncompleteBacklinkFetch: (currentRootId, sourceNodes, backlinks) => {
-                console.log("反链管家插件 疑似 getBacklinkDoc 接口数据不全，如果清除缓存刷新后还是不全，请反馈开发者。 ");
-                console.log("backlinkBlockNodeArray ", sourceNodes, " ,backlinkDcoDataResult ", backlinks);
+                logBacklinkDebug("反链管家插件 疑似 getBacklinkDoc 接口数据不全，如果清除缓存刷新后还是不全，请反馈开发者。 ");
+                logBacklinkDebug("backlinkBlockNodeArray ", sourceNodes, " ,backlinkDcoDataResult ", backlinks);
                 getBacklink2(currentRootId, "", "", "3", "3");
             },
         },
@@ -291,6 +302,25 @@ export async function getTurnPageBacklinkPanelRenderData(
 
     let backlinkDataArray = backlinkCacheData.backlinks;
     let usedCache = backlinkCacheData.usedCache;
+    const orderedBlocksByRootId = await loadOrderedBacklinkSourceWindowBlocks({
+        backlinkDataArray,
+        deps: {
+            queryDocumentBlocksByRootIds: async (rootIdArray) => {
+                const blockSql = generateBacklinkSourceWindowBlockArraySql(rootIdArray);
+                if (isStrBlank(blockSql)) {
+                    return [];
+                }
+                return sql(blockSql);
+            },
+            getBlockIndexMap: getBatchBlockIdIndex,
+        },
+    });
+    attachBacklinkSourceWindows({
+        backlinkDataArray,
+        backlinkBlockNodeArray: pageBacklinkBlockArray,
+        orderedBlocksByRootId,
+        contextVisibilityLevel: "extended",
+    });
     let backlinkPanelRenderDataResult: IBacklinkPanelRenderData = {
         rootId,
         backlinkDataArray: backlinkDataArray,
@@ -306,7 +336,7 @@ export async function getTurnPageBacklinkPanelRenderData(
     };
     const endTime = performance.now(); // 记录结束时间
     const executionTime = endTime - startTime; // 计算时间差
-    console.log(
+    logBacklinkDebug(
         `反链面板 翻页 消耗时间 : ${executionTime} ms `,
         // `, backlinkPanelRenderDataResult `, backlinkPanelRenderDataResult,
     );
@@ -481,7 +511,7 @@ export async function getBacklinkPanelData(
 
     const endTime = performance.now(); // 记录结束时间
     const executionTime = endTime - startTime; // 计算时间差
-    console.log(
+    logBacklinkDebug(
         `反链面板 获取和处理数据 消耗时间 : ${executionTime} ms `,
         // `, 数据 : backlinkPanelData `, backlinkPanelData
     );

@@ -74,6 +74,23 @@ function getDefaultMarkdownToBlockDOM() {
   return (markdown = "") => lute.Md2BlockDOM(markdown);
 }
 
+function getBacklinkSourceWindowByLevel(activeBacklink, visibilityLevel = "core") {
+  if (!activeBacklink) {
+    return null;
+  }
+
+  const sourceWindows = activeBacklink.sourceWindows;
+  if (sourceWindows && sourceWindows[visibilityLevel]) {
+    return sourceWindows[visibilityLevel];
+  }
+
+  if (visibilityLevel === "extended") {
+    return activeBacklink.sourceWindow || null;
+  }
+
+  return null;
+}
+
 export function buildBacklinkDocumentRenderOptions({
   documentId,
   activeBacklink,
@@ -92,22 +109,34 @@ export function buildBacklinkDocumentRenderOptions({
     render: { ...BACKLINK_DOCUMENT_RENDER_CONFIG },
   };
 
-  if (
-    !useFullDocument &&
-    normalizedVisibilityLevel === "extended" &&
-    activeBacklink?.sourceWindow
-  ) {
+  const sourceWindow = getBacklinkSourceWindowByLevel(
+    activeBacklink,
+    normalizedVisibilityLevel,
+  );
+  if (!useFullDocument && normalizedVisibilityLevel === "core" && sourceWindow) {
+    const shouldPreferFocusBlock =
+      sourceWindow.focusBlockId &&
+      sourceWindow.anchorBlockId &&
+      sourceWindow.focusBlockId !== sourceWindow.anchorBlockId;
+    options.blockId =
+      (shouldPreferFocusBlock
+        ? sourceWindow.focusBlockId
+        : sourceWindow.anchorBlockId) ||
+      sourceWindow.focusBlockId ||
+      activeBacklink?.backlinkBlock?.id ||
+      documentId;
+    return options;
+  }
+  if (!useFullDocument && sourceWindow) {
     options.scrollAttr = {
-      rootId: activeBacklink.sourceWindow.rootId || documentId,
-      startId: activeBacklink.sourceWindow.startBlockId,
-      endId: activeBacklink.sourceWindow.endBlockId,
+      rootId: sourceWindow.rootId || documentId,
+      startId: sourceWindow.startBlockId,
+      endId: sourceWindow.endBlockId,
       scrollTop: 0,
-      focusId:
-        activeBacklink.sourceWindow.focusBlockId ||
-        activeBacklink.backlinkBlock?.id,
+      focusId: sourceWindow.focusBlockId || activeBacklink.backlinkBlock?.id,
       zoomInId:
-        activeBacklink.sourceWindow.anchorBlockId ||
-        activeBacklink.sourceWindow.focusBlockId ||
+        sourceWindow.anchorBlockId ||
+        sourceWindow.focusBlockId ||
         activeBacklink.backlinkBlock?.id,
     };
     return options;

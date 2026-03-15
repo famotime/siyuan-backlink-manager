@@ -151,12 +151,21 @@ test("omits backlinkData when rendering a full document", () => {
   );
 });
 
-test("keeps backlinkData restriction in the default preview mode", () => {
+test("uses source window scrollAttr for nearby mode when original context is available", () => {
   const activeBacklink = {
     backlinkBlock: {
       id: "backlink-1",
       root_id: "doc-1",
       box: "box-1",
+    },
+    sourceWindows: {
+      nearby: {
+        rootId: "doc-1",
+        startBlockId: "block-prev",
+        endBlockId: "block-next",
+        focusBlockId: "backlink-1",
+        anchorBlockId: "backlink-1",
+      },
     },
   };
 
@@ -168,7 +177,14 @@ test("keeps backlinkData restriction in the default preview mode", () => {
     }),
     {
       blockId: "doc-1",
-      backlinkData: [activeBacklink],
+      scrollAttr: {
+        rootId: "doc-1",
+        startId: "block-prev",
+        endId: "block-next",
+        scrollTop: 0,
+        focusId: "backlink-1",
+        zoomInId: "backlink-1",
+      },
       render: {
         background: false,
         title: false,
@@ -180,12 +196,21 @@ test("keeps backlinkData restriction in the default preview mode", () => {
   );
 });
 
-test("uses assembled preview backlink data when nearby content is available", () => {
+test("uses the original anchor block directly in core mode", () => {
   const activeBacklink = {
     backlinkBlock: {
       id: "backlink-1",
       root_id: "doc-1",
       box: "box-1",
+    },
+    sourceWindows: {
+      core: {
+        rootId: "doc-1",
+        startBlockId: "backlink-1",
+        endBlockId: "backlink-1",
+        focusBlockId: "backlink-1",
+        anchorBlockId: "backlink-1",
+      },
     },
   };
 
@@ -193,14 +218,47 @@ test("uses assembled preview backlink data when nearby content is available", ()
     buildBacklinkDocumentRenderOptions({
       documentId: "doc-1",
       activeBacklink,
-      contextVisibilityLevel: "nearby",
-      deps: {
-        buildBacklinkPreviewBacklinkData: () => [{ dom: "<div>assembled</div>" }],
-      },
+      contextVisibilityLevel: "core",
     }),
     {
-      blockId: "doc-1",
-      backlinkData: [{ dom: "<div>assembled</div>" }],
+      blockId: "backlink-1",
+      render: {
+        background: false,
+        title: false,
+        gutter: true,
+        scroll: false,
+        breadcrumb: false,
+      },
+    },
+  );
+});
+
+test("uses the focus block directly in core mode when the source window anchor is a parent list item", () => {
+  const activeBacklink = {
+    backlinkBlock: {
+      id: "backlink-child",
+      root_id: "doc-1",
+      box: "box-1",
+    },
+    sourceWindows: {
+      core: {
+        rootId: "doc-1",
+        startBlockId: "list-item-1",
+        endBlockId: "backlink-child",
+        focusBlockId: "backlink-child",
+        anchorBlockId: "list-item-1",
+      },
+    },
+  };
+
+  assert.deepEqual(
+    buildBacklinkDocumentRenderOptions({
+      documentId: "doc-1",
+      activeBacklink,
+      contextVisibilityLevel: "core",
+    }),
+    {
+      blockId: "backlink-child",
       render: {
         background: false,
         title: false,
@@ -219,12 +277,14 @@ test("uses source window scrollAttr instead of preview backlink data in extended
       root_id: "doc-1",
       box: "box-1",
     },
-    sourceWindow: {
-      rootId: "doc-1",
-      startBlockId: "heading-1",
-      endBlockId: "block-2",
-      focusBlockId: "backlink-1",
-      anchorBlockId: "backlink-1",
+    sourceWindows: {
+      extended: {
+        rootId: "doc-1",
+        startBlockId: "heading-1",
+        endBlockId: "block-2",
+        focusBlockId: "backlink-1",
+        anchorBlockId: "backlink-1",
+      },
     },
   };
 

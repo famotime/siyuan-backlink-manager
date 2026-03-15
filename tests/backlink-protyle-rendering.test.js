@@ -185,6 +185,7 @@ test("applyCreatedBacklinkProtyleState expands one more local layer in nearby mo
     "expand-heading",
     "hide-items",
     "highlight",
+    "hide-items",
     "highlight",
     "touchend",
   ]);
@@ -246,6 +247,7 @@ test("applyCreatedBacklinkProtyleState fully expands the local preview in extend
     "expand-heading",
     "hide-items",
     "highlight",
+    "hide-items",
     "highlight",
     "touchend",
   ]);

@@ -21,17 +21,20 @@ function compareBlocksByFallbackOrder(blockA = {}, blockB = {}) {
 
 function buildDocumentBlockContext(orderedDocumentBlocks = []) {
   const indexById = new Map();
+  const blockById = new Map();
 
   orderedDocumentBlocks.forEach((block, index) => {
     if (!block?.id) {
       return;
     }
     indexById.set(block.id, index);
+    blockById.set(block.id, block);
   });
 
   return {
     orderedDocumentBlocks,
     indexById,
+    blockById,
   };
 }
 
@@ -57,21 +60,162 @@ function findNearestHeadingEndIndex(focusIndex, orderedDocumentBlocks = []) {
   return orderedDocumentBlocks.length - 1;
 }
 
-export function buildBacklinkSourceWindow({
+function isDescendantBlock(block = null, ancestorBlockId = "", blockById = new Map()) {
+  if (!block?.id || !ancestorBlockId || block.id === ancestorBlockId) {
+    return false;
+  }
+
+  const visitedBlockIdSet = new Set();
+  let currentBlock = block;
+  while (currentBlock?.parent_id && !visitedBlockIdSet.has(currentBlock.id)) {
+    if (currentBlock.parent_id === ancestorBlockId) {
+      return true;
+    }
+    visitedBlockIdSet.add(currentBlock.id);
+    currentBlock = blockById.get(currentBlock.parent_id);
+  }
+
+  return false;
+}
+
+function findBlockSubtreeEndIndex(startIndex, context) {
+  const anchorBlockId = context.orderedDocumentBlocks[startIndex]?.id;
+  if (!anchorBlockId) {
+    return startIndex;
+  }
+
+  let endIndex = startIndex;
+  for (
+    let currentIndex = startIndex + 1;
+    currentIndex < context.orderedDocumentBlocks.length;
+    currentIndex += 1
+  ) {
+    const block = context.orderedDocumentBlocks[currentIndex];
+    if (!isDescendantBlock(block, anchorBlockId, context.blockById)) {
+      break;
+    }
+    endIndex = currentIndex;
+  }
+
+  return endIndex;
+}
+
+function getBlockRangeEndIndex(blockId = "", context) {
+  const startIndex = context.indexById.get(blockId);
+  if (startIndex === undefined) {
+    return undefined;
+  }
+
+  const block = context.blockById.get(blockId);
+  if (block?.type === "i") {
+    return findBlockSubtreeEndIndex(startIndex, context);
+  }
+
+  return startIndex;
+}
+
+function resolveListItemAnchorBlockId(backlinkBlockNode = {}, context) {
+  const backlinkBlock = backlinkBlockNode?.block;
+  if (!backlinkBlock?.id) {
+    return "";
+  }
+  if (backlinkBlock.type === "i") {
+    return backlinkBlock.id;
+  }
+
+  const parentBlock = context.blockById.get(backlinkBlock.parent_id);
+  if (parentBlock?.type === "i") {
+    return parentBlock.id;
+  }
+
+  if (backlinkBlock.parentBlockType === "i" && backlinkBlock.parent_id) {
+    return backlinkBlock.parent_id;
+  }
+
+  return "";
+}
+
+function buildSourceWindowFromRange({
   backlinkBlockNode = null,
-  orderedDocumentBlocks = [],
-  contextVisibilityLevel = "core",
+  context,
+  anchorBlockId = "",
+  startIndex,
+  endIndex,
 } = {}) {
   if (
-    contextVisibilityLevel !== "extended" ||
     !backlinkBlockNode?.block?.id ||
-    !Array.isArray(orderedDocumentBlocks) ||
-    orderedDocumentBlocks.length <= 0
+    startIndex === undefined ||
+    endIndex === undefined
   ) {
     return null;
   }
 
-  const context = buildDocumentBlockContext(orderedDocumentBlocks);
+  const safeStartIndex = Math.max(0, startIndex);
+  const safeEndIndex = Math.max(safeStartIndex, endIndex);
+  const windowBlockIds = context.orderedDocumentBlocks
+    .slice(safeStartIndex, safeEndIndex + 1)
+    .map((block) => block.id);
+  if (windowBlockIds.length <= 0) {
+    return null;
+  }
+
+  return {
+    rootId: backlinkBlockNode.block.root_id,
+    anchorBlockId: anchorBlockId || backlinkBlockNode.block.id,
+    startBlockId: windowBlockIds[0],
+    endBlockId: windowBlockIds[windowBlockIds.length - 1],
+    focusBlockId: backlinkBlockNode.block.id,
+    windowBlockIds,
+    defaultExpandMode: "document_local_full",
+  };
+}
+
+function buildCoreBacklinkSourceWindow(backlinkBlockNode, context) {
+  const listItemAnchorBlockId = resolveListItemAnchorBlockId(backlinkBlockNode, context);
+  if (listItemAnchorBlockId) {
+    const startIndex = context.indexById.get(listItemAnchorBlockId);
+    return buildSourceWindowFromRange({
+      backlinkBlockNode,
+      context,
+      anchorBlockId: listItemAnchorBlockId,
+      startIndex,
+      endIndex: findBlockSubtreeEndIndex(startIndex, context),
+    });
+  }
+
+  const focusIndex = context.indexById.get(backlinkBlockNode.block.id);
+  return buildSourceWindowFromRange({
+    backlinkBlockNode,
+    context,
+    anchorBlockId: backlinkBlockNode.block.id,
+    startIndex: focusIndex,
+    endIndex: focusIndex,
+  });
+}
+
+function buildNearbyBacklinkSourceWindow(backlinkBlockNode, context) {
+  const listItemAnchorBlockId = resolveListItemAnchorBlockId(backlinkBlockNode, context);
+  const anchorBlockId = listItemAnchorBlockId || backlinkBlockNode.block.id;
+  const anchorStartIndex = context.indexById.get(anchorBlockId);
+  if (anchorStartIndex === undefined) {
+    return null;
+  }
+
+  const startBlockId = backlinkBlockNode.previousSiblingBlockId || anchorBlockId;
+  const endBlockId = backlinkBlockNode.nextSiblingBlockId || anchorBlockId;
+  const startIndex = context.indexById.get(startBlockId) ?? anchorStartIndex;
+  const endIndex = getBlockRangeEndIndex(endBlockId, context) ?? getBlockRangeEndIndex(anchorBlockId, context);
+
+  return buildSourceWindowFromRange({
+    backlinkBlockNode,
+    context,
+    anchorBlockId,
+    startIndex,
+    endIndex,
+  });
+}
+
+function buildExtendedBacklinkSourceWindow(backlinkBlockNode, context) {
   const focusBlockId = backlinkBlockNode.block.id;
   const focusIndex = context.indexById.get(focusBlockId);
   if (focusIndex === undefined) {
@@ -86,23 +230,40 @@ export function buildBacklinkSourceWindow({
     safeStartIndex,
     findNearestHeadingEndIndex(focusIndex, context.orderedDocumentBlocks),
   );
-  const windowBlockIds = context.orderedDocumentBlocks
-    .slice(safeStartIndex, safeEndIndex + 1)
-    .map((block) => block.id);
 
-  if (windowBlockIds.length <= 0) {
+  return buildSourceWindowFromRange({
+    backlinkBlockNode,
+    context,
+    anchorBlockId: focusBlockId,
+    startIndex: safeStartIndex,
+    endIndex: safeEndIndex,
+  });
+}
+
+export function buildBacklinkSourceWindow({
+  backlinkBlockNode = null,
+  orderedDocumentBlocks = [],
+  contextVisibilityLevel = "core",
+} = {}) {
+  if (
+    !backlinkBlockNode?.block?.id ||
+    !Array.isArray(orderedDocumentBlocks) ||
+    orderedDocumentBlocks.length <= 0
+  ) {
     return null;
   }
 
-  return {
-    rootId: backlinkBlockNode.block.root_id,
-    anchorBlockId: focusBlockId,
-    startBlockId: windowBlockIds[0],
-    endBlockId: windowBlockIds[windowBlockIds.length - 1],
-    focusBlockId,
-    windowBlockIds,
-    defaultExpandMode: "document_local_full",
-  };
+  const context = buildDocumentBlockContext(orderedDocumentBlocks);
+  if (contextVisibilityLevel === "core") {
+    return buildCoreBacklinkSourceWindow(backlinkBlockNode, context);
+  }
+  if (contextVisibilityLevel === "nearby") {
+    return buildNearbyBacklinkSourceWindow(backlinkBlockNode, context);
+  }
+  if (contextVisibilityLevel === "extended") {
+    return buildExtendedBacklinkSourceWindow(backlinkBlockNode, context);
+  }
+  return null;
 }
 
 export function attachBacklinkSourceWindows({
@@ -110,8 +271,8 @@ export function attachBacklinkSourceWindows({
   backlinkBlockNodeArray = [],
   orderedBlocksByRootId = new Map(),
   contextVisibilityLevel = "extended",
-} = {}) {
-  if (contextVisibilityLevel !== "extended" || !Array.isArray(backlinkDataArray)) {
+  } = {}) {
+  if (!Array.isArray(backlinkDataArray)) {
     return backlinkDataArray;
   }
 
@@ -136,11 +297,27 @@ export function attachBacklinkSourceWindows({
       continue;
     }
 
-    backlinkData.sourceWindow = buildBacklinkSourceWindow({
-      backlinkBlockNode,
-      orderedDocumentBlocks,
-      contextVisibilityLevel,
-    });
+    backlinkBlockNode.sourceWindows = {
+      core: buildBacklinkSourceWindow({
+        backlinkBlockNode,
+        orderedDocumentBlocks,
+        contextVisibilityLevel: "core",
+      }),
+      nearby: buildBacklinkSourceWindow({
+        backlinkBlockNode,
+        orderedDocumentBlocks,
+        contextVisibilityLevel: "nearby",
+      }),
+      extended: buildBacklinkSourceWindow({
+        backlinkBlockNode,
+        orderedDocumentBlocks,
+        contextVisibilityLevel: "extended",
+      }),
+    };
+    backlinkBlockNode.sourceWindow = backlinkBlockNode.sourceWindows.extended;
+
+    backlinkData.sourceWindows = backlinkBlockNode.sourceWindows;
+    backlinkData.sourceWindow = backlinkBlockNode.sourceWindow;
   }
 
   return backlinkDataArray;

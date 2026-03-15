@@ -163,6 +163,7 @@ export function applyCreatedBacklinkProtyleState({
     expandBacklinkHeadingMore,
     backlinkProtyleItemFoldMap,
     foldListItemNodeByIdSet,
+    hideBlocksOutsideBacklinkSourceWindow,
     defaultExpandedListItemLevel,
     expandListItemNodeByDepth,
     getElementsBeforeDepth,
@@ -243,6 +244,11 @@ export function applyCreatedBacklinkProtyleState({
   }
 
   if (!showFullDocument) {
+    hideBlocksOutsideBacklinkSourceWindow?.(
+      backlinkData,
+      protyleContentElement,
+      contextVisibilityLevel,
+    );
     hideOtherListItemElement(backlinkData, protyleContentElement, queryParams, {
       isSetEmpty,
       isSetNotEmpty,
@@ -255,6 +261,18 @@ export function applyCreatedBacklinkProtyleState({
   );
   highlightElementTextByCss(documentLiElement, keywordArray);
   delayedTwiceRefresh(() => {
+    if (!showFullDocument) {
+      hideBlocksOutsideBacklinkSourceWindow?.(
+        backlinkData,
+        protyleContentElement,
+        contextVisibilityLevel,
+      );
+      hideOtherListItemElement(backlinkData, protyleContentElement, queryParams, {
+        isSetEmpty,
+        isSetNotEmpty,
+        isArrayNotEmpty,
+      });
+    }
     highlightElementTextByCss(protyleContentElement, keywordArray);
   }, 100);
   protyleContentElement.addEventListener("touchend", (event) => {

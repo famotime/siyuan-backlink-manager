@@ -8,8 +8,11 @@ import {
   getBacklinkDocumentMainAreaWnd,
   getBacklinkDocumentOpenTarget,
   getBacklinkDocumentPreClickOpenArea,
+  getBacklinkDocumentWndElementFromTarget,
+  resolveBacklinkDocumentCtrlLeftClickOpenAreaFromCache,
   mergeBacklinkDocumentOpenTargetIntoTabOptions,
   resolveBacklinkDocumentOpenArea,
+  resolveBacklinkDocumentPreClickOpenAreaFromWndElements,
 } from "../src/components/panel/backlink-document-open-target.js";
 
 test("maps right area requests to the right-side tab position", () => {
@@ -249,11 +252,25 @@ test("captures right-side opening when the backlink tab window is active before 
   const backlinkWndElement = {};
   const openArea = getBacklinkDocumentPreClickOpenArea({
     currentTab: {
-      parent: {
-        element: backlinkWndElement,
+      tab: {
+        headElement: {
+          classList: {
+            contains(name) {
+              return name === "item--focus";
+            },
+          },
+        },
+        parent: {
+          element: backlinkWndElement,
+        },
       },
     },
     documentRef: {
+      activeElement: {
+        closest(selector) {
+          return selector === ".layout__wnd" ? backlinkWndElement : null;
+        },
+      },
       querySelector(selector) {
         return selector === "div.layout__wnd--active"
           ? backlinkWndElement
@@ -266,17 +283,30 @@ test("captures right-side opening when the backlink tab window is active before 
 });
 
 test("captures main-area opening when another window is active before click", () => {
+  const mainWndElement = { id: "main-wnd" };
   const openArea = getBacklinkDocumentPreClickOpenArea({
     currentTab: {
-      parent: {
-        element: { id: "backlink-wnd" },
+      tab: {
+        headElement: {
+          classList: {
+            contains() {
+              return false;
+            },
+          },
+        },
+        parent: {
+          element: { id: "backlink-wnd" },
+        },
       },
     },
     documentRef: {
+      activeElement: {
+        closest(selector) {
+          return selector === ".layout__wnd" ? mainWndElement : null;
+        },
+      },
       querySelector(selector) {
-        return selector === "div.layout__wnd--active"
-          ? { id: "main-wnd" }
-          : null;
+        return selector === "div.layout__wnd--active" ? null : null;
       },
     },
   });
@@ -284,22 +314,38 @@ test("captures main-area opening when another window is active before click", ()
   assert.equal(openArea, "main");
 });
 
-test("falls back to focus mode when the pre-click active window cannot be detected", () => {
+test("falls back to right-side opening when the pre-click active window cannot be detected", () => {
   const openArea = getBacklinkDocumentPreClickOpenArea({
-    currentTab: null,
+    currentTab: {
+      tab: {
+        headElement: {
+          classList: {
+            contains() {
+              return false;
+            },
+          },
+        },
+      },
+    },
     documentRef: {
+      activeElement: {
+        closest() {
+          return null;
+        },
+      },
       querySelector() {
         return null;
       },
     },
   });
 
-  assert.equal(openArea, "focus");
+  assert.equal(openArea, "right");
 });
 
 test("resolves focus-based open requests using the pre-click active area", () => {
   assert.equal(resolveBacklinkDocumentOpenArea("focus", "main"), "main");
   assert.equal(resolveBacklinkDocumentOpenArea("focus", "right"), "right");
+  assert.equal(resolveBacklinkDocumentOpenArea("focus", "focus"), "right");
   assert.equal(resolveBacklinkDocumentOpenArea("main", "right"), "main");
 });
 
@@ -327,18 +373,81 @@ test("builds a debug snapshot for the current and active window state", () => {
 
   const snapshot = getBacklinkDocumentOpenDebugSnapshot({
     currentTab: {
-      parent: {
-        element: currentWndElement,
+      tab: {
+        headElement: {
+          id: "tab-right",
+          className: "item",
+          classList: {
+            contains() {
+              return false;
+            },
+          },
+          getAttribute(name) {
+            return name === "data-id" ? "tab-right-data" : null;
+          },
+        },
+        parent: {
+          element: currentWndElement,
+        },
       },
     },
     documentRef: {
+      activeElement: {
+        tagName: "DIV",
+        id: "editor-active",
+        className: "protyle-content",
+        closest(selector) {
+          return selector === ".layout__wnd" ? activeWndElement : null;
+        },
+      },
       querySelector(selector) {
-        return selector === "div.layout__wnd--active" ? activeWndElement : null;
+        if (selector === "div.layout__wnd--active") {
+          return activeWndElement;
+        }
+        if (selector === "li.item--focus") {
+          return {
+            id: "tab-main",
+            className: "item item--focus",
+            classList: {
+              contains(name) {
+                return name === "item--focus";
+              },
+            },
+            getAttribute(name) {
+              return name === "data-id" ? "tab-main-data" : null;
+            },
+          };
+        }
+        return null;
       },
     },
   });
 
   assert.deepEqual(snapshot, {
+    currentTab: {
+      id: "tab-right",
+      dataId: "tab-right-data",
+      className: "item",
+      isFocused: false,
+    },
+    activeTab: {
+      id: "tab-main",
+      dataId: "tab-main-data",
+      className: "item item--focus",
+      isFocused: true,
+    },
+    activeElement: {
+      tagName: "DIV",
+      id: "editor-active",
+      className: "protyle-content",
+    },
+    focusedWnd: {
+      id: "wnd-main",
+      dataId: "wnd-main-data",
+      className: "layout__wnd layout__wnd--active",
+      left: 0,
+      width: 780,
+    },
     currentWnd: {
       id: "wnd-right",
       dataId: "wnd-right-data",
@@ -355,4 +464,131 @@ test("builds a debug snapshot for the current and active window state", () => {
     },
     inferredPreClickOpenArea: "main",
   });
+});
+
+test("resolves the current window from Custom.tab.parent", () => {
+  const backlinkWndElement = {};
+  const openArea = getBacklinkDocumentPreClickOpenArea({
+    currentTab: {
+      tab: {
+        headElement: {
+          classList: {
+            contains(name) {
+              return name === "item--focus";
+            },
+          },
+        },
+        parent: {
+          element: backlinkWndElement,
+        },
+      },
+    },
+    documentRef: {
+      activeElement: {
+        closest(selector) {
+          return selector === ".layout__wnd" ? backlinkWndElement : null;
+        },
+      },
+      querySelector(selector) {
+        return selector === "div.layout__wnd--active"
+          ? backlinkWndElement
+          : null;
+      },
+    },
+  });
+
+  assert.equal(openArea, "right");
+});
+
+test("resolves pre-click open area from explicit current and focused windows", () => {
+  const wndElement = {};
+  assert.equal(
+    resolveBacklinkDocumentPreClickOpenAreaFromWndElements({
+      currentWndElement: wndElement,
+      focusedWndElement: wndElement,
+    }),
+    "right",
+  );
+  assert.equal(
+    resolveBacklinkDocumentPreClickOpenAreaFromWndElements({
+      currentWndElement: wndElement,
+      focusedWndElement: {},
+    }),
+    "main",
+  );
+  assert.equal(
+    resolveBacklinkDocumentPreClickOpenAreaFromWndElements({
+      currentWndElement: null,
+      focusedWndElement: wndElement,
+    }),
+    "right",
+  );
+});
+
+test("uses cached focus only for ctrl-left area resolution and defaults to right", () => {
+  const backlinkWndElement = {};
+  const mainWndElement = {};
+
+  assert.equal(
+    resolveBacklinkDocumentCtrlLeftClickOpenAreaFromCache({
+      currentWndElement: backlinkWndElement,
+      cachedFocusedWndElement: null,
+      documentRef: {
+        activeElement: {
+          closest(selector) {
+            return selector === ".layout__wnd" ? mainWndElement : null;
+          },
+        },
+        querySelector() {
+          return null;
+        },
+      },
+    }),
+    "right",
+  );
+  assert.equal(
+    resolveBacklinkDocumentCtrlLeftClickOpenAreaFromCache({
+      currentWndElement: backlinkWndElement,
+      cachedFocusedWndElement: null,
+    }),
+    "right",
+  );
+  assert.equal(
+    resolveBacklinkDocumentCtrlLeftClickOpenAreaFromCache({
+      currentWndElement: backlinkWndElement,
+      cachedFocusedWndElement: backlinkWndElement,
+    }),
+    "right",
+  );
+  assert.equal(
+    resolveBacklinkDocumentCtrlLeftClickOpenAreaFromCache({
+      currentWndElement: backlinkWndElement,
+      cachedFocusedWndElement: mainWndElement,
+    }),
+    "main",
+  );
+});
+
+test("gets the enclosing layout window from an event target", () => {
+  const wndElement = { id: "wnd-main" };
+  const target = {
+    closest(selector) {
+      return selector === ".layout__wnd" ? wndElement : null;
+    },
+  };
+
+  assert.equal(getBacklinkDocumentWndElementFromTarget(target), wndElement);
+});
+
+test("gets the enclosing layout window from a non-element target via parent nodes", () => {
+  const wndElement = { id: "wnd-main" };
+  const target = {
+    parentElement: {
+      closest(selector) {
+        return selector === ".layout__wnd" ? wndElement : null;
+      },
+    },
+  };
+
+  assert.equal(getBacklinkDocumentWndElementFromTarget(target), wndElement);
 });

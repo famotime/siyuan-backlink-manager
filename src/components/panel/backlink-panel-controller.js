@@ -42,10 +42,12 @@ import {
 } from "./backlink-document-interaction.js";
 import {
   activateBacklinkDocumentMainArea,
-  getBacklinkDocumentOpenDebugSnapshot,
   getBacklinkDocumentOpenTarget,
   getBacklinkDocumentPreClickOpenArea,
+  getBacklinkDocumentWndElementFromProtyle,
+  getBacklinkDocumentWndElementFromTarget,
   mergeBacklinkDocumentOpenTargetIntoTabOptions,
+  resolveBacklinkDocumentCtrlLeftClickOpenAreaFromCache,
   resolveBacklinkDocumentOpenArea,
 } from "./backlink-document-open-target.js";
 import {
@@ -60,6 +62,7 @@ import {
   expandBacklinkHeadingMore,
   expandListItemNodeByDepth,
   foldListItemNodeByIdSet,
+  hideBlocksOutsideBacklinkSourceWindow,
   hideOtherListItemElement,
 } from "./backlink-protyle-dom.js";
 import {
@@ -88,12 +91,9 @@ import { sanitizeBacklinkKeywords } from "./backlink-panel-formatting.js";
 import { mergeTurnPageBacklinkPanelRenderData } from "./backlink-panel-render-data.js";
 
 export function createBacklinkPanelController(state) {
-  const BACKLINK_OPEN_DEBUG_PREFIX = "[backlink-open-debug]";
   let preClickOpenArea = "focus";
-
-  function logBacklinkOpenDebug(stage, payload = {}) {
-    console.log(BACKLINK_OPEN_DEBUG_PREFIX, stage, payload);
-  }
+  let lastKnownFocusedWndElement = null;
+  let detachDocumentInteractionTracking = null;
 
   function getEditors() {
     if (state.currentTab) {
@@ -162,6 +162,66 @@ export function createBacklinkPanelController(state) {
         clearProtyleGutters(state.backlinkULElement);
       }
     });
+
+    if (!detachDocumentInteractionTracking) {
+      detachDocumentInteractionTracking = attachDocumentInteractionTracking();
+    }
+  }
+
+  function attachDocumentInteractionTracking() {
+    const documentRef = state.backlinkULElement?.ownerDocument || document;
+    const eventBus = EnvConfig.ins.plugin?.eventBus;
+    if (!documentRef?.addEventListener) {
+      return () => {};
+    }
+
+    const updateFocusedWndCache = (wndElement) => {
+      if (!wndElement) {
+        return;
+      }
+      lastKnownFocusedWndElement = wndElement;
+    };
+
+    const handleFocusIn = (event) => {
+      updateFocusedWndCache(
+        getBacklinkDocumentWndElementFromTarget(event.target, event),
+      );
+    };
+
+    const handleMouseDownCapture = (event) => {
+      const targetRole = getBacklinkDocumentTargetRole(event.target);
+      const isBacklinkTitleCtrlLeftClick =
+        event.button === 0 &&
+        event.ctrlKey &&
+        targetRole === "title" &&
+        state.backlinkULElement?.contains?.(event.target);
+      if (isBacklinkTitleCtrlLeftClick) {
+        return;
+      }
+
+      updateFocusedWndCache(
+        getBacklinkDocumentWndElementFromTarget(event.target, event),
+      );
+    };
+
+    const handleProtyleFocus = (event) => {
+      updateFocusedWndCache(
+        getBacklinkDocumentWndElementFromProtyle(event?.detail?.protyle),
+      );
+    };
+
+    documentRef.addEventListener("focusin", handleFocusIn, true);
+    documentRef.addEventListener("mousedown", handleMouseDownCapture, true);
+    eventBus?.on?.("switch-protyle", handleProtyleFocus);
+    eventBus?.on?.("loaded-protyle-static", handleProtyleFocus);
+    eventBus?.on?.("click-editorcontent", handleProtyleFocus);
+    return () => {
+      documentRef.removeEventListener("focusin", handleFocusIn, true);
+      documentRef.removeEventListener("mousedown", handleMouseDownCapture, true);
+      eventBus?.off?.("switch-protyle", handleProtyleFocus);
+      eventBus?.off?.("loaded-protyle-static", handleProtyleFocus);
+      eventBus?.off?.("click-editorcontent", handleProtyleFocus);
+    };
   }
 
   function clickBacklinkDocumentLiElement(event) {
@@ -185,19 +245,6 @@ export function createBacklinkPanelController(state) {
         requestedOpenArea,
         preClickOpenArea,
       );
-      logBacklinkOpenDebug("click-title", {
-        ctrlKey: Boolean(event.ctrlKey),
-        targetRole,
-        requestedOpenArea,
-        preClickOpenArea,
-        resolvedOpenArea,
-        rootId: target.getAttribute("data-node-id"),
-        blockId: target.getAttribute("data-backlink-block-id"),
-        snapshot: getBacklinkDocumentOpenDebugSnapshot({
-          currentTab: state.currentTab,
-          documentRef: document,
-        }),
-      });
       openBlockTab(
         target.getAttribute("data-node-id"),
         target.getAttribute("data-backlink-block-id"),
@@ -222,20 +269,19 @@ export function createBacklinkPanelController(state) {
       return;
     }
 
-    preClickOpenArea = getBacklinkDocumentPreClickOpenArea({
-      currentTab: state.currentTab,
-      documentRef: document,
-    });
-    logBacklinkOpenDebug("mousedown-title", {
-      button: event.button,
-      ctrlKey: Boolean(event.ctrlKey),
-      targetRole,
-      preClickOpenArea,
-      snapshot: getBacklinkDocumentOpenDebugSnapshot({
-        currentTab: state.currentTab,
-        documentRef: document,
-      }),
-    });
+    const currentWndElement = state.currentTab?.tab?.parent?.element ||
+      state.currentTab?.parent?.element ||
+      null;
+    preClickOpenArea = event.ctrlKey
+      ? resolveBacklinkDocumentCtrlLeftClickOpenAreaFromCache({
+          currentWndElement,
+          cachedFocusedWndElement: lastKnownFocusedWndElement,
+          documentRef: document,
+        })
+      : getBacklinkDocumentPreClickOpenArea({
+          currentTab: state.currentTab,
+          documentRef: document,
+        });
   }
 
   function contextmenuBacklinkDocumentLiElement(event) {
@@ -250,17 +296,6 @@ export function createBacklinkPanelController(state) {
       return;
     }
     event.preventDefault();
-    logBacklinkOpenDebug("contextmenu-title", {
-      ctrlKey: Boolean(event.ctrlKey),
-      targetRole,
-      openArea,
-      rootId: target.getAttribute("data-node-id"),
-      blockId: target.getAttribute("data-backlink-block-id"),
-      snapshot: getBacklinkDocumentOpenDebugSnapshot({
-        currentTab: state.currentTab,
-        documentRef: document,
-      }),
-    });
     openBlockTab(
       target.getAttribute("data-node-id"),
       target.getAttribute("data-backlink-block-id"),
@@ -359,6 +394,7 @@ export function createBacklinkPanelController(state) {
               syHasChildListNode,
               backlinkProtyleHeadingExpandMap:
                 state.backlinkProtyleHeadingExpandMap,
+              hideBlocksOutsideBacklinkSourceWindow,
               hideOtherListItemElement,
               queryParams: state.queryParams,
               isSetEmpty,
@@ -539,29 +575,9 @@ export function createBacklinkPanelController(state) {
       params.actions = [Constants.CB_GET_FOCUS, Constants.CB_GET_SCROLL];
     }
     const openTarget = getBacklinkDocumentOpenTarget(params.openArea);
-    logBacklinkOpenDebug("open-desktop-before-activate", {
-      rootId: params.rootId,
-      blockId: params.blockId,
-      openArea: params.openArea,
-      openTarget,
-      actions: params.actions,
-      snapshot: getBacklinkDocumentOpenDebugSnapshot({
-        currentTab: state.currentTab,
-        documentRef: document,
-      }),
-    });
     if (openTarget.shouldActivateMainArea) {
-      const activatedMainArea = activateBacklinkDocumentMainArea({
+      activateBacklinkDocumentMainArea({
         currentTab: state.currentTab,
-      });
-      logBacklinkOpenDebug("open-desktop-after-activate", {
-        rootId: params.rootId,
-        blockId: params.blockId,
-        activatedMainArea,
-        snapshot: getBacklinkDocumentOpenDebugSnapshot({
-          currentTab: state.currentTab,
-          documentRef: document,
-        }),
       });
     }
     const tabOptions = mergeBacklinkDocumentOpenTargetIntoTabOptions({
@@ -571,14 +587,6 @@ export function createBacklinkPanelController(state) {
         action: params.actions,
       },
     }, openTarget);
-    logBacklinkOpenDebug("open-desktop-open-tab", {
-      rootId: params.rootId,
-      blockId: params.blockId,
-      openArea: params.openArea,
-      hasPosition: Object.prototype.hasOwnProperty.call(tabOptions, "position"),
-      position: tabOptions.position,
-      doc: tabOptions.doc,
-    });
     openTab(tabOptions);
   }
 
@@ -932,6 +940,10 @@ export function createBacklinkPanelController(state) {
   return {
     updateLastCriteria,
     initEvent,
+    destroyEvent() {
+      detachDocumentInteractionTracking?.();
+      detachDocumentInteractionTracking = null;
+    },
     initBaseData,
     refreshFilterDisplayData,
     clearBacklinkProtyleList,

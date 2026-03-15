@@ -273,6 +273,7 @@
     });
 
     onDestroy(() => {
+        controller.destroyEvent?.();
         filterPanelResizeObserver?.disconnect();
         controller.clearBacklinkProtyleList();
     });

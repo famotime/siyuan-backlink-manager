@@ -92,6 +92,124 @@ test("buildBacklinkSourceWindow falls back to document start and end when no hea
   assert.equal(sourceWindow.endBlockId, "tail");
 });
 
+test("buildBacklinkSourceWindow keeps core mode on the original paragraph block", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "heading-skills", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "heading-what", type: "h", subtype: "h3", parent_id: "doc-a" },
+    { id: "block-official", type: "p", parent_id: "doc-a" },
+    { id: "block-quote", type: "b", parent_id: "doc-a" },
+    { id: "block-toolkit", type: "p", parent_id: "doc-a" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "block-official",
+        root_id: "doc-a",
+        parent_id: "doc-a",
+        type: "p",
+      },
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "core",
+  });
+
+  assert.deepEqual(sourceWindow, {
+    rootId: "doc-a",
+    anchorBlockId: "block-official",
+    startBlockId: "block-official",
+    endBlockId: "block-official",
+    focusBlockId: "block-official",
+    windowBlockIds: ["block-official"],
+    defaultExpandMode: "document_local_full",
+  });
+});
+
+test("buildBacklinkSourceWindow keeps nearby mode on the surrounding original paragraphs", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "heading-skills", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "heading-what", type: "h", subtype: "h3", parent_id: "doc-a" },
+    { id: "block-toolkit", type: "p", parent_id: "doc-a" },
+    { id: "block-example", type: "p", parent_id: "doc-a" },
+    { id: "block-after", type: "p", parent_id: "doc-a" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "block-example",
+        root_id: "doc-a",
+        parent_id: "doc-a",
+        type: "p",
+      },
+      previousSiblingBlockId: "block-toolkit",
+      nextSiblingBlockId: "block-after",
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "nearby",
+  });
+
+  assert.deepEqual(sourceWindow, {
+    rootId: "doc-a",
+    anchorBlockId: "block-example",
+    startBlockId: "block-toolkit",
+    endBlockId: "block-after",
+    focusBlockId: "block-example",
+    windowBlockIds: ["block-toolkit", "block-example", "block-after"],
+    defaultExpandMode: "document_local_full",
+  });
+});
+
+test("buildBacklinkSourceWindow keeps nearby mode on sibling list items and includes the next parent item subtree", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "heading-skills", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "heading-what", type: "h", subtype: "h3", parent_id: "doc-a" },
+    { id: "block-tail", type: "p", parent_id: "doc-a" },
+    { id: "item-expand", type: "i", parent_id: "list-root" },
+    { id: "item-nearby", type: "i", parent_id: "list-root" },
+    { id: "item-brand", type: "i", parent_id: "list-root" },
+    { id: "block-brand", type: "p", parent_id: "item-brand" },
+    { id: "item-title", type: "i", parent_id: "list-root" },
+    { id: "list-title", type: "l", parent_id: "item-title" },
+    { id: "item-logo", type: "i", parent_id: "list-title" },
+    { id: "block-logo", type: "p", parent_id: "item-logo" },
+    { id: "item-bad", type: "i", parent_id: "list-root" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "block-brand",
+        root_id: "doc-a",
+        parent_id: "item-brand",
+        type: "p",
+      },
+      previousSiblingBlockId: "item-nearby",
+      nextSiblingBlockId: "item-title",
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "nearby",
+  });
+
+  assert.deepEqual(sourceWindow, {
+    rootId: "doc-a",
+    anchorBlockId: "item-brand",
+    startBlockId: "item-nearby",
+    endBlockId: "block-logo",
+    focusBlockId: "block-brand",
+    windowBlockIds: [
+      "item-nearby",
+      "item-brand",
+      "block-brand",
+      "item-title",
+      "list-title",
+      "item-logo",
+      "block-logo",
+    ],
+    defaultExpandMode: "document_local_full",
+  });
+});
+
 test("attachBacklinkSourceWindows adds heading-bounded source windows to extended backlinks", () => {
   const backlinks = [
     {

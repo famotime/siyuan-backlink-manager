@@ -252,6 +252,10 @@ test("collectParentBlocks renders heading parents from outer to inner order", ()
     context.backlinkBlockMap["block-a"].parentRenderMarkdown,
     "## 二、Skills：让 Claude 真正「学会干活」\n\n### 1. Skills 是什么？",
   );
+  assert.deepEqual(
+    context.backlinkBlockMap["block-a"].parentContextBlockIds,
+    ["heading-outer", "heading-inner"],
+  );
 });
 
 test("collectParentBlocks keeps the parent list item title in render markdown without appending its subtree", () => {
@@ -526,5 +530,15 @@ test("collectSiblingBlocks stores expanded sibling markdown separately", () => {
   assert.equal(
     context.backlinkBlockMap["block-a"].expandedRenderMarkdown,
     "- extra item a\n\n- extra item b",
+  );
+  assert.equal(context.backlinkBlockMap["block-a"].previousSiblingBlockId, "item-prev");
+  assert.equal(context.backlinkBlockMap["block-a"].nextSiblingBlockId, "item-next");
+  assert.deepEqual(
+    context.backlinkBlockMap["block-a"].beforeExpandedBlockIdArray,
+    [],
+  );
+  assert.deepEqual(
+    context.backlinkBlockMap["block-a"].afterExpandedBlockIdArray,
+    [],
   );
 });

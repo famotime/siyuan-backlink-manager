@@ -275,6 +275,10 @@ export function collectParentBlocks({
         parentRenderMarkdown,
       );
     }
+    backlinkBlockNode.parentContextBlockIds = prependBlockId(
+      backlinkBlockNode.parentContextBlockIds,
+      parentBlock.id,
+    );
     updateDynamicAnchorMap(context.relatedDefBlockDynamicAnchorMap, markdown);
     updateStaticAnchorMap(context.relatedDefBlockStaticAnchorMap, markdown);
   }
@@ -300,6 +304,18 @@ function prependMarkdownSegment(baseMarkdown = "", nextMarkdown = "") {
     return compactNextMarkdown;
   }
   return `${compactNextMarkdown}\n\n${baseMarkdown}`;
+}
+
+function prependBlockId(blockIdArray = [], blockId = "") {
+  if (!blockId) {
+    return Array.isArray(blockIdArray) ? blockIdArray : [];
+  }
+
+  const nextBlockIdArray = Array.isArray(blockIdArray) ? [...blockIdArray] : [];
+  if (!nextBlockIdArray.includes(blockId)) {
+    nextBlockIdArray.unshift(blockId);
+  }
+  return nextBlockIdArray;
 }
 
 function getParentRenderMarkdown(parentBlock = {}) {
@@ -489,6 +505,8 @@ export function collectSiblingBlocks({
     );
     backlinkBlockNode.previousSiblingRenderMarkdown =
       siblingGroup.previousSiblingBlock?.renderMarkdown || "";
+    backlinkBlockNode.previousSiblingBlockId =
+      siblingGroup.previousSiblingBlock?.id || "";
     backlinkBlockNode.nextSiblingMarkdown = appendMarkdownSegment(
       backlinkBlockNode.nextSiblingMarkdown,
       appendSiblingBlockContext({
@@ -505,6 +523,8 @@ export function collectSiblingBlocks({
     );
     backlinkBlockNode.nextSiblingRenderMarkdown =
       siblingGroup.nextSiblingBlock?.renderMarkdown || "";
+    backlinkBlockNode.nextSiblingBlockId =
+      siblingGroup.nextSiblingBlock?.id || "";
     applyExpandedSiblingContextToNode({
       backlinkBlockNode,
       siblingBlocks: siblingGroup.beforeSiblingBlocks || [],
@@ -518,6 +538,11 @@ export function collectSiblingBlocks({
       updateMapCount,
       context,
     });
+    backlinkBlockNode.beforeExpandedBlockIdArray = (
+      siblingGroup.beforeSiblingBlocks || []
+    )
+      .map((block) => block?.id)
+      .filter(Boolean);
     applyExpandedSiblingContextToNode({
       backlinkBlockNode,
       siblingBlocks: siblingGroup.afterSiblingBlocks || [],
@@ -531,6 +556,11 @@ export function collectSiblingBlocks({
       updateMapCount,
       context,
     });
+    backlinkBlockNode.afterExpandedBlockIdArray = (
+      siblingGroup.afterSiblingBlocks || []
+    )
+      .map((block) => block?.id)
+      .filter(Boolean);
     applyExpandedSiblingContextToNode({
       backlinkBlockNode,
       siblingBlocks: siblingGroup.expandedSiblingBlocks || [],

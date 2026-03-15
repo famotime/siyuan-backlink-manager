@@ -1,4 +1,4 @@
-import { getBacklink2, getBacklinkDoc, getBlockKramdown, getChildBlocks, sql } from "@/utils/api";
+import { getBacklink2, getBacklinkDoc, getBatchBlockIdIndex, getBlockKramdown, getChildBlocks, sql } from "@/utils/api";
 import {
     generateGetBacklinkBlockArraySql,
     generateGetBacklinkListItemBlockArraySql,
@@ -86,6 +86,11 @@ import {
     hydrateBacklinkContextBundles,
 } from "./backlink-context.js";
 import { normalizeBacklinkContextBudget } from "./backlink-context-budget.js";
+import {
+    attachBacklinkSourceWindows,
+    generateBacklinkSourceWindowBlockArraySql,
+    loadOrderedBacklinkSourceWindowBlocks,
+} from "./backlink-source-window.js";
 
 
 export async function getBacklinkPanelRenderData(
@@ -175,6 +180,25 @@ export async function getBacklinkPanelRenderData(
 
     let backlinkDataArray = backlinkCacheData.backlinks;
     let usedCache = backlinkCacheData.usedCache;
+    const orderedBlocksByRootId = await loadOrderedBacklinkSourceWindowBlocks({
+        backlinkDataArray,
+        deps: {
+            queryDocumentBlocksByRootIds: async (rootIdArray) => {
+                const blockSql = generateBacklinkSourceWindowBlockArraySql(rootIdArray);
+                if (isStrBlank(blockSql)) {
+                    return [];
+                }
+                return sql(blockSql);
+            },
+            getBlockIndexMap: getBatchBlockIdIndex,
+        },
+    });
+    attachBacklinkSourceWindows({
+        backlinkDataArray,
+        backlinkBlockNodeArray: pageBacklinkBlockArray,
+        orderedBlocksByRootId,
+        contextVisibilityLevel: "extended",
+    });
 
     let filterCurDocDefBlockArray = filterExistingDefBlocks(
         backlinkPanelData.curDocDefBlockArray,

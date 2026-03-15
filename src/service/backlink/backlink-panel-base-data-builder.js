@@ -49,6 +49,11 @@ export function createBacklinkBlockNode(backlinkBlock) {
     includeParentDefBlockIds: new Set(),
     dynamicAnchorMap: new Map(),
     staticAnchorMap: new Map(),
+    parentContextBlockIds: [],
+    previousSiblingBlockId: "",
+    nextSiblingBlockId: "",
+    beforeExpandedBlockIdArray: [],
+    afterExpandedBlockIdArray: [],
   };
 }
 

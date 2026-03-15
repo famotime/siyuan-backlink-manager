@@ -106,6 +106,16 @@ export interface IBacklinkContextBudgetSummary {
     truncated: boolean;
 }
 
+export interface IBacklinkSourceWindow {
+    rootId: string;
+    anchorBlockId: string;
+    startBlockId: string;
+    endBlockId: string;
+    focusBlockId: string;
+    windowBlockIds: string[];
+    defaultExpandMode: string;
+}
+
 
 
 export interface IBacklinkBlockNode {
@@ -140,6 +150,11 @@ export interface IBacklinkBlockNode {
     dynamicAnchorMap: Map<string, Set<string>>;
     staticAnchorMap: Map<string, Set<string>>;
     parentListItemTreeNode?: ListItemTreeNode;
+    parentContextBlockIds?: string[];
+    previousSiblingBlockId?: string;
+    nextSiblingBlockId?: string;
+    beforeExpandedBlockIdArray?: string[];
+    afterExpandedBlockIdArray?: string[];
     contextFragments?: IBacklinkContextFragment[];
     contextBundle?: IBacklinkContextBundle;
 }

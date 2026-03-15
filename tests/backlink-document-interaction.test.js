@@ -211,3 +211,49 @@ test("uses assembled preview backlink data when nearby content is available", ()
     },
   );
 });
+
+test("uses source window scrollAttr instead of preview backlink data in extended mode", () => {
+  const activeBacklink = {
+    backlinkBlock: {
+      id: "backlink-1",
+      root_id: "doc-1",
+      box: "box-1",
+    },
+    sourceWindow: {
+      rootId: "doc-1",
+      startBlockId: "heading-1",
+      endBlockId: "block-2",
+      focusBlockId: "backlink-1",
+      anchorBlockId: "backlink-1",
+    },
+  };
+
+  assert.deepEqual(
+    buildBacklinkDocumentRenderOptions({
+      documentId: "doc-1",
+      activeBacklink,
+      contextVisibilityLevel: "extended",
+      deps: {
+        buildBacklinkPreviewBacklinkData: () => [{ dom: "<div>assembled</div>" }],
+      },
+    }),
+    {
+      blockId: "doc-1",
+      scrollAttr: {
+        rootId: "doc-1",
+        startId: "heading-1",
+        endId: "block-2",
+        scrollTop: 0,
+        focusId: "backlink-1",
+        zoomInId: "backlink-1",
+      },
+      render: {
+        background: false,
+        title: false,
+        gutter: true,
+        scroll: false,
+        breadcrumb: false,
+      },
+    },
+  );
+});

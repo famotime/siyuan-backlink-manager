@@ -92,6 +92,27 @@ export function buildBacklinkDocumentRenderOptions({
     render: { ...BACKLINK_DOCUMENT_RENDER_CONFIG },
   };
 
+  if (
+    !useFullDocument &&
+    normalizedVisibilityLevel === "extended" &&
+    activeBacklink?.sourceWindow
+  ) {
+    options.scrollAttr = {
+      rootId: activeBacklink.sourceWindow.rootId || documentId,
+      startId: activeBacklink.sourceWindow.startBlockId,
+      endId: activeBacklink.sourceWindow.endBlockId,
+      scrollTop: 0,
+      focusId:
+        activeBacklink.sourceWindow.focusBlockId ||
+        activeBacklink.backlinkBlock?.id,
+      zoomInId:
+        activeBacklink.sourceWindow.anchorBlockId ||
+        activeBacklink.sourceWindow.focusBlockId ||
+        activeBacklink.backlinkBlock?.id,
+    };
+    return options;
+  }
+
   if (!useFullDocument && activeBacklink) {
     const previewBacklinkData = (
       deps.buildBacklinkPreviewBacklinkData || buildBacklinkPreviewBacklinkData

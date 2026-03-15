@@ -151,6 +151,15 @@ interface IBacklinkData {
     backlinkBlock: Block;
     includeChildListItemIdArray: string[];
     excludeChildLisetItemIdArray: string[];
+    sourceWindow?: {
+        rootId: string;
+        anchorBlockId: string;
+        startBlockId: string;
+        endBlockId: string;
+        focusBlockId: string;
+        windowBlockIds?: string[];
+        defaultExpandMode?: string;
+    };
 }
 
 

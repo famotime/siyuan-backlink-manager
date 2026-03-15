@@ -19,6 +19,110 @@ function compareBlocksByFallbackOrder(blockA = {}, blockB = {}) {
   return String(blockA?.id ?? "").localeCompare(String(blockB?.id ?? ""));
 }
 
+function compareBlocksByDocumentOrder(
+  blockA = {},
+  blockB = {},
+  indexMap = new Map(),
+) {
+  const indexA = indexMap?.get?.(blockA.id);
+  const indexB = indexMap?.get?.(blockB.id);
+  const hasIndexA = Number.isFinite(indexA);
+  const hasIndexB = Number.isFinite(indexB);
+
+  if (hasIndexA && hasIndexB && indexA !== indexB) {
+    return indexA - indexB;
+  }
+  if (hasIndexA !== hasIndexB) {
+    return hasIndexA ? -1 : 1;
+  }
+
+  return compareBlocksByFallbackOrder(blockA, blockB);
+}
+
+function buildTreeOrderedBlocks(blockArray = [], rootId = "", indexMap = new Map()) {
+  if (!Array.isArray(blockArray) || blockArray.length <= 0) {
+    return [];
+  }
+
+  const blockById = new Map();
+  const childBlocksByParentId = new Map();
+  for (const block of blockArray) {
+    if (!block?.id) {
+      continue;
+    }
+    blockById.set(block.id, block);
+    const parentId = block.parent_id || "";
+    let childBlocks = childBlocksByParentId.get(parentId);
+    if (!childBlocks) {
+      childBlocks = [];
+      childBlocksByParentId.set(parentId, childBlocks);
+    }
+    childBlocks.push(block);
+  }
+
+  for (const childBlocks of childBlocksByParentId.values()) {
+    childBlocks.sort((blockA, blockB) =>
+      compareBlocksByDocumentOrder(blockA, blockB, indexMap),
+    );
+  }
+
+  const orderedBlocks = [];
+  const visitedBlockIds = new Set();
+
+  function visitChildren(parentId = "") {
+    const childBlocks = childBlocksByParentId.get(parentId) || [];
+    for (const childBlock of childBlocks) {
+      if (!childBlock?.id || visitedBlockIds.has(childBlock.id)) {
+        continue;
+      }
+      visitedBlockIds.add(childBlock.id);
+      orderedBlocks.push(childBlock);
+      visitChildren(childBlock.id);
+    }
+  }
+
+  visitChildren(rootId);
+
+  const orphanRootBlocks = blockArray
+    .filter((block) => {
+      if (!block?.id || visitedBlockIds.has(block.id)) {
+        return false;
+      }
+      return !blockById.has(block.parent_id);
+    })
+    .sort((blockA, blockB) =>
+      compareBlocksByDocumentOrder(blockA, blockB, indexMap),
+    );
+
+  for (const orphanBlock of orphanRootBlocks) {
+    if (visitedBlockIds.has(orphanBlock.id)) {
+      continue;
+    }
+    visitedBlockIds.add(orphanBlock.id);
+    orderedBlocks.push(orphanBlock);
+    visitChildren(orphanBlock.id);
+  }
+
+  if (visitedBlockIds.size < blockById.size) {
+    const remainingBlocks = blockArray
+      .filter((block) => block?.id && !visitedBlockIds.has(block.id))
+      .sort((blockA, blockB) =>
+        compareBlocksByDocumentOrder(blockA, blockB, indexMap),
+      );
+
+    for (const block of remainingBlocks) {
+      if (visitedBlockIds.has(block.id)) {
+        continue;
+      }
+      visitedBlockIds.add(block.id);
+      orderedBlocks.push(block);
+      visitChildren(block.id);
+    }
+  }
+
+  return orderedBlocks;
+}
+
 function buildDocumentBlockContext(orderedDocumentBlocks = []) {
   const indexById = new Map();
   const blockById = new Map();
@@ -114,6 +218,25 @@ function getBlockRangeEndIndex(blockId = "", context) {
   return startIndex;
 }
 
+function resolveFirstDescendantBlockId(blockId = "", context) {
+  const startIndex = context.indexById.get(blockId);
+  if (startIndex === undefined) {
+    return blockId;
+  }
+
+  const block = context.blockById.get(blockId);
+  if (block?.type !== "i") {
+    return blockId;
+  }
+
+  const nextBlock = context.orderedDocumentBlocks[startIndex + 1];
+  if (!isDescendantBlock(nextBlock, blockId, context.blockById)) {
+    return blockId;
+  }
+
+  return nextBlock.id || blockId;
+}
+
 function resolveListItemAnchorBlockId(backlinkBlockNode = {}, context) {
   const backlinkBlock = backlinkBlockNode?.block;
   if (!backlinkBlock?.id) {
@@ -141,6 +264,8 @@ function buildSourceWindowFromRange({
   anchorBlockId = "",
   startIndex,
   endIndex,
+  startBlockId = "",
+  endBlockId = "",
 } = {}) {
   if (
     !backlinkBlockNode?.block?.id ||
@@ -162,8 +287,8 @@ function buildSourceWindowFromRange({
   return {
     rootId: backlinkBlockNode.block.root_id,
     anchorBlockId: anchorBlockId || backlinkBlockNode.block.id,
-    startBlockId: windowBlockIds[0],
-    endBlockId: windowBlockIds[windowBlockIds.length - 1],
+    startBlockId: startBlockId || windowBlockIds[0],
+    endBlockId: endBlockId || windowBlockIds[windowBlockIds.length - 1],
     focusBlockId: backlinkBlockNode.block.id,
     windowBlockIds,
     defaultExpandMode: "document_local_full",
@@ -203,6 +328,7 @@ function buildNearbyBacklinkSourceWindow(backlinkBlockNode, context) {
 
   const startBlockId = backlinkBlockNode.previousSiblingBlockId || anchorBlockId;
   const endBlockId = backlinkBlockNode.nextSiblingBlockId || anchorBlockId;
+  const renderStartBlockId = resolveFirstDescendantBlockId(startBlockId, context);
   const startIndex = context.indexById.get(startBlockId) ?? anchorStartIndex;
   const endIndex = getBlockRangeEndIndex(endBlockId, context) ?? getBlockRangeEndIndex(anchorBlockId, context);
 
@@ -212,6 +338,7 @@ function buildNearbyBacklinkSourceWindow(backlinkBlockNode, context) {
     anchorBlockId,
     startIndex,
     endIndex,
+    startBlockId: renderStartBlockId,
   });
 }
 
@@ -383,21 +510,10 @@ export async function loadOrderedBacklinkSourceWindowBlocks({
   }
 
   for (const blockArray of orderedBlocksByRootId.values()) {
-    blockArray.sort((blockA, blockB) => {
-      const indexA = indexMap?.get?.(blockA.id);
-      const indexB = indexMap?.get?.(blockB.id);
-      const hasIndexA = Number.isFinite(indexA);
-      const hasIndexB = Number.isFinite(indexB);
-
-      if (hasIndexA && hasIndexB && indexA !== indexB) {
-        return indexA - indexB;
-      }
-      if (hasIndexA !== hasIndexB) {
-        return hasIndexA ? -1 : 1;
-      }
-
-      return compareBlocksByFallbackOrder(blockA, blockB);
-    });
+    const rootId = blockArray[0]?.root_id || "";
+    const orderedBlocks = buildTreeOrderedBlocks(blockArray, rootId, indexMap);
+    blockArray.length = 0;
+    blockArray.push(...orderedBlocks);
   }
 
   return orderedBlocksByRootId;

@@ -190,9 +190,25 @@ export function applyCreatedBacklinkProtyleState({
 
   const backlinkBlockId = backlinkData.backlinkBlock.id;
   const backlinkRootId = backlinkData.backlinkBlock.root_id;
-  const canApplySourceWindowHiding = Boolean(
-    protyleContentElement.querySelector?.(`[data-node-id='${backlinkBlockId}']`),
-  );
+  const applySourceWindowFiltering = () => {
+    const canApplySourceWindowHiding = Boolean(
+      protyleContentElement.querySelector?.(`[data-node-id='${backlinkBlockId}']`),
+    );
+    if (!canApplySourceWindowHiding) {
+      return;
+    }
+
+    hideBlocksOutsideBacklinkSourceWindow?.(
+      backlinkData,
+      protyleContentElement,
+      contextVisibilityLevel,
+    );
+    hideOtherListItemElement(backlinkData, protyleContentElement, queryParams, {
+      isSetEmpty,
+      isSetNotEmpty,
+      isArrayNotEmpty,
+    });
+  };
 
   if (showFullDocument) {
     expandBacklinkDocument(documentLiElement);
@@ -247,18 +263,7 @@ export function applyCreatedBacklinkProtyleState({
   }
 
   if (!showFullDocument) {
-    if (canApplySourceWindowHiding) {
-      hideBlocksOutsideBacklinkSourceWindow?.(
-        backlinkData,
-        protyleContentElement,
-        contextVisibilityLevel,
-      );
-      hideOtherListItemElement(backlinkData, protyleContentElement, queryParams, {
-        isSetEmpty,
-        isSetNotEmpty,
-        isArrayNotEmpty,
-      });
-    }
+    applySourceWindowFiltering();
   }
 
   const keywordArray = sanitizeBacklinkKeywords(
@@ -266,17 +271,8 @@ export function applyCreatedBacklinkProtyleState({
   );
   highlightElementTextByCss(documentLiElement, keywordArray);
   delayedTwiceRefresh(() => {
-    if (!showFullDocument && canApplySourceWindowHiding) {
-      hideBlocksOutsideBacklinkSourceWindow?.(
-        backlinkData,
-        protyleContentElement,
-        contextVisibilityLevel,
-      );
-      hideOtherListItemElement(backlinkData, protyleContentElement, queryParams, {
-        isSetEmpty,
-        isSetNotEmpty,
-        isArrayNotEmpty,
-      });
+    if (!showFullDocument) {
+      applySourceWindowFiltering();
     }
     highlightElementTextByCss(protyleContentElement, keywordArray);
   }, 100);

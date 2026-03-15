@@ -369,12 +369,14 @@ export function createBacklinkPanelController(state) {
           backlinkData,
           documentLiElement,
           protyle,
+          contextVisibilityLevel,
           showFullDocument,
         }) =>
           applyCreatedBacklinkProtyleState({
             backlinkData,
             documentLiElement,
             protyle,
+            contextVisibilityLevel,
             showFullDocument,
             deps: {
               emitLoadedProtyleStatic,

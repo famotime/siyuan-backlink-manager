@@ -146,14 +146,27 @@ export function buildBacklinkDocumentRenderOptions({
     return options;
   }
   if (!useFullDocument && normalizedVisibilityLevel === "core" && sourceWindow) {
-    const shouldPreferFocusBlock =
-      sourceWindow.focusBlockId &&
+    const shouldRenderListItemSourceWindow =
       sourceWindow.anchorBlockId &&
-      sourceWindow.focusBlockId !== sourceWindow.anchorBlockId;
+      sourceWindow.focusBlockId &&
+      sourceWindow.anchorBlockId !== sourceWindow.focusBlockId;
+    if (shouldRenderListItemSourceWindow) {
+      options.scrollAttr = {
+        rootId: sourceWindow.rootId || documentId,
+        startId: sourceWindow.startBlockId,
+        endId: sourceWindow.endBlockId,
+        scrollTop: 0,
+        focusId: sourceWindow.focusBlockId || activeBacklink.backlinkBlock?.id,
+        zoomInId:
+          sourceWindow.anchorBlockId ||
+          sourceWindow.focusBlockId ||
+          activeBacklink.backlinkBlock?.id,
+      };
+      return options;
+    }
+
     options.blockId =
-      (shouldPreferFocusBlock
-        ? sourceWindow.focusBlockId
-        : sourceWindow.anchorBlockId) ||
+      sourceWindow.anchorBlockId ||
       sourceWindow.focusBlockId ||
       activeBacklink?.backlinkBlock?.id ||
       documentId;

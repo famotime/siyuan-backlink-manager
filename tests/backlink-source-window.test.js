@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   attachBacklinkSourceWindows,
   buildBacklinkSourceWindow,
+  loadOrderedBacklinkSourceWindowBlocks,
 } from "../src/service/backlink/backlink-source-window.js";
 
 function createDocumentBlocks(blocks = []) {
@@ -210,6 +211,46 @@ test("buildBacklinkSourceWindow keeps nearby mode on sibling list items and incl
   });
 });
 
+test("buildBacklinkSourceWindow uses the previous sibling text block as the nearby render start for nested list items", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "heading-skills", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "heading-what", type: "h", subtype: "h3", parent_id: "doc-a" },
+    { id: "item-nearby", type: "i", parent_id: "list-root" },
+    { id: "block-nearby", type: "p", parent_id: "item-nearby" },
+    { id: "item-brand", type: "i", parent_id: "list-root" },
+    { id: "block-brand", type: "p", parent_id: "item-brand" },
+    { id: "item-title", type: "i", parent_id: "list-root" },
+    { id: "block-title", type: "p", parent_id: "item-title" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "block-brand",
+        root_id: "doc-a",
+        parent_id: "item-brand",
+        type: "p",
+      },
+      previousSiblingBlockId: "item-nearby",
+      nextSiblingBlockId: "item-title",
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "nearby",
+  });
+
+  assert.equal(sourceWindow.anchorBlockId, "item-brand");
+  assert.equal(sourceWindow.startBlockId, "block-nearby");
+  assert.equal(sourceWindow.endBlockId, "block-title");
+  assert.deepEqual(sourceWindow.windowBlockIds, [
+    "item-nearby",
+    "block-nearby",
+    "item-brand",
+    "block-brand",
+    "item-title",
+    "block-title",
+  ]);
+});
+
 test("attachBacklinkSourceWindows adds heading-bounded source windows to extended backlinks", () => {
   const backlinks = [
     {
@@ -282,4 +323,51 @@ test("attachBacklinkSourceWindows adds heading-bounded source windows to extende
   ]);
   assert.equal(backlinks[1].sourceWindow.startBlockId, "heading-next");
   assert.equal(backlinks[1].sourceWindow.endBlockId, "block-nearby");
+});
+
+test("loadOrderedBacklinkSourceWindowBlocks preserves parent-before-child tree order when block indexes are unavailable", async () => {
+  const orderedBlocksByRootId = await loadOrderedBacklinkSourceWindowBlocks({
+    backlinkDataArray: [
+      {
+        backlinkBlock: {
+          id: "block-brand",
+          root_id: "doc-a",
+        },
+      },
+    ],
+    deps: {
+      queryDocumentBlocksByRootIds: async () => [
+        {
+          id: "block-brand",
+          root_id: "doc-a",
+          parent_id: "item-brand",
+          type: "p",
+          sort: 10,
+          path: "/doc-a/list",
+        },
+        {
+          id: "item-brand",
+          root_id: "doc-a",
+          parent_id: "doc-a",
+          type: "i",
+          sort: 20,
+          path: "/doc-a/list",
+        },
+        {
+          id: "item-next",
+          root_id: "doc-a",
+          parent_id: "doc-a",
+          type: "i",
+          sort: 20,
+          path: "/doc-a/list",
+        },
+      ],
+      getBlockIndexMap: async () => new Map(),
+    },
+  });
+
+  assert.deepEqual(
+    orderedBlocksByRootId.get("doc-a").map((block) => block.id),
+    ["item-brand", "block-brand", "item-next"],
+  );
 });

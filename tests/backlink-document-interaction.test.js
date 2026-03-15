@@ -295,7 +295,7 @@ test("uses the original anchor block directly in core mode", () => {
   );
 });
 
-test("uses the focus block directly in core mode when the source window anchor is a parent list item", () => {
+test("uses source window scrollAttr in core mode when the source window anchor is a parent list item", () => {
   const activeBacklink = {
     backlinkBlock: {
       id: "backlink-child",
@@ -320,7 +320,15 @@ test("uses the focus block directly in core mode when the source window anchor i
       contextVisibilityLevel: "core",
     }),
     {
-      blockId: "backlink-child",
+      blockId: "doc-1",
+      scrollAttr: {
+        rootId: "doc-1",
+        startId: "list-item-1",
+        endId: "backlink-child",
+        scrollTop: 0,
+        focusId: "backlink-child",
+        zoomInId: "list-item-1",
+      },
       render: {
         background: false,
         title: false,

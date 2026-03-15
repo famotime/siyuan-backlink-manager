@@ -326,3 +326,77 @@ test("applyCreatedBacklinkProtyleState skips source window hiding when preview d
     "touchend",
   ]);
 });
+
+test("applyCreatedBacklinkProtyleState retries source window hiding after the original backlink block appears", () => {
+  const calls = [];
+  let backlinkBlockVisible = false;
+  const protyleContentElement = {
+    querySelector(selector) {
+      if (selector === "[data-node-id='block-a']") {
+        return backlinkBlockVisible ? {} : null;
+      }
+      return null;
+    },
+    addEventListener(type) {
+      calls.push(type);
+    },
+  };
+
+  applyCreatedBacklinkProtyleState({
+    backlinkData: {
+      backlinkBlock: {
+        id: "block-a",
+        root_id: "doc-a",
+      },
+    },
+    documentLiElement: { id: "li-a" },
+    protyle: {
+      protyle: {
+        contentElement: protyleContentElement,
+      },
+    },
+    contextVisibilityLevel: "nearby",
+    deps: {
+      emitLoadedProtyleStatic: () => calls.push("emit"),
+      getBacklinkDocumentRenderState: () => ({ isFolded: false }),
+      backlinkDocumentViewState: {},
+      expandBacklinkDocument: () => calls.push("expand-document"),
+      collapseBacklinkDocument: () => calls.push("collapse-document"),
+      expandAllListItemNode: () => calls.push("expand-all-items"),
+      expandBacklinkHeadingMore: () => calls.push("expand-heading"),
+      backlinkProtyleItemFoldMap: new Map(),
+      foldListItemNodeByIdSet: () => calls.push("fold-by-id-set"),
+      hideBlocksOutsideBacklinkSourceWindow: () => calls.push("hide-window"),
+      defaultExpandedListItemLevel: 1,
+      expandListItemNodeByDepth: (_element, depth) =>
+        calls.push(`expand-by-depth:${depth}`),
+      getElementsBeforeDepth: () => [],
+      getElementsAtDepth: () => [],
+      syHasChildListNode: () => false,
+      backlinkProtyleHeadingExpandMap: new Map(),
+      hideOtherListItemElement: () => calls.push("hide-items"),
+      queryParams: { backlinkKeywordStr: "" },
+      isSetEmpty: () => true,
+      isSetNotEmpty: () => false,
+      isArrayNotEmpty: () => false,
+      sanitizeBacklinkKeywords: () => [],
+      splitKeywordStringToArray: () => [],
+      highlightElementTextByCss: () => calls.push("highlight"),
+      delayedTwiceRefresh: (callback) => {
+        backlinkBlockVisible = true;
+        callback();
+      },
+    },
+  });
+
+  assert.deepEqual(calls, [
+    "emit",
+    "expand-by-depth:2",
+    "expand-heading",
+    "highlight",
+    "hide-window",
+    "hide-items",
+    "highlight",
+    "touchend",
+  ]);
+});

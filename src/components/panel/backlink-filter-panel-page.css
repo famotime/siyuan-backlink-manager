@@ -1,4 +1,4 @@
-.tag {
+.backlink-panel__area .tag {
     display: inline-flex;
     align-items: center;
     padding: 3px 17px 3px 3px;
@@ -18,54 +18,54 @@
     opacity: 0.9;
 }
 
-.selected {
+.backlink-panel__area .selected {
     background-color: rgba(26, 188, 156, 1);
     color: white;
     border: 1px solid rgba(26, 188, 156, 0.4);
 }
 
-.tag.selected:hover {
+.backlink-panel__area .tag.selected:hover {
     background-color: rgba(26, 188, 156, 0.9);
 }
 
-.excluded {
+.backlink-panel__area .excluded {
     background-color: black;
     color: white;
     border: 1px solid rgba(0, 0, 0, 0.6);
 }
 
-.tag.excluded:hover {
+.backlink-panel__area .tag.excluded:hover {
     background-color: rgba(0, 0, 0, 0.7);
 }
 
-.optional {
+.backlink-panel__area .optional {
     background-color: var(--b3-theme-background);
     color: var(--b3-theme-on-background);
     border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-.tag.optional:hover {
+.backlink-panel__area .tag.optional:hover {
     background-color: rgba(0, 0, 0, 0.08);
 }
 
-.tag:active {
+.backlink-panel__area .tag:active {
     transform: scale(0.95);
 }
 
-.b3-list-item__graphic {
+.backlink-panel__area .b3-list-item__graphic {
     margin: 1px 0 0;
     height: 11px;
     padding: 0;
 }
 
-.block-content {
+.backlink-panel__area .block-content {
     text-overflow: ellipsis;
     overflow: hidden;
     white-space: nowrap;
     flex-shrink: 1;
 }
 
-.count {
+.backlink-panel__area .count {
     position: absolute;
     top: 0;
     right: 0;
@@ -74,7 +74,7 @@
     font-size: 10px;
 }
 
-.panel__title {
+.backlink-panel__area .panel__title {
     cursor: pointer;
     border: 0;
     opacity: 1;
@@ -92,13 +92,13 @@
     height: 30px;
 }
 
-.filter-panel__title:hover,
-.backlink-panel__title:hover {
+.backlink-panel__area .filter-panel__title:hover,
+.backlink-panel__area .backlink-panel__title:hover {
     color: var(--b3-theme-on-background);
     background-color: var(--b3-list-icon-hover);
 }
 
-.backlink-panel-filter {
+.backlink-panel__area .backlink-panel-filter {
     margin: 5px;
     padding: 0 3px 3px 13px;
     transition:
@@ -106,7 +106,7 @@
         box-shadow 0.3s ease;
 }
 
-.defblock-list {
+.backlink-panel__area .defblock-list {
     min-height: 33px;
     max-height: 96px;
     overflow-y: auto;
@@ -114,34 +114,34 @@
     border-radius: 6px;
 }
 
-select {
+.backlink-panel__area select {
     padding-right: 23px;
     width: 100%;
     flex: 1;
 }
 
-input {
+.backlink-panel__area input {
     width: 100%;
     flex: 1;
 }
 
-.filter-panel__sub_title {
+.backlink-panel__area .filter-panel__sub_title {
     font-size: 1.06em;
     font-weight: bold;
     margin: 6px 0;
 }
 
-.block__icon {
+.backlink-panel__area .block__icon {
     opacity: 1;
 }
 
-.backlink-nav-progress {
+.backlink-panel__area .backlink-nav-progress {
     min-width: 2.75em;
     text-align: center;
 }
 
-.backlink-context-source,
-.backlink-context-summary {
+.backlink-panel__area .backlink-context-source,
+.backlink-panel__area .backlink-context-summary {
     display: inline-flex;
     align-items: center;
     min-height: 20px;
@@ -152,12 +152,12 @@ input {
     vertical-align: middle;
 }
 
-.backlink-context-source:empty,
-.backlink-context-summary:empty {
+.backlink-panel__area .backlink-context-source:empty,
+.backlink-panel__area .backlink-context-summary:empty {
     display: none;
 }
 
-.backlink-context-source {
+.backlink-panel__area .backlink-context-source {
     margin-left: 6px;
     padding: 0 6px;
     border-radius: 999px;
@@ -166,18 +166,18 @@ input {
     background: rgba(26, 188, 156, 0.12);
 }
 
-.backlink-context-summary {
+.backlink-panel__area .backlink-context-summary {
     max-width: 14em;
     font-size: 11px;
     color: var(--b3-theme-on-surface-light);
 }
 
-.list-item__document-name {
+.backlink-panel__area .list-item__document-name {
     display: flex;
     flex-wrap: wrap;
 }
 
-.backlink-document-header-row {
+.backlink-panel__area .backlink-document-header-row {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
@@ -186,7 +186,7 @@ input {
     min-width: 0;
 }
 
-.backlink-context-control-row {
+.backlink-panel__area .backlink-context-control-row {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -195,7 +195,7 @@ input {
     width: calc(100% - 26px);
 }
 
-.backlink-context-step-button {
+.backlink-panel__area .backlink-context-step-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -204,19 +204,19 @@ input {
     border-radius: 999px;
 }
 
-.backlink-context-step-button svg {
+.backlink-panel__area .backlink-context-step-button svg {
     width: 12px;
     height: 12px;
 }
 
-.backlink-context-state-group {
+.backlink-panel__area .backlink-context-state-group {
     display: inline-flex;
     align-items: center;
     gap: 4px;
     flex-wrap: wrap;
 }
 
-.backlink-context-state {
+.backlink-panel__area .backlink-context-state {
     display: inline-flex;
     align-items: center;
     min-height: 22px;
@@ -228,41 +228,41 @@ input {
     border: 1px solid transparent;
 }
 
-.backlink-context-state.active {
+.backlink-panel__area .backlink-context-state.active {
     color: var(--b3-theme-primary);
     background: rgba(26, 188, 156, 0.12);
     border-color: rgba(26, 188, 156, 0.24);
 }
 
 @media (max-width: 640px) {
-    .backlink-context-source,
-    .backlink-context-summary {
+    .backlink-panel__area .backlink-context-source,
+    .backlink-panel__area .backlink-context-summary {
         max-width: 100%;
         white-space: normal;
     }
 
-    .backlink-context-control-row {
+    .backlink-panel__area .backlink-context-control-row {
         margin-left: 20px;
         width: calc(100% - 20px);
     }
 }
 
-.backlink-pagination {
+.backlink-panel__area .backlink-pagination {
     display: inline-flex;
     align-items: center;
     gap: 2px;
 }
 
-.backlink-nav-button {
+.backlink-panel__area .backlink-nav-button {
     cursor: pointer;
 }
 
-.backlink-nav-button.disabled {
+.backlink-panel__area .backlink-nav-button.disabled {
     opacity: 0.38;
     cursor: default;
 }
 
-.backlink-panel__header {
+.backlink-panel__area .backlink-panel__header {
     position: sticky;
     top: 0;
     text-align: center;

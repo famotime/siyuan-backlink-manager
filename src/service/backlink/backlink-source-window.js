@@ -20,113 +20,41 @@ function compareBlocksByFallbackOrder(blockA = {}, blockB = {}) {
 }
 
 function buildDocumentBlockContext(orderedDocumentBlocks = []) {
-  const blockById = new Map();
   const indexById = new Map();
 
   orderedDocumentBlocks.forEach((block, index) => {
     if (!block?.id) {
       return;
     }
-    blockById.set(block.id, block);
     indexById.set(block.id, index);
   });
 
   return {
     orderedDocumentBlocks,
-    blockById,
     indexById,
-    ancestorIdArrayCache: new Map(),
   };
 }
 
-function getAncestorIdArray(blockId, context) {
-  if (!blockId) {
-    return [];
-  }
-  if (context.ancestorIdArrayCache.has(blockId)) {
-    return context.ancestorIdArrayCache.get(blockId);
-  }
-
-  const ancestorIdArray = [];
-  const visitedBlockIdSet = new Set();
-  let currentBlock = context.blockById.get(blockId);
-
-  while (currentBlock?.parent_id && !visitedBlockIdSet.has(currentBlock.parent_id)) {
-    visitedBlockIdSet.add(currentBlock.parent_id);
-    ancestorIdArray.push(currentBlock.parent_id);
-    currentBlock = context.blockById.get(currentBlock.parent_id);
-  }
-
-  context.ancestorIdArrayCache.set(blockId, ancestorIdArray);
-  return ancestorIdArray;
-}
-
-function getSubtreeEndIndex(blockId, context) {
-  const startIndex = context.indexById.get(blockId);
-  if (startIndex === undefined) {
-    return -1;
-  }
-
-  let endIndex = startIndex;
-  for (let currentIndex = startIndex + 1; currentIndex < context.orderedDocumentBlocks.length; currentIndex += 1) {
-    const currentBlock = context.orderedDocumentBlocks[currentIndex];
-    const ancestorIdArray = getAncestorIdArray(currentBlock?.id, context);
-    if (ancestorIdArray.includes(blockId)) {
-      endIndex = currentIndex;
-      continue;
-    }
-    if (endIndex > startIndex) {
-      break;
+function findNearestHeadingStartIndex(focusIndex, orderedDocumentBlocks = []) {
+  for (let currentIndex = focusIndex; currentIndex >= 0; currentIndex -= 1) {
+    if (orderedDocumentBlocks[currentIndex]?.type === "h") {
+      return currentIndex;
     }
   }
-
-  return endIndex;
+  return 0;
 }
 
-function getHeadingParentIdArray(backlinkBlockNode = {}, context) {
-  const parentContextBlockIds = Array.isArray(backlinkBlockNode.parentContextBlockIds)
-    ? backlinkBlockNode.parentContextBlockIds
-    : [];
-  return parentContextBlockIds.filter((blockId) => {
-    const parentBlock = context.blockById.get(blockId);
-    return parentBlock?.type === "h";
-  });
-}
-
-function expandWindowStart(startIndex, blockIds = [], context) {
-  let nextStartIndex = startIndex;
-  for (const blockId of blockIds) {
-    const blockIndex = context.indexById.get(blockId);
-    if (blockIndex === undefined) {
-      continue;
+function findNearestHeadingEndIndex(focusIndex, orderedDocumentBlocks = []) {
+  for (
+    let currentIndex = focusIndex + 1;
+    currentIndex < orderedDocumentBlocks.length;
+    currentIndex += 1
+  ) {
+    if (orderedDocumentBlocks[currentIndex]?.type === "h") {
+      return currentIndex - 1;
     }
-    nextStartIndex = Math.min(nextStartIndex, blockIndex);
   }
-  return nextStartIndex;
-}
-
-function expandWindowEnd(endIndex, blockIds = [], context) {
-  let nextEndIndex = endIndex;
-  for (const blockId of blockIds) {
-    const blockEndIndex = getSubtreeEndIndex(blockId, context);
-    if (blockEndIndex < 0) {
-      continue;
-    }
-    nextEndIndex = Math.max(nextEndIndex, blockEndIndex);
-  }
-  return nextEndIndex;
-}
-
-function getFirstBlockId(blockIdArray = []) {
-  return Array.isArray(blockIdArray) && blockIdArray.length > 0
-    ? blockIdArray[0]
-    : null;
-}
-
-function getLastBlockId(blockIdArray = []) {
-  return Array.isArray(blockIdArray) && blockIdArray.length > 0
-    ? blockIdArray[blockIdArray.length - 1]
-    : null;
+  return orderedDocumentBlocks.length - 1;
 }
 
 export function buildBacklinkSourceWindow({
@@ -150,58 +78,13 @@ export function buildBacklinkSourceWindow({
     return null;
   }
 
-  const currentContainerBlockId =
-    backlinkBlockNode.parentListItemTreeNode?.id || focusBlockId;
-  const beforeExpandedBlockIdArray = Array.isArray(
-    backlinkBlockNode.beforeExpandedBlockIdArray,
-  )
-    ? backlinkBlockNode.beforeExpandedBlockIdArray
-    : [];
-  const afterExpandedBlockIdArray = Array.isArray(
-    backlinkBlockNode.afterExpandedBlockIdArray,
-  )
-    ? backlinkBlockNode.afterExpandedBlockIdArray
-    : [];
-
-  let startIndex = focusIndex;
-  let endIndex = focusIndex;
-
-  startIndex = expandWindowStart(
-    startIndex,
-    [
-      getFirstBlockId(beforeExpandedBlockIdArray),
-      backlinkBlockNode.previousSiblingBlockId,
-      currentContainerBlockId,
-    ],
-    context,
+  const safeStartIndex = findNearestHeadingStartIndex(
+    focusIndex,
+    context.orderedDocumentBlocks,
   );
-  endIndex = expandWindowEnd(
-    endIndex,
-    [
-      currentContainerBlockId,
-      backlinkBlockNode.nextSiblingBlockId,
-      getLastBlockId(afterExpandedBlockIdArray),
-    ],
-    context,
-  );
-
-  const headingParentIdArray = getHeadingParentIdArray(backlinkBlockNode, context);
-  if (headingParentIdArray.length > 0) {
-    startIndex = expandWindowStart(startIndex, [headingParentIdArray[0]], context);
-    endIndex = expandWindowEnd(
-      endIndex,
-      [headingParentIdArray[headingParentIdArray.length - 1]],
-      context,
-    );
-  } else if (backlinkBlockNode.block.type === "h") {
-    startIndex = expandWindowStart(startIndex, [focusBlockId], context);
-    endIndex = expandWindowEnd(endIndex, [focusBlockId], context);
-  }
-
-  const safeStartIndex = Math.max(0, Math.min(startIndex, endIndex));
-  const safeEndIndex = Math.min(
-    context.orderedDocumentBlocks.length - 1,
-    Math.max(startIndex, endIndex),
+  const safeEndIndex = Math.max(
+    safeStartIndex,
+    findNearestHeadingEndIndex(focusIndex, context.orderedDocumentBlocks),
   );
   const windowBlockIds = context.orderedDocumentBlocks
     .slice(safeStartIndex, safeEndIndex + 1)

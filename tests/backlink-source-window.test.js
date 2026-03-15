@@ -17,17 +17,16 @@ function createDocumentBlocks(blocks = []) {
   }));
 }
 
-test("buildBacklinkSourceWindow expands extended mode to a document-local window around heading ancestors and list siblings", () => {
+test("buildBacklinkSourceWindow uses the nearest heading section around the backlink block in extended mode", () => {
   const orderedBlocks = createDocumentBlocks([
-    { id: "heading-h2", type: "h", subtype: "h2", parent_id: "doc-a" },
-    { id: "heading-h3", type: "h", subtype: "h3", parent_id: "doc-a" },
+    { id: "intro", type: "p", parent_id: "doc-a" },
+    { id: "heading-prev", type: "h", subtype: "h2", parent_id: "doc-a" },
     { id: "item-expand", type: "i", parent_id: "list-root" },
     { id: "item-nearby", type: "i", parent_id: "list-root" },
     { id: "item-brand", type: "i", parent_id: "list-root" },
     { id: "block-brand", type: "p", parent_id: "item-brand" },
     { id: "item-title", type: "i", parent_id: "list-root" },
-    { id: "item-logo", type: "i", parent_id: "list-root" },
-    { id: "item-error", type: "i", parent_id: "list-root" },
+    { id: "heading-next", type: "h", subtype: "h2", parent_id: "doc-a" },
     { id: "tail", type: "p", parent_id: "doc-a" },
   ]);
 
@@ -39,15 +38,6 @@ test("buildBacklinkSourceWindow expands extended mode to a document-local window
         parent_id: "item-brand",
         type: "p",
       },
-      parentContextBlockIds: ["heading-h2", "heading-h3"],
-      parentListItemTreeNode: {
-        id: "item-brand",
-        children: [],
-      },
-      previousSiblingBlockId: "item-nearby",
-      nextSiblingBlockId: "item-title",
-      beforeExpandedBlockIdArray: ["item-expand"],
-      afterExpandedBlockIdArray: ["item-logo", "item-error"],
     },
     orderedDocumentBlocks: orderedBlocks,
     contextVisibilityLevel: "extended",
@@ -56,25 +46,53 @@ test("buildBacklinkSourceWindow expands extended mode to a document-local window
   assert.deepEqual(sourceWindow, {
     rootId: "doc-a",
     anchorBlockId: "block-brand",
-    startBlockId: "heading-h2",
-    endBlockId: "item-error",
+    startBlockId: "heading-prev",
+    endBlockId: "item-title",
     focusBlockId: "block-brand",
     windowBlockIds: [
-      "heading-h2",
-      "heading-h3",
+      "heading-prev",
       "item-expand",
       "item-nearby",
       "item-brand",
       "block-brand",
       "item-title",
-      "item-logo",
-      "item-error",
     ],
     defaultExpandMode: "document_local_full",
   });
 });
 
-test("attachBacklinkSourceWindows adds a source window to extended backlinks without disturbing nearby mode items", () => {
+test("buildBacklinkSourceWindow falls back to document start and end when no headings exist", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "intro", type: "p", parent_id: "doc-a" },
+    { id: "item-brand", type: "i", parent_id: "list-root" },
+    { id: "block-brand", type: "p", parent_id: "item-brand" },
+    { id: "tail", type: "p", parent_id: "doc-a" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "block-brand",
+        root_id: "doc-a",
+        parent_id: "item-brand",
+        type: "p",
+      },
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "extended",
+  });
+
+  assert.deepEqual(sourceWindow.windowBlockIds, [
+    "intro",
+    "item-brand",
+    "block-brand",
+    "tail",
+  ]);
+  assert.equal(sourceWindow.startBlockId, "intro");
+  assert.equal(sourceWindow.endBlockId, "tail");
+});
+
+test("attachBacklinkSourceWindows adds heading-bounded source windows to extended backlinks", () => {
   const backlinks = [
     {
       backlinkBlock: {
@@ -116,11 +134,13 @@ test("attachBacklinkSourceWindows adds a source window to extended backlinks wit
     [
       "doc-a",
       createDocumentBlocks([
+        { id: "intro", type: "p", parent_id: "doc-a" },
         { id: "heading-h2", type: "h", subtype: "h2", parent_id: "doc-a" },
         { id: "item-nearby", type: "i", parent_id: "list-root" },
         { id: "item-brand", type: "i", parent_id: "list-root" },
         { id: "block-brand", type: "p", parent_id: "item-brand" },
         { id: "item-title", type: "i", parent_id: "list-root" },
+        { id: "heading-next", type: "h", subtype: "h2", parent_id: "doc-a" },
         { id: "block-nearby", type: "p", parent_id: "doc-a" },
       ]),
     ],
@@ -135,5 +155,13 @@ test("attachBacklinkSourceWindows adds a source window to extended backlinks wit
 
   assert.equal(backlinks[0].sourceWindow.startBlockId, "heading-h2");
   assert.equal(backlinks[0].sourceWindow.endBlockId, "item-title");
-  assert.equal(backlinks[1].sourceWindow.focusBlockId, "block-nearby");
+  assert.deepEqual(backlinks[0].sourceWindow.windowBlockIds, [
+    "heading-h2",
+    "item-nearby",
+    "item-brand",
+    "block-brand",
+    "item-title",
+  ]);
+  assert.equal(backlinks[1].sourceWindow.startBlockId, "heading-next");
+  assert.equal(backlinks[1].sourceWindow.endBlockId, "block-nearby");
 });

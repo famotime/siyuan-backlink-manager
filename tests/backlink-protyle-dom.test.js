@@ -244,3 +244,126 @@ test("hideBlocksOutsideBacklinkSourceWindow keeps ancestor list containers visib
   assert.deepEqual(childBlock.classList.removed, ["fn__none"]);
   assert.deepEqual(unrelatedBlock.classList.added, ["fn__none"]);
 });
+
+test("hideBlocksOutsideBacklinkSourceWindow unfolds folded ancestor list items for visible nested blocks", () => {
+  const makeBlock = (id, dataType = "", folded = false) => ({
+    id,
+    parentElement: null,
+    getAttribute(name) {
+      if (name === "data-node-id") {
+        return id;
+      }
+      if (name === "data-type") {
+        return dataType;
+      }
+      if (name === "fold") {
+        return folded ? "1" : null;
+      }
+      return null;
+    },
+    classList: {
+      added: [],
+      removed: [],
+      add(name) {
+        this.added.push(name);
+      },
+      remove(name) {
+        this.removed.push(name);
+      },
+    },
+    removedAttributes: [],
+    removeAttribute(name) {
+      this.removedAttributes.push(name);
+    },
+  });
+
+  const outerItem = makeBlock("item-outer", "NodeListItem", true);
+  const nestedList = makeBlock("list-nested", "NodeList", false);
+  const innerItem = makeBlock("item-inner", "NodeListItem", true);
+  const childBlock = makeBlock("block-child", "NodeParagraph", false);
+  nestedList.parentElement = outerItem;
+  innerItem.parentElement = nestedList;
+  childBlock.parentElement = innerItem;
+
+  const protyleWysiwygElement = {
+    querySelectorAll() {
+      return [outerItem, nestedList, innerItem, childBlock];
+    },
+  };
+  const protyleContentElement = {
+    querySelector() {
+      return protyleWysiwygElement;
+    },
+  };
+
+  hideBlocksOutsideBacklinkSourceWindow(
+    {
+      sourceWindows: {
+        nearby: {
+          windowBlockIds: ["block-child"],
+        },
+      },
+    },
+    protyleContentElement,
+    "nearby",
+  );
+
+  assert.ok(outerItem.removedAttributes.includes("fold"));
+  assert.ok(innerItem.removedAttributes.includes("fold"));
+});
+
+test("hideBlocksOutsideBacklinkSourceWindow keeps descendant blocks visible when a list item container is in the window", () => {
+  const makeBlock = (id) => ({
+    id,
+    parentElement: null,
+    getAttribute(name) {
+      return name === "data-node-id" ? id : null;
+    },
+    querySelectorAll() {
+      return [];
+    },
+    classList: {
+      added: [],
+      removed: [],
+      add(name) {
+        this.added.push(name);
+      },
+      remove(name) {
+        this.removed.push(name);
+      },
+    },
+  });
+
+  const itemBlock = makeBlock("item-a");
+  const textBlock = makeBlock("block-a");
+  const otherBlock = makeBlock("block-b");
+  itemBlock.querySelectorAll = () => [textBlock];
+  textBlock.parentElement = itemBlock;
+
+  const protyleWysiwygElement = {
+    querySelectorAll() {
+      return [itemBlock, textBlock, otherBlock];
+    },
+  };
+  const protyleContentElement = {
+    querySelector() {
+      return protyleWysiwygElement;
+    },
+  };
+
+  hideBlocksOutsideBacklinkSourceWindow(
+    {
+      sourceWindows: {
+        nearby: {
+          windowBlockIds: ["item-a"],
+        },
+      },
+    },
+    protyleContentElement,
+    "nearby",
+  );
+
+  assert.deepEqual(itemBlock.classList.removed, ["fn__none"]);
+  assert.deepEqual(textBlock.classList.removed, ["fn__none"]);
+  assert.deepEqual(otherBlock.classList.added, ["fn__none"]);
+});

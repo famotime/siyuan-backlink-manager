@@ -16,7 +16,7 @@ function compareBlocksByFallbackOrder(blockA = {}, blockB = {}) {
     return pathResult;
   }
 
-  return String(blockA?.id ?? "").localeCompare(String(blockB?.id ?? ""));
+  return 0;
 }
 
 function compareBlocksByDocumentOrder(
@@ -29,7 +29,7 @@ function compareBlocksByDocumentOrder(
   const hasIndexA = Number.isFinite(indexA);
   const hasIndexB = Number.isFinite(indexB);
 
-  if (hasIndexA && hasIndexB && indexA !== indexB) {
+  if (hasIndexA && hasIndexB) {
     return indexA - indexB;
   }
   if (hasIndexA !== hasIndexB) {

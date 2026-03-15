@@ -266,6 +266,80 @@ function collectVisibleBlockIdsWithAncestors(
   return expandedVisibleBlockIdSet;
 }
 
+function collectVisibleBlockIdsWithDescendants(
+  visibleBlockIdSet,
+  blockElementArray = [],
+) {
+  if (!(visibleBlockIdSet instanceof Set)) {
+    return visibleBlockIdSet;
+  }
+
+  const blockElementMap = new Map();
+  for (const blockElement of blockElementArray) {
+    const blockId = blockElement?.getAttribute?.("data-node-id");
+    if (!blockId) {
+      continue;
+    }
+    blockElementMap.set(blockId, blockElement);
+  }
+
+  const expandedVisibleBlockIdSet = new Set(visibleBlockIdSet);
+  for (const blockId of visibleBlockIdSet) {
+    const blockElement = blockElementMap.get(blockId);
+    if (!blockElement) {
+      continue;
+    }
+
+    const descendantBlockElements =
+      blockElement.querySelectorAll?.("[data-node-id]") || [];
+    for (const descendantBlockElement of descendantBlockElements) {
+      const descendantBlockId =
+        descendantBlockElement?.getAttribute?.("data-node-id");
+      if (descendantBlockId) {
+        expandedVisibleBlockIdSet.add(descendantBlockId);
+      }
+    }
+  }
+
+  return expandedVisibleBlockIdSet;
+}
+
+function unfoldVisibleListItemAncestors(
+  visibleBlockIdSet,
+  blockElementArray = [],
+  protyleWysiwygElement,
+) {
+  if (!protyleWysiwygElement || !(visibleBlockIdSet instanceof Set)) {
+    return;
+  }
+
+  const blockElementMap = new Map();
+  for (const blockElement of blockElementArray) {
+    const blockId = blockElement?.getAttribute?.("data-node-id");
+    if (!blockId) {
+      continue;
+    }
+    blockElementMap.set(blockId, blockElement);
+  }
+
+  const unfoldListItemElement = (element) => {
+    if (element?.getAttribute?.("data-type") !== "NodeListItem") {
+      return;
+    }
+    if (element?.getAttribute?.("fold") === "1") {
+      element.removeAttribute?.("fold");
+    }
+  };
+
+  for (const blockId of visibleBlockIdSet) {
+    let currentElement = blockElementMap.get(blockId);
+    while (currentElement && currentElement !== protyleWysiwygElement) {
+      unfoldListItemElement(currentElement);
+      currentElement = currentElement.parentElement;
+    }
+  }
+}
+
 export function hideBlocksOutsideBacklinkSourceWindow(
   backlinkData,
   protyleContentElement,
@@ -287,7 +361,15 @@ export function hideBlocksOutsideBacklinkSourceWindow(
 
   const blockElementArray = protyleWysiwygElement.querySelectorAll("[data-node-id]");
   const visibleBlockIdSet = collectVisibleBlockIdsWithAncestors(
-    new Set(windowBlockIds),
+    collectVisibleBlockIdsWithDescendants(
+      new Set(windowBlockIds),
+      blockElementArray,
+    ),
+    blockElementArray,
+    protyleWysiwygElement,
+  );
+  unfoldVisibleListItemAncestors(
+    visibleBlockIdSet,
     blockElementArray,
     protyleWysiwygElement,
   );

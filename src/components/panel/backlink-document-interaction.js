@@ -172,6 +172,15 @@ export function buildBacklinkDocumentRenderOptions({
       documentId;
     return options;
   }
+  if (
+    !useFullDocument &&
+    normalizedVisibilityLevel === "nearby" &&
+    sourceWindow?.anchorBlockId &&
+    sourceWindow?.focusBlockId &&
+    sourceWindow.anchorBlockId !== sourceWindow.focusBlockId
+  ) {
+    return options;
+  }
   if (!useFullDocument && sourceWindow) {
     options.scrollAttr = {
       rootId: sourceWindow.rootId || documentId,

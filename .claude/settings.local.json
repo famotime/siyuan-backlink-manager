@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__syplugin-anMCPServer__siyuan_read_doc_content",
+      "mcp__syplugin-anMCPServer__siyuan_query_sql",
+      "Bash(node:*)"
+    ]
+  }
+}

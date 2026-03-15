@@ -145,6 +145,57 @@ export function renderBacklinkDocumentGroup({
   return editor;
 }
 
+function getBacklinkSourceWindowByLevel(
+  backlinkData,
+  contextVisibilityLevel = "core",
+) {
+  if (!backlinkData) {
+    return null;
+  }
+
+  const sourceWindows = backlinkData.sourceWindows;
+  if (sourceWindows && sourceWindows[contextVisibilityLevel]) {
+    return sourceWindows[contextVisibilityLevel];
+  }
+
+  if (contextVisibilityLevel === "extended") {
+    return backlinkData.sourceWindow || null;
+  }
+
+  return null;
+}
+
+function canApplySourceWindowFiltering({
+  backlinkData,
+  backlinkBlockId = "",
+  contextVisibilityLevel = "core",
+  protyleContentElement,
+}) {
+  if (!protyleContentElement?.querySelector) {
+    return false;
+  }
+
+  const sourceWindow = getBacklinkSourceWindowByLevel(
+    backlinkData,
+    contextVisibilityLevel,
+  );
+  const candidateBlockIds = [
+    backlinkBlockId,
+    sourceWindow?.anchorBlockId,
+    sourceWindow?.focusBlockId,
+    sourceWindow?.startBlockId,
+    sourceWindow?.endBlockId,
+  ].filter(Boolean);
+
+  for (const blockId of candidateBlockIds) {
+    if (protyleContentElement.querySelector(`[data-node-id='${blockId}']`)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export function applyCreatedBacklinkProtyleState({
   backlinkData,
   documentLiElement,
@@ -170,11 +221,7 @@ export function applyCreatedBacklinkProtyleState({
     getElementsAtDepth,
     syHasChildListNode,
     backlinkProtyleHeadingExpandMap,
-    hideOtherListItemElement,
     queryParams,
-    isSetEmpty,
-    isSetNotEmpty,
-    isArrayNotEmpty,
     sanitizeBacklinkKeywords,
     splitKeywordStringToArray,
     highlightElementTextByCss,
@@ -191,10 +238,14 @@ export function applyCreatedBacklinkProtyleState({
   const backlinkBlockId = backlinkData.backlinkBlock.id;
   const backlinkRootId = backlinkData.backlinkBlock.root_id;
   const applySourceWindowFiltering = () => {
-    const canApplySourceWindowHiding = Boolean(
-      protyleContentElement.querySelector?.(`[data-node-id='${backlinkBlockId}']`),
-    );
-    if (!canApplySourceWindowHiding) {
+    if (
+      !canApplySourceWindowFiltering({
+        backlinkData,
+        backlinkBlockId,
+        contextVisibilityLevel,
+        protyleContentElement,
+      })
+    ) {
       return;
     }
 
@@ -203,11 +254,6 @@ export function applyCreatedBacklinkProtyleState({
       protyleContentElement,
       contextVisibilityLevel,
     );
-    hideOtherListItemElement(backlinkData, protyleContentElement, queryParams, {
-      isSetEmpty,
-      isSetNotEmpty,
-      isArrayNotEmpty,
-    });
   };
 
   if (showFullDocument) {

@@ -1,19 +1,45 @@
 .backlink-panel__area {
     --backlink-filter-panel-offset: 0px;
+    --backlink-chip-radius: 999px;
+    --backlink-chip-flat-radius: 999px;
+    --backlink-chip-height: 20px;
+    --backlink-chip-flat-height: 18px;
+    --backlink-chip-padding-inline: 7px;
+    --backlink-chip-flat-padding-inline: 5px;
+    --backlink-chip-gap: 4px;
+    --backlink-chip-border-color: rgba(128, 128, 128, 0.18);
+    --backlink-chip-surface: var(--b3-theme-surface);
+    --backlink-chip-surface-hover: var(--b3-list-icon-hover);
+    --backlink-chip-primary-surface: rgba(26, 188, 156, 0.12);
+    --backlink-chip-primary-border: rgba(26, 188, 156, 0.24);
+}
+
+.backlink-panel__area .backlink-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--backlink-chip-gap);
+    min-height: var(--backlink-chip-height);
+    padding: 0 var(--backlink-chip-padding-inline);
+    border-radius: var(--backlink-chip-radius);
+    line-height: 1.15;
+    box-sizing: border-box;
+}
+
+.backlink-panel__area .backlink-chip--flat {
+    min-height: var(--backlink-chip-flat-height);
+    padding: 0 var(--backlink-chip-flat-padding-inline);
+    border-radius: var(--backlink-chip-flat-radius);
 }
 
 .backlink-panel__area .tag {
-    display: inline-flex;
-    align-items: center;
-    padding: 3px 17px 3px 3px;
-    margin: 4px 4px 4px 2px;
-    border-radius: 4px;
+    padding: 2px 15px 2px 4px;
+    margin: 3px 4px 3px 2px;
     cursor: pointer;
     transition: all 0.2s ease;
-    border: 1px solid transparent;
+    border: 1px solid var(--backlink-chip-border-color);
     position: relative;
     max-width: 120px;
-    max-height: 30px;
+    max-height: 26px;
     overflow: hidden;
     text-overflow: ellipsis;
     vertical-align: top;
@@ -43,13 +69,13 @@
 }
 
 .backlink-panel__area .optional {
-    background-color: var(--b3-theme-background);
+    background-color: var(--backlink-chip-surface);
     color: var(--b3-theme-on-background);
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--backlink-chip-border-color);
 }
 
 .backlink-panel__area .tag.optional:hover {
-    background-color: rgba(0, 0, 0, 0.08);
+    background-color: var(--backlink-chip-surface-hover);
 }
 
 .backlink-panel__area .tag:active {
@@ -71,10 +97,10 @@
 
 .backlink-panel__area .count {
     position: absolute;
-    top: 0;
-    right: 0;
+    top: 1px;
+    right: 1px;
     border-radius: 20%;
-    padding: 2px 5px;
+    padding: 1px 4px;
     font-size: 10px;
 }
 
@@ -148,7 +174,6 @@
 .backlink-panel__area .backlink-context-summary {
     display: inline-flex;
     align-items: center;
-    min-height: 20px;
     max-width: 10em;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -163,11 +188,10 @@
 
 .backlink-panel__area .backlink-context-source {
     margin-left: 6px;
-    padding: 0 6px;
-    border-radius: 999px;
     font-size: 11px;
     color: var(--b3-theme-primary);
-    background: rgba(26, 188, 156, 0.12);
+    background: var(--backlink-chip-primary-surface);
+    border: 1px solid var(--backlink-chip-primary-border);
 }
 
 .backlink-panel__area .backlink-context-summary {
@@ -221,21 +245,45 @@
 }
 
 .backlink-panel__area .backlink-context-state {
-    display: inline-flex;
-    align-items: center;
-    min-height: 22px;
-    padding: 0 8px;
-    border-radius: 999px;
-    font-size: 11px;
+    appearance: none;
+    cursor: pointer;
+    font: inherit;
+    height: 18px;
+    min-height: 16px;
+    padding: 3px 6px;
+    line-height: 1;
+    font-size: 12px;
     color: var(--b3-theme-on-surface-light);
-    background: var(--b3-theme-surface);
-    border: 1px solid transparent;
+    background: var(--backlink-chip-surface);
+    border: 1px solid var(--backlink-chip-border-color);
 }
 
 .backlink-panel__area .backlink-context-state.active {
     color: var(--b3-theme-primary);
-    background: rgba(26, 188, 156, 0.12);
-    border-color: rgba(26, 188, 156, 0.24);
+    background: var(--backlink-chip-primary-surface);
+    border-color: var(--backlink-chip-primary-border);
+}
+
+.backlink-panel__area .backlink-saved-criteria-tag {
+    padding-right: 4px;
+    max-width: none;
+}
+
+.backlink-panel__area .backlink-saved-criteria-tag .block-content {
+    padding: 0 2px;
+}
+
+.backlink-panel__area .backlink-saved-criteria-tag .block__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    min-height: 18px;
+    border-radius: 999px;
+}
+
+.backlink-panel__area .backlink-saved-criteria-tag .block__icon:hover {
+    background: var(--backlink-chip-surface-hover);
 }
 
 @media (max-width: 640px) {

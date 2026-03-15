@@ -73,6 +73,7 @@ import {
   markBacklinkDocumentExpanded,
   markBacklinkDocumentFoldState,
   markBacklinkDocumentFullView,
+  markBacklinkDocumentVisibilityLevel,
 } from "./backlink-document-view-state.js";
 import { sanitizeBacklinkKeywords } from "./backlink-panel-formatting.js";
 import { mergeTurnPageBacklinkPanelRenderData } from "./backlink-panel-render-data.js";
@@ -383,11 +384,24 @@ export function createBacklinkPanelController(state) {
       return;
     }
 
-    const nextVisibilityLevel = cycleBacklinkDocumentVisibilityLevel(
-      state.backlinkDocumentViewState,
-      documentId,
-      direction,
-    );
+    const nextVisibilityLevel =
+      direction === "previous" || direction === "next"
+        ? cycleBacklinkDocumentVisibilityLevel(
+            state.backlinkDocumentViewState,
+            documentId,
+            direction,
+          )
+        : (() => {
+            markBacklinkDocumentVisibilityLevel(
+              state.backlinkDocumentViewState,
+              documentId,
+              direction,
+            );
+            return getBacklinkDocumentRenderState(
+              state.backlinkDocumentViewState,
+              documentId,
+            ).contextVisibilityLevel;
+          })();
     expandBacklinkDocument(documentLiElement);
 
     const documentGroup = state.backlinkDocumentGroupArray.find(

@@ -27,12 +27,16 @@ test("buildBacklinkDocumentListItemHtml renders title aria text and progress tex
   assert.match(html, /父级/);
   assert.match(html, /命中说明/);
   assert.match(html, /backlink-document-header-row/);
+  assert.match(html, /backlink-chip backlink-chip--flat backlink-context-source/);
   assert.match(html, /backlink-context-control-row/);
   assert.match(html, /backlink-context-step-button/);
   assert.match(html, /backlink-context-step-button previous/);
   assert.match(html, /backlink-context-step-button next/);
   assert.match(html, /backlink-context-state-group/);
-  assert.match(html, /backlink-context-state active/);
+  assert.match(
+    html,
+    /backlink-chip backlink-chip--flat backlink-context-state active/,
+  );
   assert.doesNotMatch(html, /backlink-context-next-action/);
   assert.doesNotMatch(html, /backlink-context-visible-summary/);
   assert.doesNotMatch(html, /backlink-context-budget-hint/);
@@ -125,7 +129,10 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and 
     nextContextButton.attrs["aria-label"],
     "切换到下一个上下文层级",
   );
-  assert.match(stateGroupElement.innerHTML, /backlink-context-state active/);
+  assert.match(
+    stateGroupElement.innerHTML,
+    /backlink-chip backlink-chip--flat backlink-context-state active/,
+  );
   assert.match(stateGroupElement.innerHTML, /近邻/);
   assert.equal(previousButton.disabled, false);
   assert.equal(nextButton.disabled, false);
@@ -159,6 +166,11 @@ test("createBacklinkDocumentListItemElement wires toggle and navigation events",
       listeners[`context-next:${type}`] = handler;
     },
   };
+  const stateGroupElement = {
+    addEventListener(type, handler) {
+      listeners[`context-state-group:${type}`] = handler;
+    },
+  };
   const documentLiElement = {
     classList: { add() {} },
     attrs: {},
@@ -178,6 +190,9 @@ test("createBacklinkDocumentListItemElement wires toggle and navigation events",
       }
       if (selector === ".backlink-context-step-button.next") {
         return nextContextButton;
+      }
+      if (selector === ".backlink-context-state-group") {
+        return stateGroupElement;
       }
       return null;
     },
@@ -239,6 +254,22 @@ test("createBacklinkDocumentListItemElement wires toggle and navigation events",
     stopPropagation() {},
     currentTarget: nextContextButton,
   });
+  listeners["context-state-group:click"]({
+    preventDefault() {},
+    stopPropagation() {},
+    target: {
+      closest(selector) {
+        if (selector !== ".backlink-context-state") {
+          return null;
+        }
+        return {
+          getAttribute(name) {
+            return name === "data-context-level" ? "extended" : null;
+          },
+        };
+      },
+    },
+  });
 
   assert.equal(created, documentLiElement);
   assert.equal(appended[0], documentLiElement);
@@ -252,5 +283,6 @@ test("createBacklinkDocumentListItemElement wires toggle and navigation events",
     "next",
     "context-previous",
     "context-next",
+    "context-extended",
   ]);
 });

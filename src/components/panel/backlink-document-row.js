@@ -37,11 +37,22 @@ function normalizeBacklinkContextControlState(contextControlState = {}) {
   };
 }
 
+function getBacklinkContextStateLevelFromTarget(target) {
+  if (!target || typeof target.closest !== "function") {
+    return "";
+  }
+
+  return (
+    target.closest(".backlink-context-state")?.getAttribute("data-context-level") ||
+    ""
+  );
+}
+
 function buildBacklinkContextStateGroupHtml(contextVisibilityLevel = "core") {
   return BACKLINK_CONTEXT_LEVEL_ORDER.map((level) => {
     const isActive = level === contextVisibilityLevel;
     const activeClass = isActive ? " active" : "";
-    return `<span class="backlink-context-state${activeClass}" data-context-level="${level}">${getBacklinkContextLevelLabel(level)}</span>`;
+    return `<button type="button" class="backlink-chip backlink-chip--flat backlink-context-state${activeClass}" data-context-level="${level}" aria-pressed="${isActive}">${getBacklinkContextLevelLabel(level)}</button>`;
   }).join("");
 }
 
@@ -81,7 +92,7 @@ export function buildBacklinkDocumentListItemHtml({
 <span class="b3-list-item__text ariaLabel"  aria-label="${truncatedAriaText}" title="${BACKLINK_DOCUMENT_TITLE_TOOLTIP}"  >
 ${documentName}
 </span>
-<span class="b3-list-item__meta backlink-context-source">${matchSourceLabel}</span>
+<span class="b3-list-item__meta backlink-chip backlink-chip--flat backlink-context-source">${matchSourceLabel}</span>
 <span class="b3-list-item__meta backlink-context-summary">${matchSummaryText}</span>
 <svg class="b3-list-item__graphic counter ariaLabel backlink-nav-button previous-backlink-icon" aria-label="上一个反链块"><use xlink:href="#iconLeft"></use></svg>
 <span class="b3-list-item__meta backlink-nav-progress">${progressText}</span>
@@ -252,6 +263,18 @@ export function createBacklinkDocumentListItemElement({
       event.preventDefault();
       event.stopPropagation();
       onStepContextLevel?.(documentLiElement, "next");
+    });
+
+  documentLiElement
+    .querySelector(".backlink-context-state-group")
+    ?.addEventListener("click", (event) => {
+      const contextLevel = getBacklinkContextStateLevelFromTarget(event.target);
+      if (!contextLevel) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      onStepContextLevel?.(documentLiElement, contextLevel);
     });
 
   documentLiElement

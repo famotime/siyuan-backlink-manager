@@ -40,3 +40,22 @@ test("backlink filter panel styles scope host selectors under backlink-panel__ar
         );
     }
 });
+
+test("backlink flat chips keep a pill radius", () => {
+    const css = readFileSync(panelCssPath, "utf8");
+
+    assert.match(css, /--backlink-chip-flat-radius:\s*999px;/);
+    assert.match(
+        css,
+        /\.backlink-panel__area\s+\.backlink-chip--flat\s*\{[\s\S]*?border-radius:\s*var\(--backlink-chip-flat-radius\);[\s\S]*?\}/,
+    );
+});
+
+test("backlink context state chips stay flatter than the generic pill", () => {
+    const css = readFileSync(panelCssPath, "utf8");
+
+    assert.match(
+        css,
+        /\.backlink-panel__area\s+\.backlink-context-state\s*\{[\s\S]*?height:\s*14px;[\s\S]*?min-height:\s*14px;[\s\S]*?padding:\s*0 3px;[\s\S]*?line-height:\s*1;[\s\S]*?\}/,
+    );
+});

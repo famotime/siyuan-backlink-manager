@@ -119,7 +119,7 @@
                     {#if !defBlock.filterStatus}
                         <div
                             id={defBlock.id}
-                            class="tag ariaLabel {defBlock.selectionStatus.toLowerCase()}"
+                            class="tag backlink-chip backlink-chip--interactive ariaLabel {defBlock.selectionStatus.toLowerCase()}"
                             aria-label={getDefBlockAriaLabel(defBlock, true)}
                             on:click|preventDefault={(event) =>
                                 handleRelatedDefBlockClick(event, defBlock)}
@@ -176,7 +176,7 @@
                 {#each backlinkFilterPanelRenderData.relatedDefBlockArray as defBlock (defBlock.id)}
                     {#if !defBlock.filterStatus}
                         <div
-                            class="tag ariaLabel {defBlock.selectionStatus.toLowerCase()}"
+                            class="tag backlink-chip backlink-chip--interactive ariaLabel {defBlock.selectionStatus.toLowerCase()}"
                             aria-label={getDefBlockAriaLabel(defBlock, true)}
                             on:click={(event) => handleRelatedDefBlockClick(event, defBlock)}
                             on:contextmenu|preventDefault={(event) =>
@@ -219,7 +219,7 @@
                 {#each backlinkFilterPanelRenderData.backlinkDocumentArray as defBlock (defBlock.id)}
                     {#if !defBlock.filterStatus}
                         <div
-                            class="tag ariaLabel {defBlock.selectionStatus.toLowerCase()}"
+                            class="tag backlink-chip backlink-chip--interactive ariaLabel {defBlock.selectionStatus.toLowerCase()}"
                             aria-label={getDefBlockAriaLabel(defBlock, true)}
                             on:click={(event) => handleRelatedDocBlockClick(event, defBlock)}
                             on:contextmenu|preventDefault={(event) =>
@@ -246,7 +246,7 @@
                     >
                     {#if savedQueryParamMap}
                         {#each savedQueryParamMap.keys() as name}
-                            <div class="tag optional" style="padding: 4px;">
+                            <div class="tag backlink-chip backlink-chip--interactive backlink-saved-criteria-tag optional">
                                 <span
                                     class="block-content"
                                     style="min-width:30px;"
@@ -259,7 +259,6 @@
                                 </span>
                                 <span
                                     class="block__icon"
-                                    style="padding: 2px 6px"
                                     on:click={() => {
                                         handleSavedPanelCriteriaDeleteClick(name);
                                     }}

@@ -41,6 +41,7 @@
     let backlinkDocumentEditorMap = new Map();
     let backlinkDocumentGroupArray = [];
     let panelFilterViewExpand = false;
+    let showFilterPanel = SettingService.ins.SettingConfig.enableFilterPanel;
     let displayHintPanelBaseDataCacheUsage = false;
     let displayHintBacklinkBlockCacheUsage = false;
     let hideBacklinkProtyleBreadcrumb = false;
@@ -300,31 +301,33 @@
         <p style="padding: 10px 20px;">此次面板使用了缓存数据</p>
     {/if}
 
-    <BacklinkFilterPanelControls
-        bind:panelFilterViewExpand
-        bind:stickyElement={filterPanelStickyElement}
-        bind:queryCurDocDefBlockRange
-        bind:showSaveCriteriaInputBox
-        bind:saveCriteriaInputText
-        {backlinkFilterPanelRenderData}
-        {queryParams}
-        {savedQueryParamMap}
-        initBaseData={controller.initBaseData}
-        refreshFilterDisplayData={controller.refreshFilterDisplayData}
-        resetFilterQueryParametersToDefault={controller.resetFilterQueryParametersToDefault}
-        clearCacheAndRefresh={controller.clearCacheAndRefresh}
-        handleFilterPanelInput={controller.handleFilterPanelInput}
-        handleRelatedDefBlockClick={controller.handleRelatedDefBlockClick}
-        handleRelatedDefBlockContextmenu={controller.handleRelatedDefBlockContextmenu}
-        handleRelatedDocBlockClick={controller.handleRelatedDocBlockClick}
-        handleRelatedDocBlockContextmenu={controller.handleRelatedDocBlockContextmenu}
-        handleSavedPanelCriteriaClick={controller.handleSavedPanelCriteriaClick}
-        handleSavedPanelCriteriaDeleteClick={controller.handleSavedPanelCriteriaDeleteClick}
-        handleCriteriaCancel={controller.handleCriteriaCancel}
-        handleCriteriaConfirm={controller.handleCriteriaConfirm}
-        {getDefBlockAriaLabel}
-        {getBlockTypeIconHrefByBlock}
-    />
+    {#if showFilterPanel}
+        <BacklinkFilterPanelControls
+            bind:panelFilterViewExpand
+            bind:stickyElement={filterPanelStickyElement}
+            bind:queryCurDocDefBlockRange
+            bind:showSaveCriteriaInputBox
+            bind:saveCriteriaInputText
+            {backlinkFilterPanelRenderData}
+            {queryParams}
+            {savedQueryParamMap}
+            initBaseData={controller.initBaseData}
+            refreshFilterDisplayData={controller.refreshFilterDisplayData}
+            resetFilterQueryParametersToDefault={controller.resetFilterQueryParametersToDefault}
+            clearCacheAndRefresh={controller.clearCacheAndRefresh}
+            handleFilterPanelInput={controller.handleFilterPanelInput}
+            handleRelatedDefBlockClick={controller.handleRelatedDefBlockClick}
+            handleRelatedDefBlockContextmenu={controller.handleRelatedDefBlockContextmenu}
+            handleRelatedDocBlockClick={controller.handleRelatedDocBlockClick}
+            handleRelatedDocBlockContextmenu={controller.handleRelatedDocBlockContextmenu}
+            handleSavedPanelCriteriaClick={controller.handleSavedPanelCriteriaClick}
+            handleSavedPanelCriteriaDeleteClick={controller.handleSavedPanelCriteriaDeleteClick}
+            handleCriteriaCancel={controller.handleCriteriaCancel}
+            handleCriteriaConfirm={controller.handleCriteriaConfirm}
+            {getDefBlockAriaLabel}
+            {getBlockTypeIconHrefByBlock}
+        />
+    {/if}
 
     <BacklinkResultsPanel
         bind:panelBacklinkViewExpand

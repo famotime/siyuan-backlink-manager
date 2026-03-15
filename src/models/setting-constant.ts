@@ -21,6 +21,7 @@ export function getSettingTabArray(): TabProperty[] {
         }),
         new TabProperty({
             key: "filter-panel-setting", name: "筛选面板", iconKey: "iconFilter", props: [
+                new ItemProperty({ key: "enableFilterPanel", type: "switch", name: "启用筛选面板", description: "", tips: "" }),
                 new ItemProperty({ key: "filterPanelViewExpand", type: "switch", name: "默认展开筛选面板", description: "", tips: "" }),
                 new ItemProperty({ key: "defaultSelectedViewBlock", type: "switch", name: "默认选中查看块", description: "", tips: "" }),
 

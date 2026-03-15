@@ -24,6 +24,7 @@ export class SettingConfig {
 
 
     /* 筛选面板 */
+    enableFilterPanel: boolean;
     filterPanelViewExpand: boolean;
     queryParentDefBlock: boolean;
     querrChildDefBlockForListItem: boolean;

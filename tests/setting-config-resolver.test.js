@@ -40,6 +40,14 @@ test("createDefaultSettingConfig includes backlink context budget defaults", () 
   assert.equal(current.backlinkContextMaxExpandedNodes, 12);
 });
 
+test("createDefaultSettingConfig disables the filter panel by default", () => {
+  const current = createDefaultSettingConfig();
+  const enabled = resolveSettingConfig({ enableFilterPanel: true });
+
+  assert.equal(current.enableFilterPanel, false);
+  assert.equal(enabled.enableFilterPanel, true);
+});
+
 test("resolveSettingConfig derives compact preset from legacy context switches", () => {
   const resolved = resolveSettingConfig({
     queryParentDefBlock: false,

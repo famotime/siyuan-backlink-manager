@@ -38,6 +38,7 @@ const DEFAULT_SETTING_CONFIG = {
   usePraentIdIdx: false,
   doubleClickTimeout: 0,
   documentBottomBacklinkPaddingWidth: null,
+  enableFilterPanel: false,
   filterPanelViewExpand: false,
   queryParentDefBlock: true,
   querrChildDefBlockForListItem: true,

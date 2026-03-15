@@ -179,6 +179,16 @@ export async function getBacklinkPanelRenderData(
                     stringToDom,
                     NewNodeID,
                 }),
+            extractTargetBacklinkDom: (dom, blockId) => {
+                const rootElement = stringToDom(dom);
+                if (!rootElement || !blockId) {
+                    return "";
+                }
+                const targetElement = rootElement.matches?.(`[data-node-id="${blockId}"]`)
+                    ? rootElement
+                    : rootElement.querySelector?.(`[data-node-id="${blockId}"]`);
+                return targetElement?.outerHTML || "";
+            },
             longestCommonSubstring,
             triggerIncompleteBacklinkFetch: (currentRootId, sourceNodes, backlinks) => {
                 logBacklinkDebug("反链管家插件 疑似 getBacklinkDoc 接口数据不全，如果清除缓存刷新后还是不全，请反馈开发者。 ");
@@ -290,6 +300,16 @@ export async function getTurnPageBacklinkPanelRenderData(
                     stringToDom,
                     NewNodeID,
                 }),
+            extractTargetBacklinkDom: (dom, blockId) => {
+                const rootElement = stringToDom(dom);
+                if (!rootElement || !blockId) {
+                    return "";
+                }
+                const targetElement = rootElement.matches?.(`[data-node-id="${blockId}"]`)
+                    ? rootElement
+                    : rootElement.querySelector?.(`[data-node-id="${blockId}"]`);
+                return targetElement?.outerHTML || "";
+            },
             longestCommonSubstring,
             triggerIncompleteBacklinkFetch: (currentRootId, sourceNodes, backlinks) => {
                 logBacklinkDebug("反链管家插件 疑似 getBacklinkDoc 接口数据不全，如果清除缓存刷新后还是不全，请反馈开发者。 ");

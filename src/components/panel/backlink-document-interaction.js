@@ -1,4 +1,7 @@
-import { buildBacklinkPreviewBacklinkData } from "../../service/backlink/backlink-preview-assembly.js";
+import {
+  buildBacklinkPreviewBacklinkData,
+  isReferenceOnlyPreviewMarkdown,
+} from "../../service/backlink/backlink-preview-assembly.js";
 
 export const BACKLINK_DOCUMENT_RENDER_CONFIG = {
   background: false,
@@ -91,6 +94,18 @@ function getBacklinkSourceWindowByLevel(activeBacklink, visibilityLevel = "core"
   return null;
 }
 
+function isReferenceOnlyBacklink(activeBacklink = null) {
+  const selfFragment = activeBacklink?.contextBundle?.fragments?.find?.(
+    (fragment) => fragment?.sourceType === "self",
+  );
+  const selfMarkdown =
+    selfFragment?.renderMarkdown ||
+    selfFragment?.text ||
+    activeBacklink?.backlinkBlock?.markdown ||
+    "";
+  return isReferenceOnlyPreviewMarkdown(selfMarkdown);
+}
+
 export function buildBacklinkDocumentRenderOptions({
   documentId,
   activeBacklink,
@@ -113,6 +128,23 @@ export function buildBacklinkDocumentRenderOptions({
     activeBacklink,
     normalizedVisibilityLevel,
   );
+  if (!useFullDocument && isReferenceOnlyBacklink(activeBacklink)) {
+    const previewBacklinkData = (
+      deps.buildBacklinkPreviewBacklinkData || buildBacklinkPreviewBacklinkData
+    )({
+      activeBacklink,
+      contextVisibilityLevel: normalizedVisibilityLevel,
+      deps: {
+        markdownToBlockDOM:
+          deps.markdownToBlockDOM || getDefaultMarkdownToBlockDOM(),
+      },
+    });
+    options.backlinkData =
+      Array.isArray(previewBacklinkData) && previewBacklinkData.length > 0
+        ? previewBacklinkData
+        : [activeBacklink];
+    return options;
+  }
   if (!useFullDocument && normalizedVisibilityLevel === "core" && sourceWindow) {
     const shouldPreferFocusBlock =
       sourceWindow.focusBlockId &&

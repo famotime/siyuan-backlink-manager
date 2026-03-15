@@ -190,6 +190,9 @@ export function applyCreatedBacklinkProtyleState({
 
   const backlinkBlockId = backlinkData.backlinkBlock.id;
   const backlinkRootId = backlinkData.backlinkBlock.root_id;
+  const canApplySourceWindowHiding = Boolean(
+    protyleContentElement.querySelector?.(`[data-node-id='${backlinkBlockId}']`),
+  );
 
   if (showFullDocument) {
     expandBacklinkDocument(documentLiElement);
@@ -244,16 +247,18 @@ export function applyCreatedBacklinkProtyleState({
   }
 
   if (!showFullDocument) {
-    hideBlocksOutsideBacklinkSourceWindow?.(
-      backlinkData,
-      protyleContentElement,
-      contextVisibilityLevel,
-    );
-    hideOtherListItemElement(backlinkData, protyleContentElement, queryParams, {
-      isSetEmpty,
-      isSetNotEmpty,
-      isArrayNotEmpty,
-    });
+    if (canApplySourceWindowHiding) {
+      hideBlocksOutsideBacklinkSourceWindow?.(
+        backlinkData,
+        protyleContentElement,
+        contextVisibilityLevel,
+      );
+      hideOtherListItemElement(backlinkData, protyleContentElement, queryParams, {
+        isSetEmpty,
+        isSetNotEmpty,
+        isArrayNotEmpty,
+      });
+    }
   }
 
   const keywordArray = sanitizeBacklinkKeywords(
@@ -261,7 +266,7 @@ export function applyCreatedBacklinkProtyleState({
   );
   highlightElementTextByCss(documentLiElement, keywordArray);
   delayedTwiceRefresh(() => {
-    if (!showFullDocument) {
+    if (!showFullDocument && canApplySourceWindowHiding) {
       hideBlocksOutsideBacklinkSourceWindow?.(
         backlinkData,
         protyleContentElement,

@@ -143,6 +143,9 @@ test("applyCreatedBacklinkProtyleState expands one more local layer in nearby mo
     protyle: {
       protyle: {
         contentElement: {
+          querySelector(selector) {
+            return selector === "[data-node-id='block-a']" ? {} : null;
+          },
           addEventListener(type) {
             calls.push(type);
           },
@@ -205,6 +208,9 @@ test("applyCreatedBacklinkProtyleState fully expands the local preview in extend
     protyle: {
       protyle: {
         contentElement: {
+          querySelector(selector) {
+            return selector === "[data-node-id='block-a']" ? {} : null;
+          },
           addEventListener(type) {
             calls.push(type);
           },
@@ -248,6 +254,74 @@ test("applyCreatedBacklinkProtyleState fully expands the local preview in extend
     "hide-items",
     "highlight",
     "hide-items",
+    "highlight",
+    "touchend",
+  ]);
+});
+
+test("applyCreatedBacklinkProtyleState skips source window hiding when preview dom has no original backlink block id", () => {
+  const calls = [];
+  const protyleContentElement = {
+    querySelector(selector) {
+      if (selector === "[data-node-id='block-a']") {
+        return null;
+      }
+      return null;
+    },
+    addEventListener(type) {
+      calls.push(type);
+    },
+  };
+
+  applyCreatedBacklinkProtyleState({
+    backlinkData: {
+      backlinkBlock: {
+        id: "block-a",
+        root_id: "doc-a",
+      },
+    },
+    documentLiElement: { id: "li-a" },
+    protyle: {
+      protyle: {
+        contentElement: protyleContentElement,
+      },
+    },
+    contextVisibilityLevel: "nearby",
+    deps: {
+      emitLoadedProtyleStatic: () => calls.push("emit"),
+      getBacklinkDocumentRenderState: () => ({ isFolded: false }),
+      backlinkDocumentViewState: {},
+      expandBacklinkDocument: () => calls.push("expand-document"),
+      collapseBacklinkDocument: () => calls.push("collapse-document"),
+      expandAllListItemNode: () => calls.push("expand-all-items"),
+      expandBacklinkHeadingMore: () => calls.push("expand-heading"),
+      backlinkProtyleItemFoldMap: new Map(),
+      foldListItemNodeByIdSet: () => calls.push("fold-by-id-set"),
+      hideBlocksOutsideBacklinkSourceWindow: () => calls.push("hide-window"),
+      defaultExpandedListItemLevel: 1,
+      expandListItemNodeByDepth: (_element, depth) =>
+        calls.push(`expand-by-depth:${depth}`),
+      getElementsBeforeDepth: () => [],
+      getElementsAtDepth: () => [],
+      syHasChildListNode: () => false,
+      backlinkProtyleHeadingExpandMap: new Map(),
+      hideOtherListItemElement: () => calls.push("hide-items"),
+      queryParams: { backlinkKeywordStr: "" },
+      isSetEmpty: () => true,
+      isSetNotEmpty: () => false,
+      isArrayNotEmpty: () => false,
+      sanitizeBacklinkKeywords: () => [],
+      splitKeywordStringToArray: () => [],
+      highlightElementTextByCss: () => calls.push("highlight"),
+      delayedTwiceRefresh: (callback) => callback(),
+    },
+  });
+
+  assert.deepEqual(calls, [
+    "emit",
+    "expand-by-depth:2",
+    "expand-heading",
+    "highlight",
     "highlight",
     "touchend",
   ]);

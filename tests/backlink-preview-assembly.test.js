@@ -145,6 +145,32 @@ test("buildBacklinkPreviewBacklinkData keeps the original backlink dom for the s
   assert.equal(backlinkData[0].dom, "<div data-node-id=\"block-self\">legacy</div>");
 });
 
+test("buildBacklinkPreviewBacklinkData rebuilds self fragment dom when it only contains a block reference", () => {
+  const backlinkData = buildBacklinkPreviewBacklinkData({
+    activeBacklink: {
+      ...createActiveBacklink({
+        visibleFragments: [
+          {
+            sourceType: "self",
+            text: "“OpenClaw” 安装 ——Skills",
+            renderMarkdown:
+              "((20260221114249-31dbi9g \"“OpenClaw” 安装 ——Skills\"))",
+          },
+        ],
+      }),
+      dom: "<div data-node-id=\"block-self\"></div>",
+    },
+    contextVisibilityLevel: "core",
+    deps: {
+      markdownToBlockDOM: (markdown) => `<article>${markdown}</article>`,
+    },
+  });
+
+  assert.equal(backlinkData.length, 1);
+  assert.equal(backlinkData[0].dom.includes("“OpenClaw” 安装 ——Skills"), true);
+  assert.equal(backlinkData[0].dom.includes("20260221114249-31dbi9g"), false);
+});
+
 test("buildBacklinkPreviewBacklinkData removes duplicate preview fragments from the same source", () => {
   const backlinkData = buildBacklinkPreviewBacklinkData({
     activeBacklink: createActiveBacklink({

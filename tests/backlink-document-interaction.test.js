@@ -196,6 +196,68 @@ test("uses source window scrollAttr for nearby mode when original context is ava
   );
 });
 
+test("uses preview backlink data instead of source window for reference-only backlinks", () => {
+  const activeBacklink = {
+    backlinkBlock: {
+      id: "backlink-1",
+      root_id: "doc-1",
+      box: "box-1",
+      markdown: "((20260221114249-31dbi9g \"“OpenClaw” 安装 ——Skills\"))",
+    },
+    contextBundle: {
+      fragments: [
+        {
+          sourceType: "self",
+          renderMarkdown:
+            "((20260221114249-31dbi9g \"“OpenClaw” 安装 ——Skills\"))",
+          visibilityLevel: "core",
+        },
+      ],
+      previewSequence: {
+        nearby: [
+          {
+            sequenceRole: "self",
+            sourceType: "self",
+            renderMarkdown:
+              "((20260221114249-31dbi9g \"“OpenClaw” 安装 ——Skills\"))",
+          },
+        ],
+      },
+    },
+    sourceWindows: {
+      nearby: {
+        rootId: "doc-1",
+        startBlockId: "backlink-1",
+        endBlockId: "backlink-1",
+        focusBlockId: "backlink-1",
+        anchorBlockId: "backlink-1",
+      },
+    },
+  };
+
+  assert.deepEqual(
+    buildBacklinkDocumentRenderOptions({
+      documentId: "doc-1",
+      activeBacklink,
+      contextVisibilityLevel: "nearby",
+      deps: {
+        buildBacklinkPreviewBacklinkData: () => [{ dom: "<div>preview</div>" }],
+      },
+    }),
+    {
+      blockId: "doc-1",
+      backlinkData: [{ dom: "<div>preview</div>" }],
+      render: {
+        background: false,
+        title: false,
+        gutter: true,
+        scroll: false,
+        breadcrumb: false,
+      },
+    },
+  );
+});
+
 test("uses the original anchor block directly in core mode", () => {
   const activeBacklink = {
     backlinkBlock: {

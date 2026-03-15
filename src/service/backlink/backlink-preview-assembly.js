@@ -82,6 +82,19 @@ function normalizePreviewRenderMarkdown(markdown = "") {
   );
 }
 
+export function isReferenceOnlyPreviewMarkdown(markdown = "") {
+  const compactMarkdown = stripKramdownIAL(String(markdown || ""))
+    .replace(/\r?\n/g, " ")
+    .trim();
+  if (!compactMarkdown) {
+    return false;
+  }
+
+  return /^(?:[-*+]|\d+\.)?\s*\(\(\d{14}-\w{7}\s['"][^'"]+['"]\)\)$/.test(
+    compactMarkdown,
+  );
+}
+
 function indentMarkdown(markdown = "", indent = "  ") {
   return String(markdown || "")
     .split(/\r?\n/)
@@ -292,7 +305,10 @@ export function buildBacklinkPreviewBacklinkData({
   if (
     previewFragments.length === 1 &&
     previewFragments[0]?.sourceType === "self" &&
-    activeBacklink.dom
+    activeBacklink.dom &&
+    !isReferenceOnlyPreviewMarkdown(
+      previewFragments[0].renderMarkdown || previewFragments[0].text || "",
+    )
   ) {
     return [activeBacklink];
   }
@@ -307,7 +323,11 @@ export function buildBacklinkPreviewBacklinkData({
       }
 
       const fragmentDom =
-        fragment.sourceType === "self" && activeBacklink.dom
+        fragment.sourceType === "self" &&
+        activeBacklink.dom &&
+        !isReferenceOnlyPreviewMarkdown(
+          fragment.renderMarkdown || fragment.text || "",
+        )
           ? activeBacklink.dom
           : markdownToBlockDOM(fragmentMarkdown);
       if (!fragmentDom) {

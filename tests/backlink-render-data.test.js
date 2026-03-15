@@ -211,15 +211,29 @@ test("getBatchBacklinkDoc maps list item container dom back to the nested backli
       longestCommonSubstring: (a) => a,
       getBacklinkDocByApiOrCache: async () => ({
         usedCache: false,
-        backlinks: [{ dom: "<div data-node-id='item-brand'></div>" }],
+        backlinks: [
+          {
+            dom: "<div data-node-id='item-brand'><div data-node-id='block-brand-text'>品牌主色、辅色、渐变怎么用 skill</div><div data-node-id='blank-line'></div></div>",
+          },
+        ],
       }),
       getBacklinkBlockId: (dom) => dom.match(/data-node-id='([^']+)'/)[1],
+      extractTargetBacklinkDom: (dom, blockId) => {
+        const match = dom.match(
+          new RegExp(`<div data-node-id='${blockId}'>[\\\\s\\\\S]*?</div>`),
+        );
+        return match ? match[0] : "";
+      },
       triggerIncompleteBacklinkFetch: () => {},
     },
   });
 
   assert.equal(result.backlinks.length, 1);
   assert.equal(result.backlinks[0].backlinkBlock.id, "block-brand-text");
+  assert.equal(
+    result.backlinks[0].dom,
+    "<div data-node-id='block-brand-text'>品牌主色、辅色、渐变怎么用 skill</div>",
+  );
   assert.equal(result.backlinks[0].contextBundle.primaryMatchSourceType, "sibling_prev");
   assert.deepEqual(result.backlinks[0].includeChildListItemIdArray, [
     "item-nearby",

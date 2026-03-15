@@ -87,6 +87,110 @@ export function buildBacklinkContextBudgetHint({
   return "部分上下文已裁剪，继续展开查看更多";
 }
 
+function escapeRegExp(value = "") {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function extractNestedNodeDomById(dom = "", blockId = "") {
+  if (!dom || !blockId) {
+    return "";
+  }
+
+  const openTagRegExp = new RegExp(
+    `<div\\b[^>]*\\bdata-node-id=(["'])${escapeRegExp(blockId)}\\1[^>]*>`,
+    "i",
+  );
+  const openTagMatch = openTagRegExp.exec(dom);
+  if (!openTagMatch) {
+    return "";
+  }
+
+  const startIndex = openTagMatch.index;
+  const tokenRegExp = /<div\b[^>]*>|<\/div>/gi;
+  tokenRegExp.lastIndex = startIndex + openTagMatch[0].length;
+
+  let depth = 1;
+  let tokenMatch;
+  while ((tokenMatch = tokenRegExp.exec(dom))) {
+    if (/^<\/div/i.test(tokenMatch[0])) {
+      depth -= 1;
+      if (depth === 0) {
+        return dom.slice(startIndex, tokenRegExp.lastIndex);
+      }
+      continue;
+    }
+    depth += 1;
+  }
+
+  return "";
+}
+
+function normalizeTargetBacklinkDom(dom = "", blockId = "", deps = {}) {
+  const { extractTargetBacklinkDom, getBacklinkBlockId } = deps;
+  if (!dom || !blockId) {
+    return "";
+  }
+
+  const extractedDom =
+    typeof extractTargetBacklinkDom === "function"
+      ? extractTargetBacklinkDom(dom, blockId)
+      : "";
+  if (
+    extractedDom &&
+    (
+      typeof getBacklinkBlockId !== "function" ||
+      getBacklinkBlockId(extractedDom) === blockId
+    )
+  ) {
+    return extractedDom;
+  }
+
+  return extractNestedNodeDomById(dom, blockId);
+}
+
+function resolveBacklinkBlockNodeByContainer({
+  backlink,
+  backlinkBlockNodeMap,
+  backlinkBlockParentNodeMap,
+  getBacklinkBlockId,
+  extractTargetBacklinkDom,
+}) {
+  const rawBacklinkBlockId = getBacklinkBlockId(backlink.dom);
+  const directNode = backlinkBlockNodeMap.get(rawBacklinkBlockId);
+  if (directNode) {
+    return {
+      backlinkBlockId: rawBacklinkBlockId,
+      backlinkBlockNode: directNode,
+      normalizedDom: backlink.dom,
+    };
+  }
+
+  const parentCandidates = backlinkBlockParentNodeMap.get(rawBacklinkBlockId) || [];
+  for (const candidate of parentCandidates) {
+    const normalizedDom = normalizeTargetBacklinkDom(
+      backlink.dom,
+      candidate.block.id,
+      {
+        extractTargetBacklinkDom,
+        getBacklinkBlockId,
+      },
+    );
+    if (normalizedDom) {
+      return {
+        backlinkBlockId: candidate.block.id,
+        backlinkBlockNode: candidate,
+        normalizedDom,
+      };
+    }
+  }
+
+  return {
+    backlinkBlockId: rawBacklinkBlockId,
+    backlinkBlockNode: null,
+    normalizedDom: backlink.dom,
+  };
+}
+
 export function getBacklinkBlockId(dom, deps) {
   const { isStrBlank, stringToDom, NewNodeID } = deps;
   if (isStrBlank(dom)) {
@@ -168,6 +272,7 @@ export async function getBatchBacklinkDoc({
     longestCommonSubstring,
     getBacklinkDocByApiOrCache,
     getBacklinkBlockId,
+    extractTargetBacklinkDom,
     triggerIncompleteBacklinkFetch,
   } = deps;
 
@@ -195,7 +300,12 @@ export async function getBatchBacklinkDoc({
     backlinkBlockIdOrderMap.set(node.block.id, index);
     backlinkBlockIdOrderMap.set(node.block.parent_id, index - 0.1);
     backlinkBlockNodeMap.set(node.block.id, node);
-    backlinkBlockParentNodeMap.set(node.block.parent_id, node);
+    let parentNodeArray = backlinkBlockParentNodeMap.get(node.block.parent_id);
+    if (!parentNodeArray) {
+      parentNodeArray = [];
+      backlinkBlockParentNodeMap.set(node.block.parent_id, parentNodeArray);
+    }
+    parentNodeArray.push(node);
   }
 
   let usedCache = false;
@@ -221,20 +331,22 @@ export async function getBatchBacklinkDoc({
 
   const backlinkDataMap = new Map();
   for (const backlink of allBacklinksArray) {
-    const backlinkBlockId = getBacklinkBlockId(backlink.dom);
+    const { backlinkBlockId, backlinkBlockNode, normalizedDom } =
+      resolveBacklinkBlockNodeByContainer({
+        backlink,
+        backlinkBlockNodeMap,
+        backlinkBlockParentNodeMap,
+        getBacklinkBlockId,
+        extractTargetBacklinkDom,
+      });
     if (backlinkDataMap.has(backlinkBlockId)) {
       continue;
     }
-
-    let backlinkBlockNode = backlinkBlockNodeMap.get(backlinkBlockId);
-    if (!backlinkBlockNode) {
-      backlinkBlockNode = backlinkBlockParentNodeMap.get(backlinkBlockId);
-    }
     if (!backlinkBlockNode) {
       continue;
     }
 
-    backlink.dom = backlink.dom.replace(/search-mark/g, "");
+    backlink.dom = (normalizedDom || backlink.dom).replace(/search-mark/g, "");
     backlink.backlinkBlock = backlinkBlockNode.block;
     backlink.contextBundle = backlinkBlockNode.contextBundle;
     backlinkDataMap.set(backlinkBlockId, backlink);

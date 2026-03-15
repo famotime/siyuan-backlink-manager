@@ -75,6 +75,7 @@ import {
   markBacklinkDocumentFullView,
 } from "./backlink-document-view-state.js";
 import { sanitizeBacklinkKeywords } from "./backlink-panel-formatting.js";
+import { mergeTurnPageBacklinkPanelRenderData } from "./backlink-panel-render-data.js";
 
 export function createBacklinkPanelController(state) {
   function getEditors() {
@@ -598,12 +599,10 @@ export function createBacklinkPanelController(state) {
         state.queryParams,
       );
 
-    state.backlinkFilterPanelRenderData.backlinkDataArray =
-      pageBacklinkPanelRenderData.backlinkDataArray;
-    state.backlinkFilterPanelRenderData.pageNum =
-      pageBacklinkPanelRenderData.pageNum;
-    state.backlinkFilterPanelRenderData.usedCache =
-      pageBacklinkPanelRenderData.usedCache;
+    state.backlinkFilterPanelRenderData = mergeTurnPageBacklinkPanelRenderData(
+      state.backlinkFilterPanelRenderData,
+      pageBacklinkPanelRenderData,
+    );
     state.queryParams = state.queryParams;
     refreshBacklinkPreview();
   }

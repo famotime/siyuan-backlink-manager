@@ -1,3 +1,7 @@
+.backlink-panel__area {
+    --backlink-filter-panel-offset: 0px;
+}
+
 .backlink-panel__area .tag {
     display: inline-flex;
     align-items: center;
@@ -267,5 +271,21 @@
     top: 0;
     text-align: center;
     padding: 0;
-    z-index: 2;
+    z-index: 3;
+    background-color: var(--b3-theme-surface);
+    border-radius: 10px;
+    box-shadow: 0 1px 0 var(--b3-border-color);
+}
+
+.backlink-panel__area .backlink-filter-panel-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    background-color: var(--b3-theme-surface);
+    border-radius: 10px;
+}
+
+.backlink-panel__area .backlink-results-panel__header {
+    top: var(--backlink-filter-panel-offset, 0px);
+    z-index: 3;
 }

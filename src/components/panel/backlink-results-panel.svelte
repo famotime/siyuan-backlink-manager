@@ -29,7 +29,7 @@
     function handleKeyDownDefault() {}
 </script>
 
-<div class="backlink-panel__header">
+<div class="backlink-panel__header backlink-results-panel__header">
     <div
         class="panel__title backlink-panel__title block__icons"
         on:click={() => {

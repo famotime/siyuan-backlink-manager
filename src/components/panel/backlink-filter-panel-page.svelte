@@ -20,6 +20,8 @@
     export let currentTab: Custom;
     export let panelBacklinkViewExpand = true;
 
+    let backlinkPanelAreaElement: HTMLDivElement;
+    let filterPanelStickyElement: HTMLDivElement;
     let previousRootId: string;
     let previousFocusBlockId: string;
     let backlinkULElement: HTMLElement;
@@ -45,6 +47,8 @@
     let showSaveCriteriaInputBox = false;
     let saveCriteriaInputText = "";
     let backlinkPaginationState = buildBacklinkPaginationState();
+    let filterPanelResizeObserver: ResizeObserver;
+    let observedFilterPanelStickyElement: HTMLDivElement;
 
     const state = {
         get rootId() {
@@ -213,6 +217,36 @@
 
     const controller = createBacklinkPanelController(state);
 
+    function updateFilterPanelStickyOffset() {
+        if (!backlinkPanelAreaElement) {
+            return;
+        }
+        const stickyOffset = filterPanelStickyElement?.offsetHeight || 0;
+        backlinkPanelAreaElement.style.setProperty(
+            "--backlink-filter-panel-offset",
+            `${stickyOffset}px`,
+        );
+    }
+
+    function syncFilterPanelStickyObserver() {
+        if (!filterPanelResizeObserver) {
+            updateFilterPanelStickyOffset();
+            return;
+        }
+        if (observedFilterPanelStickyElement === filterPanelStickyElement) {
+            updateFilterPanelStickyOffset();
+            return;
+        }
+        if (observedFilterPanelStickyElement) {
+            filterPanelResizeObserver.unobserve(observedFilterPanelStickyElement);
+        }
+        observedFilterPanelStickyElement = filterPanelStickyElement;
+        if (observedFilterPanelStickyElement) {
+            filterPanelResizeObserver.observe(observedFilterPanelStickyElement);
+        }
+        updateFilterPanelStickyOffset();
+    }
+
     $: if (rootId !== previousRootId || focusBlockId !== previousFocusBlockId) {
         controller.initBaseData();
     }
@@ -220,10 +254,17 @@
     $: backlinkPaginationState = buildBacklinkPaginationState(
         backlinkFilterPanelRenderData || {},
     );
+    $: syncFilterPanelStickyObserver();
 
     onMount(() => {
         doubleClickTimeout =
             SettingService.ins.SettingConfig.doubleClickTimeout || 0;
+        if (typeof ResizeObserver !== "undefined") {
+            filterPanelResizeObserver = new ResizeObserver(() => {
+                updateFilterPanelStickyOffset();
+            });
+        }
+        syncFilterPanelStickyObserver();
         if (rootId !== previousRootId || focusBlockId !== previousFocusBlockId) {
             controller.initBaseData();
         }
@@ -231,6 +272,7 @@
     });
 
     onDestroy(() => {
+        filterPanelResizeObserver?.disconnect();
         controller.clearBacklinkProtyleList();
     });
 
@@ -250,7 +292,7 @@
     }
 </script>
 
-<div class="backlink-panel__area">
+<div class="backlink-panel__area" bind:this={backlinkPanelAreaElement}>
     {#if !rootId}
         <p style="padding: 10px 20px;">没有获取到当前文档信息，请切换文档重试</p>
     {/if}
@@ -260,6 +302,7 @@
 
     <BacklinkFilterPanelControls
         bind:panelFilterViewExpand
+        bind:stickyElement={filterPanelStickyElement}
         bind:queryCurDocDefBlockRange
         bind:showSaveCriteriaInputBox
         bind:saveCriteriaInputText

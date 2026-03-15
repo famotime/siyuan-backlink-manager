@@ -326,8 +326,22 @@ function buildNearbyBacklinkSourceWindow(backlinkBlockNode, context) {
     return null;
   }
 
-  const startBlockId = backlinkBlockNode.previousSiblingBlockId || anchorBlockId;
-  const endBlockId = backlinkBlockNode.nextSiblingBlockId || anchorBlockId;
+  const isListItemContext = !!listItemAnchorBlockId;
+  let startBlockId, endBlockId;
+
+  if (isListItemContext && backlinkBlockNode.previousSiblingBlockId && backlinkBlockNode.nextSiblingBlockId) {
+    startBlockId = backlinkBlockNode.previousSiblingBlockId;
+    endBlockId = backlinkBlockNode.nextSiblingBlockId;
+  } else {
+    const prevIndex = anchorStartIndex - 1;
+    const nextIndex = anchorStartIndex + 1;
+    startBlockId = prevIndex >= 0 ? context.orderedDocumentBlocks[prevIndex]?.id : null;
+    endBlockId = nextIndex < context.orderedDocumentBlocks.length ? context.orderedDocumentBlocks[nextIndex]?.id : null;
+  }
+
+  startBlockId = startBlockId || anchorBlockId;
+  endBlockId = endBlockId || anchorBlockId;
+
   const renderStartBlockId = resolveFirstDescendantBlockId(startBlockId, context);
   const startIndex = context.indexById.get(startBlockId) ?? anchorStartIndex;
   const endIndex = getBlockRangeEndIndex(endBlockId, context) ?? getBlockRangeEndIndex(anchorBlockId, context);

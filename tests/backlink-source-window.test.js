@@ -431,6 +431,122 @@ test("buildBacklinkSourceWindow keeps nearby mode on sibling list items and adds
   });
 });
 
+test("buildBacklinkSourceWindow keeps nearby list mode on the anchor shell when only one sibling exists", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "heading-skills", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "item-brand", type: "i", parent_id: "list-root" },
+    { id: "block-brand", type: "p", parent_id: "item-brand" },
+    { id: "item-title", type: "i", parent_id: "list-root" },
+    { id: "block-title", type: "p", parent_id: "item-title" },
+    { id: "tail", type: "p", parent_id: "doc-a" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "block-brand",
+        root_id: "doc-a",
+        parent_id: "item-brand",
+        type: "p",
+      },
+      nextSiblingBlockId: "item-title",
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "nearby",
+  });
+
+  assert.deepEqual(sourceWindow.windowBlockIds, [
+    "item-brand",
+    "block-brand",
+    "item-title",
+    "block-title",
+  ]);
+  assert.equal(sourceWindow.startBlockId, "block-brand");
+  assert.equal(sourceWindow.endBlockId, "block-title");
+  assert.deepEqual(sourceWindow.visibleBlockIds, [
+    "item-brand",
+    "block-brand",
+    "item-title",
+    "block-title",
+  ]);
+  assert.equal(sourceWindow.renderMode, "document");
+});
+
+test("buildBacklinkSourceWindow keeps nearby list mode on the anchor shell when only the previous sibling exists", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "heading-skills", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "item-nearby", type: "i", parent_id: "list-root" },
+    { id: "block-nearby", type: "p", parent_id: "item-nearby" },
+    { id: "item-brand", type: "i", parent_id: "list-root" },
+    { id: "block-brand", type: "p", parent_id: "item-brand" },
+    { id: "tail", type: "p", parent_id: "doc-a" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "block-brand",
+        root_id: "doc-a",
+        parent_id: "item-brand",
+        type: "p",
+      },
+      previousSiblingBlockId: "item-nearby",
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "nearby",
+  });
+
+  assert.deepEqual(sourceWindow.windowBlockIds, [
+    "item-nearby",
+    "block-nearby",
+    "item-brand",
+    "block-brand",
+  ]);
+  assert.equal(sourceWindow.startBlockId, "block-nearby");
+  assert.equal(sourceWindow.endBlockId, "block-brand");
+  assert.deepEqual(sourceWindow.visibleBlockIds, [
+    "item-nearby",
+    "block-nearby",
+    "item-brand",
+    "block-brand",
+  ]);
+  assert.equal(sourceWindow.renderMode, "document");
+});
+
+test("buildBacklinkSourceWindow keeps nearby list mode on the anchor shell when no siblings exist", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "heading-skills", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "item-brand", type: "i", parent_id: "list-root" },
+    { id: "block-brand", type: "p", parent_id: "item-brand" },
+    { id: "tail", type: "p", parent_id: "doc-a" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "block-brand",
+        root_id: "doc-a",
+        parent_id: "item-brand",
+        type: "p",
+      },
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "nearby",
+  });
+
+  assert.deepEqual(sourceWindow.windowBlockIds, [
+    "item-brand",
+    "block-brand",
+  ]);
+  assert.equal(sourceWindow.startBlockId, "block-brand");
+  assert.equal(sourceWindow.endBlockId, "block-brand");
+  assert.deepEqual(sourceWindow.visibleBlockIds, [
+    "item-brand",
+    "block-brand",
+  ]);
+  assert.equal(sourceWindow.renderMode, "document");
+});
+
 test("buildBacklinkSourceWindow uses the previous sibling text block as the nearby render start for nested list items", () => {
   const orderedBlocks = createDocumentBlocks([
     { id: "heading-skills", type: "h", subtype: "h2", parent_id: "doc-a" },

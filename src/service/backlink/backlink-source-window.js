@@ -505,18 +505,15 @@ function buildNearbyBacklinkSourceWindow(backlinkBlockNode, context) {
   const isListItemContext = !!listItemAnchorBlockId;
   let startBlockId, endBlockId;
 
-  if (isListItemContext && backlinkBlockNode.previousSiblingBlockId && backlinkBlockNode.nextSiblingBlockId) {
-    startBlockId = backlinkBlockNode.previousSiblingBlockId;
-    endBlockId = backlinkBlockNode.nextSiblingBlockId;
+  if (isListItemContext) {
+    startBlockId = backlinkBlockNode.previousSiblingBlockId || anchorBlockId;
+    endBlockId = backlinkBlockNode.nextSiblingBlockId || anchorBlockId;
   } else {
     const prevIndex = anchorStartIndex - 1;
     const nextIndex = anchorStartIndex + 1;
     startBlockId = prevIndex >= 0 ? context.orderedDocumentBlocks[prevIndex]?.id : null;
     endBlockId = nextIndex < context.orderedDocumentBlocks.length ? context.orderedDocumentBlocks[nextIndex]?.id : null;
   }
-
-  startBlockId = startBlockId || anchorBlockId;
-  endBlockId = endBlockId || anchorBlockId;
 
   const renderStartBlockId = resolveFirstDescendantBlockId(startBlockId, context);
   const startIndex = context.indexById.get(startBlockId) ?? anchorStartIndex;

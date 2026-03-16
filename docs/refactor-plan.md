@@ -1,0 +1,109 @@
+# Refactor Plan
+
+## 1. Project Snapshot
+
+- Generated on: 2026-03-16
+- Scope: backlink context rules, source window calculation, local preview rendering, panel interaction
+- Goal: align the current implementation with the formal rules in `docs/上下文状态渐进显示规则.md` while preserving original rendering and editable source behavior
+
+## 1.1 Refactor Strategy
+
+This round must be executed as a top-down architectural refactor, not a sequence of local patches.
+
+Hard constraints:
+
+- Refactor from rule model to render contract to UI interaction, in that order
+- Avoid case-by-case condition branching that only fixes one structure or one visibility level
+- Prefer replacing ambiguous responsibilities with explicit modules and contracts
+- Every downstream change must consume upstream contracts instead of reinterpreting rules locally
+
+Architecture-first sequence:
+
+1. Formalize the domain model for `锚点单元 / 结构壳 / 相邻单元 / 所属标题节`
+2. Refactor source window and local preview into one shared context-range contract
+3. Refactor rendering orchestration to consume that contract consistently
+4. Refactor UI state and feedback to reflect the same contract
+5. Remove obsolete fallback paths and duplicated rule interpretation
+
+## 2. Architecture and Module Analysis
+
+| Module | Key Files | Current Responsibility | Main Pain Points | Test Coverage Status |
+| --- | --- | --- | --- | --- |
+| Context rule model | `src/service/backlink/backlink-context-rules.js`, `src/service/backlink/backlink-context.js`, `src/service/backlink/backlink-context-budget.js` | Defines source types, visibility levels, match priority, visible fragments, budget trimming | Source rules are unified, but formal concepts such as `锚点单元`、`结构壳`、`所属标题节` are not first-class yet | Covered by `tests/backlink-context-fragments.test.js`, `tests/backlink-context-budget.test.js` |
+| Source window calculation | `src/service/backlink/backlink-source-window.js` | Builds `core/nearby/extended` source windows from ordered document blocks | `core` for list items is too large, `nearby` can over-expand neighbor subtrees, `extended` still uses nearest-any-heading boundaries | Covered by `tests/backlink-source-window.test.js`, `tests/backlink-document-interaction.test.js` |
+| Preview assembly | `src/service/backlink/backlink-preview-assembly.js` | Builds fallback preview content from fragments and preview sequence | Can assemble local preview, but cannot yet express “structure shell visible while deep descendants stay folded” | Covered by `tests/backlink-preview-assembly.test.js` |
+| Document render orchestration | `src/components/panel/backlink-document-interaction.js`, `src/components/panel/backlink-protyle-rendering.js` | Chooses full-doc vs local render mode, applies source window filtering, restores fold state | Source window and preview assembly still split behavior by scenario; list shell rendering contract is weak | Covered by `tests/backlink-document-interaction.test.js`, `tests/backlink-protyle-rendering.test.js` |
+| View state and header feedback | `src/components/panel/backlink-document-view-state.js`, `src/components/panel/backlink-panel-header.js`, `src/components/panel/backlink-results-panel.svelte` | Stores document visibility level and renders row/header affordances | Current level and newly exposed context are not explained strongly enough in UI | Covered by `tests/backlink-document-view-state.test.js`, `tests/backlink-panel-header.test.js` |
+| Data assembly entry | `src/service/backlink/backlink-data.ts`, `src/service/backlink/backlink-render-data.js` | Orchestrates loading, attaches source windows, prepares render data and summaries | Needs to propagate any new rule metadata without breaking document-grouped browsing | Covered by `tests/backlink-render-data.test.js`, `tests/backlink-panel-render-data.test.js` |
+
+## 2.1 Target Architecture
+
+The target architecture should be organized as four layers with one-way dependencies:
+
+1. Rule layer
+   Files: `src/service/backlink/backlink-context-rules.js`, new helper module(s) if needed
+   Responsibility: define canonical concepts and visibility semantics
+
+2. Range planning layer
+   Files: `src/service/backlink/backlink-source-window.js`, possibly extracted planner module
+   Responsibility: compute `core / nearby / extended / full` range plans from ordered blocks and rule-layer concepts
+
+3. Render contract layer
+   Files: `src/service/backlink/backlink-preview-assembly.js`, `src/components/panel/backlink-document-interaction.js`, `src/components/panel/backlink-protyle-rendering.js`
+   Responsibility: convert range plans into renderable source-window filtering, shell visibility, and fold behavior
+
+4. Interaction layer
+   Files: `src/components/panel/backlink-document-view-state.js`, `src/components/panel/backlink-panel-header.js`, `src/components/panel/backlink-results-panel.svelte`
+   Responsibility: expose level switching, current state, and explanation without redefining rules
+
+Dependency rule:
+
+- Interaction layer may not define visibility semantics on its own
+- Render contract layer may not invent range boundaries on its own
+- Range planning layer may not depend on UI state details
+- Rule layer must be the single source of truth for formal concepts
+
+## 3. Prioritized Refactor Backlog
+
+| ID | Priority | Module/Scenario | Files in Scope | Refactor Objective | Risk Level | Pre-Refactor Test Checklist | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| RF-001 | P0 | 规则层重构 | `src/service/backlink/backlink-context-rules.js`, `src/service/backlink/backlink-context.js`, `src/service/backlink/backlink-render-data.js`, `tests/backlink-context-fragments.test.js`, `tests/backlink-render-data.test.js` | Introduce first-class rule concepts for anchor unit, shell, adjacent unit, section boundary, and no-heading fallback so downstream modules stop reinterpreting semantics | High | - [ ] 新规则元数据可表达列表子块与列表项壳的区别; - [ ] 可表达“同级或更高级标题”边界; - [ ] 可表达无标题结构容器兜底; - [ ] 现有命中摘要与预算提示不回归 | pending |
+| RF-002 | P0 | 范围规划层重构 | `src/service/backlink/backlink-source-window.js`, new planner helper module(s) if needed, `tests/backlink-source-window.test.js`, `tests/backlink-document-interaction.test.js` | Refactor source-window calculation into an explicit range planner driven by rule-layer concepts, replacing nearest-any-heading and whole-subtree defaults | High | - [ ] `extended` 采用所属标题节边界; - [ ] 列表 `core` 不再默认整棵子树; - [ ] 列表 `nearby` 采用结构壳优先而非完整深层邻居; - [ ] 无标题列表文档优先顶层容器 | pending |
+| RF-003 | P0 | 渲染契约层重构 | `src/service/backlink/backlink-preview-assembly.js`, `src/components/panel/backlink-document-interaction.js`, `src/components/panel/backlink-protyle-rendering.js`, `tests/backlink-preview-assembly.test.js`, `tests/backlink-document-interaction.test.js`, `tests/backlink-protyle-rendering.test.js` | Build a shared render contract that consumes range plans and controls shell visibility, focus visibility, source-window filtering, and descendant folding consistently | High | - [ ] source window 与 preview 组装不再各自解释规则; - [ ] 列表结构壳可见且焦点可编辑; - [ ] `nearby` 与 `extended` 正文差异稳定可见; - [ ] reference-only 与全文路径不回归 | pending |
+| RF-004 | P1 | 交互层重构 | `src/components/panel/backlink-document-view-state.js`, `src/components/panel/backlink-panel-header.js`, `src/components/panel/backlink-results-panel.svelte`, `tests/backlink-document-view-state.test.js`, `tests/backlink-panel-header.test.js` | Refactor UI state and feedback to reflect the new contract instead of encoding rule assumptions inside click handlers or labels | Medium | - [ ] 当前层级文案与实际范围一致; - [ ] 切换反馈能解释新增内容; - [ ] 编辑/拖拽刷新后层级保持稳定; - [ ] 文档折叠和全文模式不回归 | pending |
+| RF-005 | P1 | 入口编排与兼容清理 | `src/service/backlink/backlink-data.ts`, `src/service/backlink/backlink-render-data.js`, related tests | Remove duplicated fallback paths, thread new rule metadata through render data, and keep document-grouped browsing stable | Medium | - [ ] `sourceWindows/contextBundle/renderData` 字段语义一致; - [ ] 文档分组切换不回归; - [ ] 来源标签与命中摘要继续准确 | pending |
+| RF-006 | P2 | 文档与全量回归收尾 | `docs/上下文状态渐进显示规则.md`, `docs/反链上下文基线与术语表.md`, `tests/*.test.js` | Finalize docs after architecture lands and close remaining regression gaps | Low | - [ ] 所有已批准项的测试补齐; - [ ] 相关规则文档与代码一致; - [ ] 全量回归可执行 | pending |
+
+Priority definition:
+- `P0`: highest value and risk, execute first
+- `P1`: medium value or risk, execute after P0
+- `P2`: low-risk cleanup, execute last
+
+Status definition:
+- `pending`
+- `in_progress`
+- `done`
+- `blocked`
+
+## 4. Execution Log
+
+| ID | Start Date | End Date | Test Commands | Result | Notes |
+| --- | --- | --- | --- | --- | --- |
+| RF-001 |  |  | `node --test tests/backlink-source-window.test.js tests/backlink-document-interaction.test.js` |  |  |
+| RF-002 |  |  | `node --test tests/backlink-source-window.test.js tests/backlink-preview-assembly.test.js` |  |  |
+| RF-003 |  |  | `node --test tests/backlink-document-interaction.test.js tests/backlink-protyle-rendering.test.js` |  |  |
+| RF-004 |  |  | `node --test tests/backlink-context-fragments.test.js tests/backlink-render-data.test.js` |  |  |
+| RF-005 |  |  | `node --test tests/backlink-panel-header.test.js tests/backlink-document-view-state.test.js` |  |  |
+| RF-006 |  |  | `node --test tests/*.test.js` |  |  |
+
+## 5. Decision and Confirmation
+
+- User approved items:
+- Deferred items:
+- Blocked items and reasons:
+
+## 6. Next Actions
+
+1. Confirm the architecture-first order. Recommended order: `RF-001` -> `RF-002` -> `RF-003` -> `RF-004` -> `RF-005`.
+2. Before implementation, add or update regression tests for the approved architectural layer first, not for downstream symptoms.
+3. Execute one approved item at a time and update this file after each completion.

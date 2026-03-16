@@ -120,7 +120,7 @@ test("buildBacklinkContextBudgetHint stays hidden when not truncated or already 
   );
 });
 
-test("getBatchBacklinkDoc deduplicates backlink dom results and preserves backlink block order", async () => {
+test("getBatchBacklinkDoc deduplicates backlink dom results without reordering api backlink order", async () => {
   const backlinkBlockNodeArray = [
     {
       block: { id: "block-a", parent_id: "parent-a", root_id: "doc-a", content: "Alpha" },
@@ -173,12 +173,12 @@ test("getBatchBacklinkDoc deduplicates backlink dom results and preserves backli
   assert.equal(result.usedCache, true);
   assert.deepEqual(
     result.backlinks.map((item) => item.backlinkBlock.id),
-    ["block-a", "block-b"],
+    ["block-b", "block-a"],
   );
-  assert.equal(result.backlinks[0].contextBundle.primaryMatchSourceType, "parent");
-  assert.equal(result.backlinks[1].contextBundle.matchSummaryList[0], "前相邻块：Beta");
-  assert.deepEqual(result.backlinks[1].includeChildListItemIdArray, ["child-1"]);
-  assert.deepEqual(result.backlinks[1].excludeChildLisetItemIdArray, ["child-2"]);
+  assert.equal(result.backlinks[1].contextBundle.primaryMatchSourceType, "parent");
+  assert.equal(result.backlinks[0].contextBundle.matchSummaryList[0], "前相邻块：Beta");
+  assert.deepEqual(result.backlinks[0].includeChildListItemIdArray, ["child-1"]);
+  assert.deepEqual(result.backlinks[0].excludeChildLisetItemIdArray, ["child-2"]);
 });
 
 test("getBatchBacklinkDoc maps list item container dom back to the nested backlink block", async () => {

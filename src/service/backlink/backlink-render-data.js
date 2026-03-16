@@ -277,7 +277,6 @@ export async function getBatchBacklinkDoc({
   } = deps;
 
   const defIdRefTreeIdKeywordMap = new Map();
-  const backlinkBlockIdOrderMap = new Map();
   const backlinkBlockNodeMap = new Map();
   const backlinkBlockParentNodeMap = new Map();
 
@@ -297,8 +296,6 @@ export async function getBatchBacklinkDoc({
     }
     defIdRefTreeIdKeywordMap.set(mapKey, keyword);
 
-    backlinkBlockIdOrderMap.set(node.block.id, index);
-    backlinkBlockIdOrderMap.set(node.block.parent_id, index - 0.1);
     backlinkBlockNodeMap.set(node.block.id, node);
     let parentNodeArray = backlinkBlockParentNodeMap.get(node.block.parent_id);
     if (!parentNodeArray) {
@@ -359,15 +356,6 @@ export async function getBatchBacklinkDoc({
   }
 
   const backlinks = Array.from(backlinkDataMap.values());
-  backlinks.sort((a, b) => {
-    const indexA = backlinkBlockIdOrderMap.has(getBacklinkBlockId(a.dom))
-      ? backlinkBlockIdOrderMap.get(getBacklinkBlockId(a.dom))
-      : Infinity;
-    const indexB = backlinkBlockIdOrderMap.has(getBacklinkBlockId(b.dom))
-      ? backlinkBlockIdOrderMap.get(getBacklinkBlockId(b.dom))
-      : Infinity;
-    return indexA - indexB;
-  });
 
   if (backlinkBlockNodeArray.length > backlinks.length) {
     triggerIncompleteBacklinkFetch(curRootId, backlinkBlockNodeArray, backlinks);

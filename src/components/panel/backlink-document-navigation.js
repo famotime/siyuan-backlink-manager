@@ -116,17 +116,10 @@ export function groupBacklinksByDocument(
         index,
       }))
       .sort((itemA, itemB) => {
-        const sourceOrderResult = compareByOptionalNumber(
-          getBacklinkSourceDocumentOrder(itemA.backlink),
-          getBacklinkSourceDocumentOrder(itemB.backlink),
+        const blockSortResult = compareByOptionalNumber(
+          getBacklinkBlockSortValue(itemA.backlink),
+          getBacklinkBlockSortValue(itemB.backlink),
         );
-        if (sourceOrderResult !== 0) {
-          return sourceOrderResult;
-        }
-
-        const blockSortResult =
-          getBacklinkBlockSortValue(itemA.backlink) -
-          getBacklinkBlockSortValue(itemB.backlink);
         if (blockSortResult !== 0) {
           return blockSortResult;
         }
@@ -136,6 +129,14 @@ export function groupBacklinksByDocument(
         );
         if (pathResult !== 0) {
           return pathResult;
+        }
+
+        const sourceOrderResult = compareByOptionalNumber(
+          getBacklinkSourceDocumentOrder(itemA.backlink),
+          getBacklinkSourceDocumentOrder(itemB.backlink),
+        );
+        if (sourceOrderResult !== 0) {
+          return sourceOrderResult;
         }
 
         return itemA.index - itemB.index;

@@ -123,7 +123,7 @@ test("keeps row-level handling for title clicks", () => {
   );
 });
 
-test("omits backlinkData when rendering a full document", () => {
+test("renders a full document with cb-get-all instead of preview backlinkData", () => {
   const activeBacklink = {
     backlinkBlock: {
       id: "backlink-1",
@@ -139,6 +139,7 @@ test("omits backlinkData when rendering a full document", () => {
       contextVisibilityLevel: "full",
     }),
     {
+      action: ["cb-get-all"],
       blockId: "doc-1",
       render: {
         background: false,

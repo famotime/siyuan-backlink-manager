@@ -144,6 +144,10 @@ export function buildBacklinkDocumentRenderOptions({
     render: { ...BACKLINK_DOCUMENT_RENDER_CONFIG },
   };
 
+  if (useFullDocument) {
+    options.action = ["cb-get-all"];
+  }
+
   const sourceWindow = getBacklinkSourceWindowByLevel(
     activeBacklink,
     normalizedVisibilityLevel,

@@ -39,6 +39,10 @@ function compareBlocksByDocumentOrder(
   return compareBlocksByFallbackOrder(blockA, blockB);
 }
 
+function hasCompleteDocumentOrder(blockArray = [], indexMap = new Map()) {
+  return blockArray.every((block) => Number.isFinite(indexMap.get(block?.id)));
+}
+
 function buildTreeOrderedBlocks(blockArray = [], rootId = "", indexMap = new Map()) {
   if (!Array.isArray(blockArray) || blockArray.length <= 0) {
     return [];
@@ -126,6 +130,7 @@ function buildTreeOrderedBlocks(blockArray = [], rootId = "", indexMap = new Map
 function buildDocumentBlockContext(orderedDocumentBlocks = []) {
   const indexById = new Map();
   const blockById = new Map();
+  const documentOrderById = new Map();
 
   orderedDocumentBlocks.forEach((block, index) => {
     if (!block?.id) {
@@ -133,13 +138,29 @@ function buildDocumentBlockContext(orderedDocumentBlocks = []) {
     }
     indexById.set(block.id, index);
     blockById.set(block.id, block);
+    const explicitDocumentOrder = Number(block.__backlinkSourceDocumentOrder);
+    documentOrderById.set(
+      block.id,
+      Number.isFinite(explicitDocumentOrder) ? explicitDocumentOrder : index,
+    );
   });
 
   return {
     orderedDocumentBlocks,
     indexById,
     blockById,
+    documentOrderById,
   };
+}
+
+function getBlockDocumentOrder(blockId = "", context) {
+  const explicitOrder = context?.documentOrderById?.get(blockId);
+  if (Number.isFinite(explicitOrder)) {
+    return explicitOrder;
+  }
+
+  const fallbackOrder = context?.indexById?.get(blockId);
+  return Number.isFinite(fallbackOrder) ? fallbackOrder : undefined;
 }
 
 function findNearestHeadingStartIndex(focusIndex, orderedDocumentBlocks = []) {
@@ -449,7 +470,7 @@ function buildSourceWindowFromRange({
     startBlockId: startBlockId || windowBlockIds[0],
     endBlockId: endBlockId || windowBlockIds[windowBlockIds.length - 1],
     focusBlockId: backlinkBlockNode.block.id,
-    sourceDocumentOrder: context.indexById.get(backlinkBlockNode.block.id),
+    sourceDocumentOrder: getBlockDocumentOrder(backlinkBlockNode.block.id, context),
     windowBlockIds,
     defaultExpandMode: "document_local_full",
   };
@@ -771,9 +792,21 @@ export async function loadOrderedBacklinkSourceWindowBlocks({
     blockArray.push(block);
   }
 
-  for (const blockArray of orderedBlocksByRootId.values()) {
-    const rootId = blockArray[0]?.root_id || "";
-    const orderedBlocks = buildTreeOrderedBlocks(blockArray, rootId, indexMap);
+  for (const [rootId, blockArray] of orderedBlocksByRootId.entries()) {
+    if (hasCompleteDocumentOrder(blockArray, indexMap)) {
+      blockArray.forEach((block) => {
+        block.__backlinkSourceDocumentOrder = indexMap.get(block.id);
+      });
+      blockArray.sort((blockA, blockB) =>
+        compareBlocksByDocumentOrder(blockA, blockB, indexMap),
+      );
+      continue;
+    }
+
+    blockArray.forEach((block) => {
+      delete block.__backlinkSourceDocumentOrder;
+    });
+    const orderedBlocks = buildTreeOrderedBlocks(blockArray, rootId, new Map());
     blockArray.length = 0;
     blockArray.push(...orderedBlocks);
   }

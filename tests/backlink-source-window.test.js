@@ -6,6 +6,7 @@ import {
   buildBacklinkSourceWindow,
   loadOrderedBacklinkSourceWindowBlocks,
 } from "../src/service/backlink/backlink-source-window.js";
+import { groupBacklinksByDocument } from "../src/components/panel/backlink-document-navigation.js";
 
 function createDocumentBlocks(blocks = []) {
   return blocks.map((block, index) => ({
@@ -777,5 +778,172 @@ test("loadOrderedBacklinkSourceWindowBlocks preserves parent-before-child tree o
   assert.deepEqual(
     orderedBlocksByRootId.get("doc-a").map((block) => block.id),
     ["item-brand", "block-brand", "item-next"],
+  );
+});
+
+test("document navigation uses block index order when indexes are available", async () => {
+  const backlinkDataArray = [
+    {
+      backlinkBlock: {
+        id: "block-brand",
+        root_id: "doc-a",
+        parent_id: "item-brand",
+        type: "p",
+        content: "brand",
+        box: "box-a",
+      },
+    },
+    {
+      backlinkBlock: {
+        id: "item-next",
+        root_id: "doc-a",
+        parent_id: "doc-a",
+        type: "i",
+        content: "next",
+        box: "box-a",
+      },
+    },
+  ];
+  const backlinkBlockNodeArray = backlinkDataArray.map((backlinkData) => ({
+    block: backlinkData.backlinkBlock,
+  }));
+  const orderedBlocksByRootId = await loadOrderedBacklinkSourceWindowBlocks({
+    backlinkDataArray,
+    deps: {
+      queryDocumentBlocksByRootIds: async () => [
+        {
+          id: "block-brand",
+          root_id: "doc-a",
+          parent_id: "item-brand",
+          type: "p",
+          sort: 10,
+          path: "/doc-a/list",
+        },
+        {
+          id: "item-brand",
+          root_id: "doc-a",
+          parent_id: "doc-a",
+          type: "i",
+          sort: 20,
+          path: "/doc-a/list",
+        },
+        {
+          id: "item-next",
+          root_id: "doc-a",
+          parent_id: "doc-a",
+          type: "i",
+          sort: 30,
+          path: "/doc-a/list-next",
+        },
+      ],
+      getBlockIndexMap: async () =>
+        new Map([
+          ["item-brand", 0],
+          ["item-next", 1],
+          ["block-brand", 2],
+        ]),
+    },
+  });
+  attachBacklinkSourceWindows({
+    backlinkDataArray,
+    backlinkBlockNodeArray,
+    orderedBlocksByRootId,
+  });
+  const groups = groupBacklinksByDocument(
+    [{ id: "doc-a", content: "Alpha" }],
+    backlinkDataArray,
+  );
+
+  assert.deepEqual(groups[0].backlinks.map((backlink) => backlink.backlinkBlock.id), [
+    "item-next",
+    "block-brand",
+  ]);
+});
+
+test("loadOrderedBacklinkSourceWindowBlocks uses block indexes per document and falls back only for incomplete documents", async () => {
+  const orderedBlocksByRootId = await loadOrderedBacklinkSourceWindowBlocks({
+    backlinkDataArray: [
+      {
+        backlinkBlock: {
+          id: "block-brand",
+          root_id: "doc-a",
+        },
+      },
+      {
+        backlinkBlock: {
+          id: "block-beta",
+          root_id: "doc-b",
+        },
+      },
+    ],
+    deps: {
+      queryDocumentBlocksByRootIds: async () => [
+        {
+          id: "block-brand",
+          root_id: "doc-a",
+          parent_id: "item-brand",
+          type: "p",
+          sort: 10,
+          path: "/doc-a/list",
+        },
+        {
+          id: "item-brand",
+          root_id: "doc-a",
+          parent_id: "doc-a",
+          type: "i",
+          sort: 20,
+          path: "/doc-a/list",
+        },
+        {
+          id: "item-next",
+          root_id: "doc-a",
+          parent_id: "doc-a",
+          type: "i",
+          sort: 30,
+          path: "/doc-a/list-next",
+        },
+        {
+          id: "block-beta",
+          root_id: "doc-b",
+          parent_id: "item-beta",
+          type: "p",
+          sort: 10,
+          path: "/doc-b/list",
+        },
+        {
+          id: "item-beta",
+          root_id: "doc-b",
+          parent_id: "doc-b",
+          type: "i",
+          sort: 20,
+          path: "/doc-b/list",
+        },
+        {
+          id: "item-gamma",
+          root_id: "doc-b",
+          parent_id: "doc-b",
+          type: "i",
+          sort: 30,
+          path: "/doc-b/list-next",
+        },
+      ],
+      getBlockIndexMap: async () =>
+        new Map([
+          ["item-brand", 0],
+          ["item-next", 1],
+          ["block-brand", 2],
+          ["item-beta", 0],
+          ["item-gamma", 2],
+        ]),
+    },
+  });
+
+  assert.deepEqual(
+    orderedBlocksByRootId.get("doc-a").map((block) => block.id),
+    ["item-brand", "item-next", "block-brand"],
+  );
+  assert.deepEqual(
+    orderedBlocksByRootId.get("doc-b").map((block) => block.id),
+    ["item-beta", "block-beta", "item-gamma"],
   );
 });

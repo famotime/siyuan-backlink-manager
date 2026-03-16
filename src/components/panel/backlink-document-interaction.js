@@ -114,15 +114,6 @@ function getBacklinkSourceWindowRenderMode(
     return sourceWindow.renderMode;
   }
 
-  if (
-    visibilityLevel === "nearby" &&
-    sourceWindow?.anchorBlockId &&
-    sourceWindow?.focusBlockId &&
-    sourceWindow.anchorBlockId !== sourceWindow.focusBlockId
-  ) {
-    return "document";
-  }
-
   return "scroll";
 }
 

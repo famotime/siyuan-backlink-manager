@@ -197,7 +197,7 @@ test("uses source window scrollAttr for nearby mode when original context is ava
   );
 });
 
-test("uses document rendering instead of scrollAttr for nearby mode when the source window spans sibling list items", () => {
+test("uses source window scrollAttr for nearby mode when the source window spans sibling list items", () => {
   const activeBacklink = {
     backlinkBlock: {
       id: "backlink-child",
@@ -223,6 +223,14 @@ test("uses document rendering instead of scrollAttr for nearby mode when the sou
     }),
     {
       blockId: "doc-1",
+      scrollAttr: {
+        rootId: "doc-1",
+        startId: "block-prev",
+        endId: "block-next",
+        scrollTop: 0,
+        focusId: "backlink-child",
+        zoomInId: "list-item-1",
+      },
       render: {
         background: false,
         title: false,

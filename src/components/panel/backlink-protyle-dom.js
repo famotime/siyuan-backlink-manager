@@ -348,13 +348,44 @@ function collectVisibleBlockIdsFromExpandedListShells(
     for (const descendantBlockElement of descendantBlockElements) {
       const descendantBlockId =
         descendantBlockElement?.getAttribute?.("data-node-id");
-      if (descendantBlockId && windowBlockIdSet.has(descendantBlockId)) {
+      if (!descendantBlockId) {
+        continue;
+      }
+      if (windowBlockIdSet.has(descendantBlockId)) {
+        expandedVisibleBlockIdSet.add(descendantBlockId);
+        continue;
+      }
+      if (
+        blockType === "NodeListItem" &&
+        isInlineListItemTextDescendant(descendantBlockElement, blockElement)
+      ) {
         expandedVisibleBlockIdSet.add(descendantBlockId);
       }
     }
   }
 
   return expandedVisibleBlockIdSet;
+}
+
+function isInlineListItemTextDescendant(descendantBlockElement, listItemElement) {
+  if (!descendantBlockElement || !listItemElement) {
+    return false;
+  }
+
+  const descendantType = descendantBlockElement?.getAttribute?.("data-type");
+  if (descendantType === "NodeList" || descendantType === "NodeListItem") {
+    return false;
+  }
+
+  let currentElement = descendantBlockElement.parentElement;
+  while (currentElement && currentElement !== listItemElement) {
+    if (currentElement?.getAttribute?.("data-type") === "NodeListItem") {
+      return false;
+    }
+    currentElement = currentElement.parentElement;
+  }
+
+  return currentElement === listItemElement;
 }
 
 function unfoldVisibleListItemAncestors(
@@ -412,7 +443,9 @@ export function hideBlocksOutsideBacklinkSourceWindow(
     return;
   }
 
-  const blockElementArray = protyleWysiwygElement.querySelectorAll("[data-node-id]");
+  const getBlockElementArray = () =>
+    protyleWysiwygElement.querySelectorAll("[data-node-id]");
+  let blockElementArray = getBlockElementArray();
   const visibleBlockIds =
     Array.isArray(sourceWindow?.visibleBlockIds) &&
     sourceWindow.visibleBlockIds.length > 0
@@ -425,10 +458,21 @@ export function hideBlocksOutsideBacklinkSourceWindow(
           sourceWindow.visibleBlockIds.length > 0
         ? []
         : visibleBlockIds;
+  const seedVisibleBlockIdSet = collectVisibleBlockIdsWithAncestors(
+    new Set(visibleBlockIds),
+    blockElementArray,
+    protyleWysiwygElement,
+  );
+  unfoldVisibleListItemAncestors(
+    seedVisibleBlockIdSet,
+    blockElementArray,
+    protyleWysiwygElement,
+  );
+  blockElementArray = getBlockElementArray();
   const visibleBlockIdSet = collectVisibleBlockIdsWithAncestors(
     collectVisibleBlockIdsWithDescendants(
       new Set([
-        ...visibleBlockIds,
+        ...seedVisibleBlockIdSet,
         ...collectVisibleBlockIdsFromExpandedListShells(
           sourceWindow,
           blockElementArray,
@@ -445,6 +489,7 @@ export function hideBlocksOutsideBacklinkSourceWindow(
     blockElementArray,
     protyleWysiwygElement,
   );
+  blockElementArray = getBlockElementArray();
   for (const blockElement of blockElementArray) {
     const blockId = blockElement?.getAttribute?.("data-node-id");
     if (!blockId) {

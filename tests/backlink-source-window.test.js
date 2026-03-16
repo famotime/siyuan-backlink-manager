@@ -407,7 +407,7 @@ test("buildBacklinkSourceWindow keeps nearby mode on sibling list items and adds
     rootId: "doc-a",
     anchorBlockId: "item-brand",
     startBlockId: "item-nearby",
-    endBlockId: "block-logo",
+    endBlockId: "item-title",
     focusBlockId: "block-brand",
     sourceDocumentOrder: 6,
     windowBlockIds: [
@@ -428,7 +428,7 @@ test("buildBacklinkSourceWindow keeps nearby mode on sibling list items and adds
       "item-logo",
       "block-logo",
     ],
-    renderMode: "document",
+    renderMode: "scroll",
   });
 });
 
@@ -462,15 +462,15 @@ test("buildBacklinkSourceWindow keeps nearby list mode on the anchor shell when 
     "item-title",
     "block-title",
   ]);
-  assert.equal(sourceWindow.startBlockId, "block-brand");
-  assert.equal(sourceWindow.endBlockId, "block-title");
+  assert.equal(sourceWindow.startBlockId, "item-brand");
+  assert.equal(sourceWindow.endBlockId, "item-title");
   assert.deepEqual(sourceWindow.visibleBlockIds, [
     "item-brand",
     "block-brand",
     "item-title",
     "block-title",
   ]);
-  assert.equal(sourceWindow.renderMode, "document");
+  assert.equal(sourceWindow.renderMode, "scroll");
 });
 
 test("buildBacklinkSourceWindow keeps nearby list mode on the anchor shell when only the previous sibling exists", () => {
@@ -503,15 +503,15 @@ test("buildBacklinkSourceWindow keeps nearby list mode on the anchor shell when 
     "item-brand",
     "block-brand",
   ]);
-  assert.equal(sourceWindow.startBlockId, "block-nearby");
-  assert.equal(sourceWindow.endBlockId, "block-brand");
+  assert.equal(sourceWindow.startBlockId, "item-nearby");
+  assert.equal(sourceWindow.endBlockId, "item-brand");
   assert.deepEqual(sourceWindow.visibleBlockIds, [
     "item-nearby",
     "block-nearby",
     "item-brand",
     "block-brand",
   ]);
-  assert.equal(sourceWindow.renderMode, "document");
+  assert.equal(sourceWindow.renderMode, "scroll");
 });
 
 test("buildBacklinkSourceWindow keeps nearby list mode on the anchor shell when no siblings exist", () => {
@@ -539,13 +539,13 @@ test("buildBacklinkSourceWindow keeps nearby list mode on the anchor shell when 
     "item-brand",
     "block-brand",
   ]);
-  assert.equal(sourceWindow.startBlockId, "block-brand");
-  assert.equal(sourceWindow.endBlockId, "block-brand");
+  assert.equal(sourceWindow.startBlockId, "item-brand");
+  assert.equal(sourceWindow.endBlockId, "item-brand");
   assert.deepEqual(sourceWindow.visibleBlockIds, [
     "item-brand",
     "block-brand",
   ]);
-  assert.equal(sourceWindow.renderMode, "document");
+  assert.equal(sourceWindow.renderMode, "scroll");
 });
 
 test("buildBacklinkSourceWindow uses the previous sibling text block as the nearby render start for nested list items", () => {
@@ -576,8 +576,8 @@ test("buildBacklinkSourceWindow uses the previous sibling text block as the near
   });
 
   assert.equal(sourceWindow.anchorBlockId, "item-brand");
-  assert.equal(sourceWindow.startBlockId, "block-nearby");
-  assert.equal(sourceWindow.endBlockId, "block-title");
+  assert.equal(sourceWindow.startBlockId, "item-nearby");
+  assert.equal(sourceWindow.endBlockId, "item-title");
   assert.deepEqual(sourceWindow.windowBlockIds, [
     "item-nearby",
     "block-nearby",

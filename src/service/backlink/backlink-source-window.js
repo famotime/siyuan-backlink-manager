@@ -539,6 +539,12 @@ function buildNearbyBacklinkSourceWindow(backlinkBlockNode, context) {
   const renderStartBlockId = resolveFirstDescendantBlockId(startBlockId, context);
   const startIndex = context.indexById.get(startBlockId) ?? anchorStartIndex;
   const endIndex = getBlockRangeEndIndex(endBlockId, context) ?? getBlockRangeEndIndex(anchorBlockId, context);
+  const sourceWindowStartBlockId = isListItemContext
+    ? startBlockId
+    : renderStartBlockId;
+  const sourceWindowEndBlockId = isListItemContext
+    ? endBlockId
+    : undefined;
 
   return buildSourceWindowFromRange({
     backlinkBlockNode,
@@ -546,7 +552,8 @@ function buildNearbyBacklinkSourceWindow(backlinkBlockNode, context) {
     anchorBlockId,
     startIndex,
     endIndex,
-    startBlockId: renderStartBlockId,
+    startBlockId: sourceWindowStartBlockId,
+    endBlockId: sourceWindowEndBlockId,
     visibleBlockIds: isListItemContext
       ? dedupeBlockIdArray([
           ...resolveReadableListItemShellBlockIds(startBlockId, context),
@@ -559,7 +566,7 @@ function buildNearbyBacklinkSourceWindow(backlinkBlockNode, context) {
           backlinkBlockNode.block.id,
           endBlockId,
         ]),
-    renderMode: isListItemContext ? "document" : "scroll",
+    renderMode: "scroll",
   });
 }
 

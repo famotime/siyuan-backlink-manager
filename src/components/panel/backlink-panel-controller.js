@@ -71,7 +71,6 @@ import {
   syncBacklinkDocumentProtyleState,
 } from "./backlink-protyle-rendering.js";
 import {
-  buildBacklinkContextControlState,
   applySavedPanelCriteria,
   clonePanelQueryParamsForSave,
   resetBacklinkQueryParameters,
@@ -79,6 +78,7 @@ import {
   toggleRelatedDefBlockCondition,
   toggleRelatedDocumentCondition,
 } from "./backlink-panel-query-params.js";
+import { buildBacklinkContextControlState } from "./backlink-panel-header.js";
 import {
   cycleBacklinkDocumentVisibilityLevel,
   getBacklinkDocumentRenderState,

@@ -106,6 +106,26 @@ function isReferenceOnlyBacklink(activeBacklink = null) {
   return isReferenceOnlyPreviewMarkdown(selfMarkdown);
 }
 
+function getBacklinkSourceWindowRenderMode(
+  sourceWindow = null,
+  visibilityLevel = "core",
+) {
+  if (sourceWindow?.renderMode) {
+    return sourceWindow.renderMode;
+  }
+
+  if (
+    visibilityLevel === "nearby" &&
+    sourceWindow?.anchorBlockId &&
+    sourceWindow?.focusBlockId &&
+    sourceWindow.anchorBlockId !== sourceWindow.focusBlockId
+  ) {
+    return "document";
+  }
+
+  return "scroll";
+}
+
 export function buildBacklinkDocumentRenderOptions({
   documentId,
   activeBacklink,
@@ -128,6 +148,10 @@ export function buildBacklinkDocumentRenderOptions({
     activeBacklink,
     normalizedVisibilityLevel,
   );
+  const sourceWindowRenderMode = getBacklinkSourceWindowRenderMode(
+    sourceWindow,
+    normalizedVisibilityLevel,
+  );
   if (!useFullDocument && isReferenceOnlyBacklink(activeBacklink)) {
     const previewBacklinkData = (
       deps.buildBacklinkPreviewBacklinkData || buildBacklinkPreviewBacklinkData
@@ -146,6 +170,10 @@ export function buildBacklinkDocumentRenderOptions({
     return options;
   }
   if (!useFullDocument && normalizedVisibilityLevel === "core" && sourceWindow) {
+    if (sourceWindowRenderMode === "document") {
+      return options;
+    }
+
     const shouldRenderListItemSourceWindow =
       sourceWindow.anchorBlockId &&
       sourceWindow.focusBlockId &&
@@ -172,13 +200,7 @@ export function buildBacklinkDocumentRenderOptions({
       documentId;
     return options;
   }
-  if (
-    !useFullDocument &&
-    normalizedVisibilityLevel === "nearby" &&
-    sourceWindow?.anchorBlockId &&
-    sourceWindow?.focusBlockId &&
-    sourceWindow.anchorBlockId !== sourceWindow.focusBlockId
-  ) {
+  if (!useFullDocument && sourceWindow && sourceWindowRenderMode === "document") {
     return options;
   }
   if (!useFullDocument && sourceWindow) {

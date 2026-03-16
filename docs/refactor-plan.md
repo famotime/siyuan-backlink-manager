@@ -67,9 +67,9 @@ Dependency rule:
 
 | ID | Priority | Module/Scenario | Files in Scope | Refactor Objective | Risk Level | Pre-Refactor Test Checklist | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| RF-001 | P0 | 规则层重构 | `src/service/backlink/backlink-context-rules.js`, `src/service/backlink/backlink-context.js`, `src/service/backlink/backlink-render-data.js`, `tests/backlink-context-fragments.test.js`, `tests/backlink-render-data.test.js` | Introduce first-class rule concepts for anchor unit, shell, adjacent unit, section boundary, and no-heading fallback so downstream modules stop reinterpreting semantics | High | - [ ] 新规则元数据可表达列表子块与列表项壳的区别; - [ ] 可表达“同级或更高级标题”边界; - [ ] 可表达无标题结构容器兜底; - [ ] 现有命中摘要与预算提示不回归 | pending |
-| RF-002 | P0 | 范围规划层重构 | `src/service/backlink/backlink-source-window.js`, new planner helper module(s) if needed, `tests/backlink-source-window.test.js`, `tests/backlink-document-interaction.test.js` | Refactor source-window calculation into an explicit range planner driven by rule-layer concepts, replacing nearest-any-heading and whole-subtree defaults | High | - [ ] `extended` 采用所属标题节边界; - [ ] 列表 `core` 不再默认整棵子树; - [ ] 列表 `nearby` 采用结构壳优先而非完整深层邻居; - [ ] 无标题列表文档优先顶层容器 | pending |
-| RF-003 | P0 | 渲染契约层重构 | `src/service/backlink/backlink-preview-assembly.js`, `src/components/panel/backlink-document-interaction.js`, `src/components/panel/backlink-protyle-rendering.js`, `tests/backlink-preview-assembly.test.js`, `tests/backlink-document-interaction.test.js`, `tests/backlink-protyle-rendering.test.js` | Build a shared render contract that consumes range plans and controls shell visibility, focus visibility, source-window filtering, and descendant folding consistently | High | - [ ] source window 与 preview 组装不再各自解释规则; - [ ] 列表结构壳可见且焦点可编辑; - [ ] `nearby` 与 `extended` 正文差异稳定可见; - [ ] reference-only 与全文路径不回归 | pending |
+| RF-001 | P0 | 规则层重构 | `src/service/backlink/backlink-context-rules.js`, `src/service/backlink/backlink-context.js`, `src/service/backlink/backlink-render-data.js`, `tests/backlink-context-fragments.test.js`, `tests/backlink-render-data.test.js` | Introduce first-class rule concepts for anchor unit, shell, adjacent unit, section boundary, and no-heading fallback so downstream modules stop reinterpreting semantics | High | - [x] 新规则元数据可表达列表子块与列表项壳的区别; - [x] 可表达“同级或更高级标题”边界; - [x] 可表达无标题结构容器兜底; - [x] 现有命中摘要与预算提示不回归 | done |
+| RF-002 | P0 | 范围规划层重构 | `src/service/backlink/backlink-source-window.js`, new planner helper module(s) if needed, `tests/backlink-source-window.test.js`, `tests/backlink-document-interaction.test.js` | Refactor source-window calculation into an explicit range planner driven by rule-layer concepts, replacing nearest-any-heading and whole-subtree defaults | High | - [x] `extended` 采用所属标题节边界; - [x] 列表 `core` 不再默认整棵子树; - [x] 列表 `nearby` 采用结构壳优先而非完整深层邻居; - [x] 无标题列表文档优先顶层容器 | done |
+| RF-003 | P0 | 渲染契约层重构 | `src/service/backlink/backlink-preview-assembly.js`, `src/components/panel/backlink-document-interaction.js`, `src/components/panel/backlink-protyle-rendering.js`, `tests/backlink-preview-assembly.test.js`, `tests/backlink-document-interaction.test.js`, `tests/backlink-protyle-rendering.test.js` | Build a shared render contract that consumes range plans and controls shell visibility, focus visibility, source-window filtering, and descendant folding consistently | High | - [x] source window 与 preview 组装不再各自解释规则; - [x] 列表结构壳可见且焦点可编辑; - [x] `nearby` 与 `extended` 正文差异稳定可见; - [x] reference-only 与全文路径不回归 | done |
 | RF-004 | P1 | 交互层重构 | `src/components/panel/backlink-document-view-state.js`, `src/components/panel/backlink-panel-header.js`, `src/components/panel/backlink-results-panel.svelte`, `tests/backlink-document-view-state.test.js`, `tests/backlink-panel-header.test.js` | Refactor UI state and feedback to reflect the new contract instead of encoding rule assumptions inside click handlers or labels | Medium | - [ ] 当前层级文案与实际范围一致; - [ ] 切换反馈能解释新增内容; - [ ] 编辑/拖拽刷新后层级保持稳定; - [ ] 文档折叠和全文模式不回归 | pending |
 | RF-005 | P1 | 入口编排与兼容清理 | `src/service/backlink/backlink-data.ts`, `src/service/backlink/backlink-render-data.js`, related tests | Remove duplicated fallback paths, thread new rule metadata through render data, and keep document-grouped browsing stable | Medium | - [ ] `sourceWindows/contextBundle/renderData` 字段语义一致; - [ ] 文档分组切换不回归; - [ ] 来源标签与命中摘要继续准确 | pending |
 | RF-006 | P2 | 文档与全量回归收尾 | `docs/上下文状态渐进显示规则.md`, `docs/反链上下文基线与术语表.md`, `tests/*.test.js` | Finalize docs after architecture lands and close remaining regression gaps | Low | - [ ] 所有已批准项的测试补齐; - [ ] 相关规则文档与代码一致; - [ ] 全量回归可执行 | pending |
@@ -89,18 +89,20 @@ Status definition:
 
 | ID | Start Date | End Date | Test Commands | Result | Notes |
 | --- | --- | --- | --- | --- | --- |
-| RF-001 |  |  | `node --test tests/backlink-source-window.test.js tests/backlink-document-interaction.test.js` |  |  |
-| RF-002 |  |  | `node --test tests/backlink-source-window.test.js tests/backlink-preview-assembly.test.js` |  |  |
-| RF-003 |  |  | `node --test tests/backlink-document-interaction.test.js tests/backlink-protyle-rendering.test.js` |  |  |
+| RF-001 | 2026-03-16 | 2026-03-16 | `node --test tests/backlink-source-window.test.js tests/backlink-protyle-dom.test.js tests/backlink-document-interaction.test.js`; `node --test tests/backlink-preview-assembly.test.js tests/backlink-protyle-rendering.test.js` | pass | 先写失败测试，再落地“所属标题节 / 无标题容器兜底 / visibleBlockIds / renderMode”契约 |
+| RF-002 | 2026-03-16 | 2026-03-16 | `node --test tests/backlink-source-window.test.js tests/backlink-protyle-dom.test.js tests/backlink-document-interaction.test.js` | pass | source window 改为范围规划器语义，列表 `core/nearby` 从整棵子树收紧到结构壳优先 |
+| RF-003 | 2026-03-16 | 2026-03-16 | `node --test tests/backlink-preview-assembly.test.js tests/backlink-protyle-rendering.test.js`; `node --test tests/*.test.js` | partial | 相关模块测试通过；全量回归仍有 3 条未触及文件的失败：`tests/backlink-filter-panel-style-scope.test.js` 1 条、`tests/dev-build-config.test.js` 2 条 |
 | RF-004 |  |  | `node --test tests/backlink-context-fragments.test.js tests/backlink-render-data.test.js` |  |  |
 | RF-005 |  |  | `node --test tests/backlink-panel-header.test.js tests/backlink-document-view-state.test.js` |  |  |
 | RF-006 |  |  | `node --test tests/*.test.js` |  |  |
 
 ## 5. Decision and Confirmation
 
-- User approved items:
+- User approved items: `RF-001`, `RF-002`, `RF-003`
 - Deferred items:
 - Blocked items and reasons:
+  `tests/backlink-filter-panel-style-scope.test.js`
+  `tests/dev-build-config.test.js`
 
 ## 6. Next Actions
 

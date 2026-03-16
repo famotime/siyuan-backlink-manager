@@ -59,10 +59,11 @@ test("buildBacklinkSourceWindow uses the nearest heading section around the back
       "item-title",
     ],
     defaultExpandMode: "document_local_full",
+    renderMode: "scroll",
   });
 });
 
-test("buildBacklinkSourceWindow falls back to document start and end when no headings exist", () => {
+test("buildBacklinkSourceWindow falls back to the nearest structural container when no headings exist", () => {
   const orderedBlocks = createDocumentBlocks([
     { id: "intro", type: "p", parent_id: "doc-a" },
     { id: "item-brand", type: "i", parent_id: "list-root" },
@@ -83,14 +84,81 @@ test("buildBacklinkSourceWindow falls back to document start and end when no hea
     contextVisibilityLevel: "extended",
   });
 
-  assert.deepEqual(sourceWindow.windowBlockIds, [
-    "intro",
-    "item-brand",
-    "block-brand",
-    "tail",
+  assert.deepEqual(sourceWindow.windowBlockIds, ["item-brand", "block-brand"]);
+  assert.equal(sourceWindow.startBlockId, "item-brand");
+  assert.equal(sourceWindow.endBlockId, "block-brand");
+});
+
+test("buildBacklinkSourceWindow keeps lower-level headings inside the current extended section until the next same-level heading", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "heading-h2-a", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "block-focus", type: "p", parent_id: "doc-a" },
+    { id: "heading-h3-a", type: "h", subtype: "h3", parent_id: "doc-a" },
+    { id: "block-a", type: "p", parent_id: "doc-a" },
+    { id: "heading-h3-b", type: "h", subtype: "h3", parent_id: "doc-a" },
+    { id: "block-b", type: "p", parent_id: "doc-a" },
+    { id: "heading-h2-b", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "block-tail", type: "p", parent_id: "doc-a" },
   ]);
-  assert.equal(sourceWindow.startBlockId, "intro");
-  assert.equal(sourceWindow.endBlockId, "tail");
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "block-focus",
+        root_id: "doc-a",
+        parent_id: "doc-a",
+        type: "p",
+      },
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "extended",
+  });
+
+  assert.deepEqual(sourceWindow.windowBlockIds, [
+    "heading-h2-a",
+    "block-focus",
+    "heading-h3-a",
+    "block-a",
+    "heading-h3-b",
+    "block-b",
+  ]);
+  assert.equal(sourceWindow.startBlockId, "heading-h2-a");
+  assert.equal(sourceWindow.endBlockId, "block-b");
+});
+
+test("buildBacklinkSourceWindow uses the nearest top-level structural container when no headings exist in extended mode", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "intro", type: "p", parent_id: "doc-a" },
+    { id: "list-root-a", type: "l", parent_id: "doc-a" },
+    { id: "item-a", type: "i", parent_id: "list-root-a" },
+    { id: "item-focus", type: "i", parent_id: "list-root-a" },
+    { id: "block-focus", type: "p", parent_id: "item-focus" },
+    { id: "item-b", type: "i", parent_id: "list-root-a" },
+    { id: "after", type: "p", parent_id: "doc-a" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "block-focus",
+        root_id: "doc-a",
+        parent_id: "item-focus",
+        type: "p",
+      },
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "extended",
+  });
+
+  assert.deepEqual(sourceWindow.windowBlockIds, [
+    "list-root-a",
+    "item-a",
+    "item-focus",
+    "block-focus",
+    "item-b",
+  ]);
+  assert.equal(sourceWindow.startBlockId, "list-root-a");
+  assert.equal(sourceWindow.endBlockId, "item-b");
 });
 
 test("buildBacklinkSourceWindow keeps core mode on the original paragraph block", () => {
@@ -123,6 +191,7 @@ test("buildBacklinkSourceWindow keeps core mode on the original paragraph block"
     focusBlockId: "block-official",
     windowBlockIds: ["block-official"],
     defaultExpandMode: "document_local_full",
+    renderMode: "scroll",
   });
 });
 
@@ -158,10 +227,11 @@ test("buildBacklinkSourceWindow keeps nearby mode on the surrounding original pa
     focusBlockId: "block-example",
     windowBlockIds: ["block-toolkit", "block-example", "block-after"],
     defaultExpandMode: "document_local_full",
+    renderMode: "scroll",
   });
 });
 
-test("buildBacklinkSourceWindow keeps nearby mode on sibling list items and includes the next parent item subtree", () => {
+test("buildBacklinkSourceWindow keeps nearby mode on sibling list items and adds explicit shell visibility metadata", () => {
   const orderedBlocks = createDocumentBlocks([
     { id: "heading-skills", type: "h", subtype: "h2", parent_id: "doc-a" },
     { id: "heading-what", type: "h", subtype: "h3", parent_id: "doc-a" },
@@ -208,6 +278,15 @@ test("buildBacklinkSourceWindow keeps nearby mode on sibling list items and incl
       "block-logo",
     ],
     defaultExpandMode: "document_local_full",
+    visibleBlockIds: [
+      "item-nearby",
+      "item-brand",
+      "block-brand",
+      "item-title",
+      "item-logo",
+      "block-logo",
+    ],
+    renderMode: "document",
   });
 });
 
@@ -248,6 +327,78 @@ test("buildBacklinkSourceWindow uses the previous sibling text block as the near
     "block-brand",
     "item-title",
     "block-title",
+  ]);
+});
+
+test("buildBacklinkSourceWindow keeps list core mode focused on the list shell and focus child instead of the full subtree", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "item-brand", type: "i", parent_id: "list-root" },
+    { id: "block-brand", type: "p", parent_id: "item-brand" },
+    { id: "list-children", type: "l", parent_id: "item-brand" },
+    { id: "item-child", type: "i", parent_id: "list-children" },
+    { id: "block-child", type: "p", parent_id: "item-child" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "block-brand",
+        root_id: "doc-a",
+        parent_id: "item-brand",
+        type: "p",
+      },
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "core",
+  });
+
+  assert.deepEqual(sourceWindow.windowBlockIds, [
+    "item-brand",
+    "block-brand",
+    "list-children",
+    "item-child",
+    "block-child",
+  ]);
+  assert.deepEqual(sourceWindow.visibleBlockIds, ["item-brand", "block-brand"]);
+});
+
+test("buildBacklinkSourceWindow keeps nearby list mode on shells and direct readable children instead of entire neighbor subtrees", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "item-nearby", type: "i", parent_id: "list-root" },
+    { id: "block-nearby", type: "p", parent_id: "item-nearby" },
+    { id: "item-brand", type: "i", parent_id: "list-root" },
+    { id: "block-brand", type: "p", parent_id: "item-brand" },
+    { id: "item-title", type: "i", parent_id: "list-root" },
+    { id: "list-title", type: "l", parent_id: "item-title" },
+    { id: "item-logo", type: "i", parent_id: "list-title" },
+    { id: "block-logo", type: "p", parent_id: "item-logo" },
+    { id: "item-deep", type: "i", parent_id: "list-title" },
+    { id: "block-deep", type: "p", parent_id: "item-deep" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "block-brand",
+        root_id: "doc-a",
+        parent_id: "item-brand",
+        type: "p",
+      },
+      previousSiblingBlockId: "item-nearby",
+      nextSiblingBlockId: "item-title",
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "nearby",
+  });
+
+  assert.deepEqual(sourceWindow.visibleBlockIds, [
+    "item-nearby",
+    "block-nearby",
+    "item-brand",
+    "block-brand",
+    "item-title",
+    "item-logo",
+    "block-logo",
   ]);
 });
 

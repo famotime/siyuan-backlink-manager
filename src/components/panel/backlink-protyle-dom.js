@@ -269,6 +269,7 @@ function collectVisibleBlockIdsWithAncestors(
 function collectVisibleBlockIdsWithDescendants(
   visibleBlockIdSet,
   blockElementArray = [],
+  descendantSourceBlockIds = null,
 ) {
   if (!(visibleBlockIdSet instanceof Set)) {
     return visibleBlockIdSet;
@@ -284,7 +285,10 @@ function collectVisibleBlockIdsWithDescendants(
   }
 
   const expandedVisibleBlockIdSet = new Set(visibleBlockIdSet);
-  for (const blockId of visibleBlockIdSet) {
+  const blockIdsToExpand = Array.isArray(descendantSourceBlockIds)
+    ? descendantSourceBlockIds
+    : Array.from(visibleBlockIdSet);
+  for (const blockId of blockIdsToExpand) {
     const blockElement = blockElementMap.get(blockId);
     if (!blockElement) {
       continue;
@@ -360,10 +364,23 @@ export function hideBlocksOutsideBacklinkSourceWindow(
   }
 
   const blockElementArray = protyleWysiwygElement.querySelectorAll("[data-node-id]");
+  const visibleBlockIds =
+    Array.isArray(sourceWindow?.visibleBlockIds) &&
+    sourceWindow.visibleBlockIds.length > 0
+      ? sourceWindow.visibleBlockIds
+      : windowBlockIds;
+  const descendantSourceBlockIds =
+    Array.isArray(sourceWindow?.includeDescendantBlockIds)
+      ? sourceWindow.includeDescendantBlockIds
+      : Array.isArray(sourceWindow?.visibleBlockIds) &&
+          sourceWindow.visibleBlockIds.length > 0
+        ? []
+        : visibleBlockIds;
   const visibleBlockIdSet = collectVisibleBlockIdsWithAncestors(
     collectVisibleBlockIdsWithDescendants(
-      new Set(windowBlockIds),
+      new Set(visibleBlockIds),
       blockElementArray,
+      descendantSourceBlockIds,
     ),
     blockElementArray,
     protyleWysiwygElement,

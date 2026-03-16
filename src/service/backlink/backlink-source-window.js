@@ -258,6 +258,154 @@ function resolveListItemAnchorBlockId(backlinkBlockNode = {}, context) {
   return "";
 }
 
+function dedupeBlockIdArray(blockIdArray = []) {
+  const dedupedBlockIds = [];
+  const seenBlockIds = new Set();
+  for (const blockId of blockIdArray) {
+    if (!blockId || seenBlockIds.has(blockId)) {
+      continue;
+    }
+    seenBlockIds.add(blockId);
+    dedupedBlockIds.push(blockId);
+  }
+  return dedupedBlockIds;
+}
+
+function getHeadingLevel(block = {}) {
+  if (block?.type !== "h") {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const headingMatch = String(block?.subtype ?? "").match(/^h([1-6])$/i);
+  if (!headingMatch) {
+    return 6;
+  }
+
+  return Number(headingMatch[1]);
+}
+
+function findContainingHeadingStartIndex(focusIndex, orderedDocumentBlocks = []) {
+  for (let currentIndex = focusIndex; currentIndex >= 0; currentIndex -= 1) {
+    if (orderedDocumentBlocks[currentIndex]?.type === "h") {
+      return currentIndex;
+    }
+  }
+  return -1;
+}
+
+function findSectionEndIndexByHeadingStart(startIndex, orderedDocumentBlocks = []) {
+  if (startIndex < 0) {
+    return orderedDocumentBlocks.length - 1;
+  }
+
+  const startHeadingLevel = getHeadingLevel(orderedDocumentBlocks[startIndex]);
+  for (
+    let currentIndex = startIndex + 1;
+    currentIndex < orderedDocumentBlocks.length;
+    currentIndex += 1
+  ) {
+    const block = orderedDocumentBlocks[currentIndex];
+    if (block?.type !== "h") {
+      continue;
+    }
+    if (getHeadingLevel(block) <= startHeadingLevel) {
+      return currentIndex - 1;
+    }
+  }
+
+  return orderedDocumentBlocks.length - 1;
+}
+
+function isStructuralContainerBlock(block = {}) {
+  return block?.type === "l" || block?.type === "i";
+}
+
+function resolveTopLevelStructuralContainerBlockId(
+  focusBlockId = "",
+  rootId = "",
+  context,
+) {
+  let currentBlock = context.blockById.get(focusBlockId);
+  if (!currentBlock?.id) {
+    return "";
+  }
+
+  let candidateBlock = currentBlock;
+  const visitedBlockIds = new Set();
+  while (currentBlock?.id && !visitedBlockIds.has(currentBlock.id)) {
+    visitedBlockIds.add(currentBlock.id);
+    const parentBlock = context.blockById.get(currentBlock.parent_id);
+    if (!parentBlock?.id || parentBlock.id === rootId || parentBlock.type === "d") {
+      return candidateBlock?.id || currentBlock.id;
+    }
+    candidateBlock = parentBlock;
+    currentBlock = parentBlock;
+  }
+
+  return candidateBlock?.id || focusBlockId;
+}
+
+function getDirectChildBlocks(parentBlockId = "", context) {
+  const startIndex = context.indexById.get(parentBlockId);
+  if (startIndex === undefined) {
+    return [];
+  }
+
+  const childBlocks = [];
+  for (
+    let currentIndex = startIndex + 1;
+    currentIndex < context.orderedDocumentBlocks.length;
+    currentIndex += 1
+  ) {
+    const block = context.orderedDocumentBlocks[currentIndex];
+    if (!isDescendantBlock(block, parentBlockId, context.blockById)) {
+      break;
+    }
+    if (block?.parent_id === parentBlockId) {
+      childBlocks.push(block);
+    }
+  }
+
+  return childBlocks;
+}
+
+function resolveReadableListItemShellBlockIds(listItemBlockId = "", context) {
+  if (!listItemBlockId) {
+    return [];
+  }
+
+  const visibleBlockIds = [listItemBlockId];
+  let currentListItemId = listItemBlockId;
+  const visitedListItemIds = new Set();
+
+  while (currentListItemId && !visitedListItemIds.has(currentListItemId)) {
+    visitedListItemIds.add(currentListItemId);
+    const directChildBlocks = getDirectChildBlocks(currentListItemId, context);
+    const readableChildBlock = directChildBlocks.find((block) => block?.type !== "l");
+    if (readableChildBlock?.id) {
+      visibleBlockIds.push(readableChildBlock.id);
+      break;
+    }
+
+    const childListBlock = directChildBlocks.find((block) => block?.type === "l");
+    if (!childListBlock?.id) {
+      break;
+    }
+
+    const firstChildListItem = getDirectChildBlocks(childListBlock.id, context).find(
+      (block) => block?.type === "i",
+    );
+    if (!firstChildListItem?.id) {
+      break;
+    }
+
+    visibleBlockIds.push(firstChildListItem.id);
+    currentListItemId = firstChildListItem.id;
+  }
+
+  return dedupeBlockIdArray(visibleBlockIds);
+}
+
 function buildSourceWindowFromRange({
   backlinkBlockNode = null,
   context,
@@ -266,6 +414,8 @@ function buildSourceWindowFromRange({
   endIndex,
   startBlockId = "",
   endBlockId = "",
+  visibleBlockIds = [],
+  renderMode = "",
 } = {}) {
   if (
     !backlinkBlockNode?.block?.id ||
@@ -284,7 +434,7 @@ function buildSourceWindowFromRange({
     return null;
   }
 
-  return {
+  const sourceWindow = {
     rootId: backlinkBlockNode.block.root_id,
     anchorBlockId: anchorBlockId || backlinkBlockNode.block.id,
     startBlockId: startBlockId || windowBlockIds[0],
@@ -293,6 +443,16 @@ function buildSourceWindowFromRange({
     windowBlockIds,
     defaultExpandMode: "document_local_full",
   };
+
+  const dedupedVisibleBlockIds = dedupeBlockIdArray(visibleBlockIds);
+  if (dedupedVisibleBlockIds.length > 0) {
+    sourceWindow.visibleBlockIds = dedupedVisibleBlockIds;
+  }
+  if (renderMode) {
+    sourceWindow.renderMode = renderMode;
+  }
+
+  return sourceWindow;
 }
 
 function buildCoreBacklinkSourceWindow(backlinkBlockNode, context) {
@@ -305,6 +465,11 @@ function buildCoreBacklinkSourceWindow(backlinkBlockNode, context) {
       anchorBlockId: listItemAnchorBlockId,
       startIndex,
       endIndex: findBlockSubtreeEndIndex(startIndex, context),
+      visibleBlockIds:
+        backlinkBlockNode.block.id === listItemAnchorBlockId
+          ? [listItemAnchorBlockId]
+          : [listItemAnchorBlockId, backlinkBlockNode.block.id],
+      renderMode: "scroll",
     });
   }
 
@@ -315,6 +480,7 @@ function buildCoreBacklinkSourceWindow(backlinkBlockNode, context) {
     anchorBlockId: backlinkBlockNode.block.id,
     startIndex: focusIndex,
     endIndex: focusIndex,
+    renderMode: "scroll",
   });
 }
 
@@ -353,6 +519,15 @@ function buildNearbyBacklinkSourceWindow(backlinkBlockNode, context) {
     startIndex,
     endIndex,
     startBlockId: renderStartBlockId,
+    visibleBlockIds: isListItemContext
+      ? dedupeBlockIdArray([
+          ...resolveReadableListItemShellBlockIds(startBlockId, context),
+          anchorBlockId,
+          backlinkBlockNode.block.id,
+          ...resolveReadableListItemShellBlockIds(endBlockId, context),
+        ])
+      : [],
+    renderMode: isListItemContext ? "document" : "scroll",
   });
 }
 
@@ -363,14 +538,37 @@ function buildExtendedBacklinkSourceWindow(backlinkBlockNode, context) {
     return null;
   }
 
-  const safeStartIndex = findNearestHeadingStartIndex(
+  const sectionHeadingStartIndex = findContainingHeadingStartIndex(
     focusIndex,
     context.orderedDocumentBlocks,
   );
-  const safeEndIndex = Math.max(
-    safeStartIndex,
-    findNearestHeadingEndIndex(focusIndex, context.orderedDocumentBlocks),
-  );
+
+  let safeStartIndex;
+  let safeEndIndex;
+  if (sectionHeadingStartIndex >= 0) {
+    safeStartIndex = sectionHeadingStartIndex;
+    safeEndIndex = Math.max(
+      safeStartIndex,
+      findSectionEndIndexByHeadingStart(
+        sectionHeadingStartIndex,
+        context.orderedDocumentBlocks,
+      ),
+    );
+  } else {
+    const topLevelContainerBlockId = resolveTopLevelStructuralContainerBlockId(
+      focusBlockId,
+      backlinkBlockNode.block.root_id,
+      context,
+    );
+    const topLevelContainerBlock = context.blockById.get(topLevelContainerBlockId);
+    if (isStructuralContainerBlock(topLevelContainerBlock)) {
+      safeStartIndex = context.indexById.get(topLevelContainerBlockId);
+      safeEndIndex = findBlockSubtreeEndIndex(safeStartIndex, context);
+    } else {
+      safeStartIndex = 0;
+      safeEndIndex = context.orderedDocumentBlocks.length - 1;
+    }
+  }
 
   return buildSourceWindowFromRange({
     backlinkBlockNode,
@@ -378,6 +576,7 @@ function buildExtendedBacklinkSourceWindow(backlinkBlockNode, context) {
     anchorBlockId: focusBlockId,
     startIndex: safeStartIndex,
     endIndex: safeEndIndex,
+    renderMode: "scroll",
   });
 }
 

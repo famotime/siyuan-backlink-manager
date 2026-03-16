@@ -367,3 +367,67 @@ test("hideBlocksOutsideBacklinkSourceWindow keeps descendant blocks visible when
   assert.deepEqual(textBlock.classList.removed, ["fn__none"]);
   assert.deepEqual(otherBlock.classList.added, ["fn__none"]);
 });
+
+test("hideBlocksOutsideBacklinkSourceWindow respects explicit visibleBlockIds without expanding every descendant of a shell block", () => {
+  const makeBlock = (id) => ({
+    id,
+    parentElement: null,
+    getAttribute(name) {
+      return name === "data-node-id" ? id : null;
+    },
+    querySelectorAll() {
+      return [];
+    },
+    classList: {
+      added: [],
+      removed: [],
+      add(name) {
+        this.added.push(name);
+      },
+      remove(name) {
+        this.removed.push(name);
+      },
+    },
+  });
+
+  const itemShell = makeBlock("item-shell");
+  const focusBlock = makeBlock("block-focus");
+  const nestedList = makeBlock("list-nested");
+  const nestedItem = makeBlock("item-nested");
+  const nestedText = makeBlock("block-nested");
+  focusBlock.parentElement = itemShell;
+  nestedList.parentElement = itemShell;
+  nestedItem.parentElement = nestedList;
+  nestedText.parentElement = nestedItem;
+  itemShell.querySelectorAll = () => [focusBlock, nestedList, nestedItem, nestedText];
+
+  const protyleWysiwygElement = {
+    querySelectorAll() {
+      return [itemShell, focusBlock, nestedList, nestedItem, nestedText];
+    },
+  };
+  const protyleContentElement = {
+    querySelector() {
+      return protyleWysiwygElement;
+    },
+  };
+
+  hideBlocksOutsideBacklinkSourceWindow(
+    {
+      sourceWindows: {
+        core: {
+          windowBlockIds: ["item-shell", "block-focus", "list-nested", "item-nested", "block-nested"],
+          visibleBlockIds: ["item-shell", "block-focus"],
+        },
+      },
+    },
+    protyleContentElement,
+    "core",
+  );
+
+  assert.deepEqual(itemShell.classList.removed, ["fn__none"]);
+  assert.deepEqual(focusBlock.classList.removed, ["fn__none"]);
+  assert.deepEqual(nestedList.classList.added, ["fn__none"]);
+  assert.deepEqual(nestedItem.classList.added, ["fn__none"]);
+  assert.deepEqual(nestedText.classList.added, ["fn__none"]);
+});

@@ -233,6 +233,44 @@ test("uses document rendering instead of scrollAttr for nearby mode when the sou
   );
 });
 
+test("uses source window renderMode when planner marks the window as document-scoped", () => {
+  const activeBacklink = {
+    backlinkBlock: {
+      id: "backlink-1",
+      root_id: "doc-1",
+      box: "box-1",
+    },
+    sourceWindows: {
+      nearby: {
+        rootId: "doc-1",
+        startBlockId: "block-prev",
+        endBlockId: "block-next",
+        focusBlockId: "backlink-1",
+        anchorBlockId: "backlink-1",
+        renderMode: "document",
+      },
+    },
+  };
+
+  assert.deepEqual(
+    buildBacklinkDocumentRenderOptions({
+      documentId: "doc-1",
+      activeBacklink,
+      contextVisibilityLevel: "nearby",
+    }),
+    {
+      blockId: "doc-1",
+      render: {
+        background: false,
+        title: false,
+        gutter: true,
+        scroll: false,
+        breadcrumb: false,
+      },
+    },
+  );
+});
+
 test("uses preview backlink data instead of source window for reference-only backlinks", () => {
   const activeBacklink = {
     backlinkBlock: {

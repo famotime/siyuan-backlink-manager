@@ -47,7 +47,7 @@ test("buildBacklinkSourceWindow uses the nearest heading section around the back
 
   assert.deepEqual(sourceWindow, {
     rootId: "doc-a",
-    anchorBlockId: "block-brand",
+    anchorBlockId: "item-brand",
     startBlockId: "heading-prev",
     endBlockId: "item-title",
     focusBlockId: "block-brand",
@@ -63,6 +63,46 @@ test("buildBacklinkSourceWindow uses the nearest heading section around the back
     defaultExpandMode: "document_local_full",
     renderMode: "scroll",
   });
+});
+
+test("buildBacklinkSourceWindow keeps the list item shell as the anchor for extended mode when the backlink is inside a list item", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "heading-prev", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "item-nearby", type: "i", parent_id: "list-root" },
+    { id: "block-nearby", type: "p", parent_id: "item-nearby" },
+    { id: "item-brand", type: "i", parent_id: "list-root" },
+    { id: "block-brand", type: "p", parent_id: "item-brand" },
+    { id: "item-title", type: "i", parent_id: "list-root" },
+    { id: "block-title", type: "p", parent_id: "item-title" },
+    { id: "heading-next", type: "h", subtype: "h2", parent_id: "doc-a" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "block-brand",
+        root_id: "doc-a",
+        parent_id: "item-brand",
+        type: "p",
+      },
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "extended",
+  });
+
+  assert.equal(sourceWindow.anchorBlockId, "item-brand");
+  assert.equal(sourceWindow.focusBlockId, "block-brand");
+  assert.equal(sourceWindow.startBlockId, "heading-prev");
+  assert.equal(sourceWindow.endBlockId, "block-title");
+  assert.deepEqual(sourceWindow.windowBlockIds, [
+    "heading-prev",
+    "item-nearby",
+    "block-nearby",
+    "item-brand",
+    "block-brand",
+    "item-title",
+    "block-title",
+  ]);
 });
 
 test("buildBacklinkSourceWindow falls back to the nearest structural container when no headings exist", () => {
@@ -946,4 +986,275 @@ test("loadOrderedBacklinkSourceWindowBlocks uses block indexes per document and 
     orderedBlocksByRootId.get("doc-b").map((block) => block.id),
     ["item-beta", "block-beta", "item-gamma"],
   );
+});
+
+test("loadOrderedBacklinkSourceWindowBlocks keeps extended sections in real child order when indexes are incomplete", async () => {
+  const orderedBlocksByRootId = await loadOrderedBacklinkSourceWindowBlocks({
+    backlinkDataArray: [
+      {
+        backlinkBlock: {
+          id: "block-focus",
+          root_id: "doc-a",
+        },
+      },
+    ],
+    deps: {
+      queryDocumentBlocksByRootIds: async () => [
+        {
+          id: "block-focus",
+          root_id: "doc-a",
+          parent_id: "item-focus",
+          type: "p",
+          sort: 10,
+          path: "/doc-a/doc",
+        },
+        {
+          id: "heading-skill",
+          root_id: "doc-a",
+          parent_id: "heading-main",
+          type: "h",
+          subtype: "h3",
+          sort: 5,
+          path: "/doc-a/doc",
+        },
+        {
+          id: "block-skill",
+          root_id: "doc-a",
+          parent_id: "heading-skill",
+          type: "p",
+          sort: 10,
+          path: "/doc-a/doc",
+        },
+        {
+          id: "heading-next",
+          root_id: "doc-a",
+          parent_id: "heading-main",
+          type: "h",
+          subtype: "h3",
+          sort: 5,
+          path: "/doc-a/doc",
+        },
+        {
+          id: "block-next",
+          root_id: "doc-a",
+          parent_id: "heading-next",
+          type: "p",
+          sort: 10,
+          path: "/doc-a/doc",
+        },
+        {
+          id: "list-root",
+          root_id: "doc-a",
+          parent_id: "heading-main",
+          type: "l",
+          subtype: "u",
+          sort: 20,
+          path: "/doc-a/doc",
+        },
+        {
+          id: "item-focus",
+          root_id: "doc-a",
+          parent_id: "list-root",
+          type: "i",
+          sort: 20,
+          path: "/doc-a/doc",
+        },
+        {
+          id: "heading-main",
+          root_id: "doc-a",
+          parent_id: "doc-a",
+          type: "h",
+          subtype: "h1",
+          sort: 5,
+          path: "/doc-a/doc",
+        },
+      ],
+      getBlockIndexMap: async () => new Map(),
+      getChildBlocks: async (parentId) => {
+        if (parentId === "heading-main") {
+          return [
+            { id: "list-root" },
+            { id: "heading-skill" },
+            { id: "heading-next" },
+          ];
+        }
+        return [];
+      },
+    },
+  });
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "block-focus",
+        root_id: "doc-a",
+        parent_id: "item-focus",
+        type: "p",
+      },
+    },
+    orderedDocumentBlocks: orderedBlocksByRootId.get("doc-a"),
+    contextVisibilityLevel: "extended",
+  });
+
+  assert.deepEqual(sourceWindow.windowBlockIds, [
+    "heading-main",
+    "list-root",
+    "item-focus",
+    "block-focus",
+    "heading-skill",
+    "block-skill",
+    "heading-next",
+    "block-next",
+  ]);
+  assert.equal(sourceWindow.startBlockId, "heading-main");
+  assert.equal(sourceWindow.endBlockId, "block-next");
+});
+
+test("loadOrderedBacklinkSourceWindowBlocks uses document kramdown order when child order is incomplete and keeps heading titles in extended sections", async () => {
+  const orderedBlocksByRootId = await loadOrderedBacklinkSourceWindowBlocks({
+    backlinkDataArray: [
+      {
+        backlinkBlock: {
+          id: "block-focus",
+          root_id: "doc-a",
+        },
+      },
+    ],
+    deps: {
+      queryDocumentBlocksByRootIds: async () => [
+        {
+          id: "heading-next",
+          root_id: "doc-a",
+          parent_id: "heading-main",
+          type: "h",
+          subtype: "h3",
+          sort: 5,
+          path: "/doc-a/doc",
+        },
+        {
+          id: "block-next",
+          root_id: "doc-a",
+          parent_id: "heading-next",
+          type: "p",
+          sort: 10,
+          path: "/doc-a/doc",
+        },
+        {
+          id: "list-root",
+          root_id: "doc-a",
+          parent_id: "heading-main",
+          type: "l",
+          subtype: "u",
+          sort: 20,
+          path: "/doc-a/doc",
+        },
+        {
+          id: "item-focus",
+          root_id: "doc-a",
+          parent_id: "list-root",
+          type: "i",
+          sort: 20,
+          path: "/doc-a/doc",
+        },
+        {
+          id: "block-focus",
+          root_id: "doc-a",
+          parent_id: "item-focus",
+          type: "p",
+          sort: 10,
+          path: "/doc-a/doc",
+        },
+        {
+          id: "heading-skill",
+          root_id: "doc-a",
+          parent_id: "heading-main",
+          type: "h",
+          subtype: "h3",
+          sort: 5,
+          path: "/doc-a/doc",
+        },
+        {
+          id: "block-skill",
+          root_id: "doc-a",
+          parent_id: "heading-skill",
+          type: "p",
+          sort: 10,
+          path: "/doc-a/doc",
+        },
+        {
+          id: "heading-main",
+          root_id: "doc-a",
+          parent_id: "doc-a",
+          type: "h",
+          subtype: "h1",
+          sort: 5,
+          path: "/doc-a/doc",
+        },
+      ],
+      getBlockIndexMap: async () => new Map(),
+      getChildBlocks: async (parentId) => {
+        if (parentId === "heading-main") {
+          return [{ id: "list-root" }];
+        }
+        if (parentId === "list-root") {
+          return [{ id: "item-focus" }];
+        }
+        if (parentId === "heading-skill") {
+          return [{ id: "block-skill" }];
+        }
+        if (parentId === "heading-next") {
+          return [{ id: "block-next" }];
+        }
+        return [];
+      },
+      getBlockKramdown: async () => ({
+        kramdown: [
+          "### Main",
+          "{: id=\"heading-main\"}",
+          "",
+          "- {: id=\"item-focus\"}Focus",
+          "  {: id=\"block-focus\"}",
+          "{: id=\"list-root\"}",
+          "",
+          "### Skill",
+          "{: id=\"heading-skill\"}",
+          "",
+          "Skill body",
+          "{: id=\"block-skill\"}",
+          "",
+          "### Next",
+          "{: id=\"heading-next\"}",
+          "",
+          "Next body",
+          "{: id=\"block-next\"}",
+        ].join("\n"),
+      }),
+    },
+  });
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "block-focus",
+        root_id: "doc-a",
+        parent_id: "item-focus",
+        type: "p",
+      },
+    },
+    orderedDocumentBlocks: orderedBlocksByRootId.get("doc-a"),
+    contextVisibilityLevel: "extended",
+  });
+
+  assert.deepEqual(sourceWindow.windowBlockIds, [
+    "heading-main",
+    "list-root",
+    "item-focus",
+    "block-focus",
+    "heading-skill",
+    "block-skill",
+    "heading-next",
+    "block-next",
+  ]);
+  assert.equal(sourceWindow.startBlockId, "heading-main");
+  assert.equal(sourceWindow.endBlockId, "block-next");
 });

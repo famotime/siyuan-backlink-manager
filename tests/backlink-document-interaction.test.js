@@ -471,3 +471,48 @@ test("uses source window scrollAttr instead of preview backlink data in extended
     },
   );
 });
+
+test("uses the list item shell as zoomInId in extended mode when the backlink focus is a child block", () => {
+  const activeBacklink = {
+    backlinkBlock: {
+      id: "backlink-child",
+      root_id: "doc-1",
+      box: "box-1",
+    },
+    sourceWindows: {
+      extended: {
+        rootId: "doc-1",
+        startBlockId: "heading-1",
+        endBlockId: "block-2",
+        focusBlockId: "backlink-child",
+        anchorBlockId: "list-item-1",
+      },
+    },
+  };
+
+  assert.deepEqual(
+    buildBacklinkDocumentRenderOptions({
+      documentId: "doc-1",
+      activeBacklink,
+      contextVisibilityLevel: "extended",
+    }),
+    {
+      blockId: "doc-1",
+      scrollAttr: {
+        rootId: "doc-1",
+        startId: "heading-1",
+        endId: "block-2",
+        scrollTop: 0,
+        focusId: "backlink-child",
+        zoomInId: "list-item-1",
+      },
+      render: {
+        background: false,
+        title: false,
+        gutter: true,
+        scroll: false,
+        breadcrumb: false,
+      },
+    },
+  );
+});

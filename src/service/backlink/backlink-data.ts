@@ -212,6 +212,8 @@ export async function getBacklinkPanelRenderData(
                 return sql(blockSql);
             },
             getBlockIndexMap: getBatchBlockIdIndex,
+            getChildBlocks,
+            getBlockKramdown,
         },
     });
     attachBacklinkSourceWindows({
@@ -333,6 +335,8 @@ export async function getTurnPageBacklinkPanelRenderData(
                 return sql(blockSql);
             },
             getBlockIndexMap: getBatchBlockIdIndex,
+            getChildBlocks,
+            getBlockKramdown,
         },
     });
     attachBacklinkSourceWindows({

@@ -16,7 +16,7 @@ function compareBlocksByFallbackOrder(blockA = {}, blockB = {}) {
     return pathResult;
   }
 
-  return 0;
+  return String(blockA?.id ?? "").localeCompare(String(blockB?.id ?? ""));
 }
 
 function compareBlocksByDocumentOrder(
@@ -43,7 +43,121 @@ function hasCompleteDocumentOrder(blockArray = [], indexMap = new Map()) {
   return blockArray.every((block) => Number.isFinite(indexMap.get(block?.id)));
 }
 
-function buildTreeOrderedBlocks(blockArray = [], rootId = "", indexMap = new Map()) {
+function compareBlocksBySiblingOrder(
+  parentId = "",
+  blockA = {},
+  blockB = {},
+  indexMap = new Map(),
+  siblingOrderMapByParentId = new Map(),
+) {
+  const siblingOrderMap = siblingOrderMapByParentId.get(parentId);
+  if (siblingOrderMap?.size > 0) {
+    const orderA = siblingOrderMap.get(blockA?.id);
+    const orderB = siblingOrderMap.get(blockB?.id);
+    const hasOrderA = Number.isFinite(orderA);
+    const hasOrderB = Number.isFinite(orderB);
+
+    if (hasOrderA && hasOrderB && orderA !== orderB) {
+      return orderA - orderB;
+    }
+  }
+
+  return compareBlocksByDocumentOrder(blockA, blockB, indexMap);
+}
+
+async function getSiblingOrderMapByParentId(blockArray = [], deps = {}) {
+  const { getChildBlocks } = deps;
+  if (typeof getChildBlocks !== "function" || !Array.isArray(blockArray)) {
+    return new Map();
+  }
+
+  const childCountByParentId = new Map();
+  for (const block of blockArray) {
+    const parentId = block?.parent_id;
+    if (!parentId) {
+      continue;
+    }
+    childCountByParentId.set(parentId, (childCountByParentId.get(parentId) ?? 0) + 1);
+  }
+
+  const candidateParentIds = Array.from(childCountByParentId.entries())
+    .filter(([parentId, childCount]) => parentId && childCount > 1)
+    .map(([parentId]) => parentId);
+  if (candidateParentIds.length <= 0) {
+    return new Map();
+  }
+
+  const siblingOrderMapByParentId = new Map();
+  await Promise.all(
+    candidateParentIds.map(async (parentId) => {
+      const childBlocks = await getChildBlocks(parentId);
+      if (!Array.isArray(childBlocks) || childBlocks.length <= 0) {
+        return;
+      }
+
+      const siblingOrderMap = new Map();
+      childBlocks.forEach((childBlock, index) => {
+        if (childBlock?.id) {
+          siblingOrderMap.set(childBlock.id, index);
+        }
+      });
+      if (siblingOrderMap.size > 0) {
+        siblingOrderMapByParentId.set(parentId, siblingOrderMap);
+      }
+    }),
+  );
+
+  return siblingOrderMapByParentId;
+}
+
+function extractBlockOrderMapFromKramdown(kramdown = "") {
+  const blockOrderMap = new Map();
+  if (!kramdown) {
+    return blockOrderMap;
+  }
+
+  const blockIdPattern = /\bid="([^"]+)"/g;
+  let match;
+  let order = 0;
+  while ((match = blockIdPattern.exec(kramdown))) {
+    const blockId = match[1];
+    if (!blockId || blockOrderMap.has(blockId)) {
+      continue;
+    }
+    blockOrderMap.set(blockId, order);
+    order += 1;
+  }
+
+  return blockOrderMap;
+}
+
+async function getKramdownOrderMapByRootId(rootIdArray = [], deps = {}) {
+  const { getBlockKramdown } = deps;
+  if (typeof getBlockKramdown !== "function" || !Array.isArray(rootIdArray)) {
+    return new Map();
+  }
+
+  const kramdownOrderMapByRootId = new Map();
+  await Promise.all(
+    rootIdArray.filter(Boolean).map(async (rootId) => {
+      const result = await getBlockKramdown(rootId);
+      const kramdown = result?.kramdown || "";
+      const blockOrderMap = extractBlockOrderMapFromKramdown(kramdown);
+      if (blockOrderMap.size > 0) {
+        kramdownOrderMapByRootId.set(rootId, blockOrderMap);
+      }
+    }),
+  );
+
+  return kramdownOrderMapByRootId;
+}
+
+function buildTreeOrderedBlocks(
+  blockArray = [],
+  rootId = "",
+  indexMap = new Map(),
+  siblingOrderMapByParentId = new Map(),
+) {
   if (!Array.isArray(blockArray) || blockArray.length <= 0) {
     return [];
   }
@@ -64,9 +178,15 @@ function buildTreeOrderedBlocks(blockArray = [], rootId = "", indexMap = new Map
     childBlocks.push(block);
   }
 
-  for (const childBlocks of childBlocksByParentId.values()) {
+  for (const [parentId, childBlocks] of childBlocksByParentId.entries()) {
     childBlocks.sort((blockA, blockB) =>
-      compareBlocksByDocumentOrder(blockA, blockB, indexMap),
+      compareBlocksBySiblingOrder(
+        parentId,
+        blockA,
+        blockB,
+        indexMap,
+        siblingOrderMapByParentId,
+      ),
     );
   }
 
@@ -572,6 +692,8 @@ function buildNearbyBacklinkSourceWindow(backlinkBlockNode, context) {
 
 function buildExtendedBacklinkSourceWindow(backlinkBlockNode, context) {
   const focusBlockId = backlinkBlockNode.block.id;
+  const listItemAnchorBlockId = resolveListItemAnchorBlockId(backlinkBlockNode, context);
+  const anchorBlockId = listItemAnchorBlockId || focusBlockId;
   const focusIndex = context.indexById.get(focusBlockId);
   if (focusIndex === undefined) {
     return null;
@@ -602,7 +724,7 @@ function buildExtendedBacklinkSourceWindow(backlinkBlockNode, context) {
     return buildSourceWindowFromRange({
       backlinkBlockNode,
       context,
-      anchorBlockId: focusBlockId,
+      anchorBlockId,
       startIndex: safeStartIndex,
       endIndex: safeEndIndex,
       renderMode: "scroll",
@@ -648,7 +770,7 @@ function buildExtendedBacklinkSourceWindow(backlinkBlockNode, context) {
   return buildSourceWindowFromRange({
     backlinkBlockNode,
     context,
-    anchorBlockId: focusBlockId,
+    anchorBlockId,
     startIndex: safeStartIndex,
     endIndex: safeEndIndex,
     renderMode: "scroll",
@@ -764,7 +886,12 @@ export async function loadOrderedBacklinkSourceWindowBlocks({
   backlinkDataArray = [],
   deps = {},
 } = {}) {
-  const { queryDocumentBlocksByRootIds, getBlockIndexMap } = deps;
+  const {
+    queryDocumentBlocksByRootIds,
+    getBlockIndexMap,
+    getChildBlocks,
+    getBlockKramdown,
+  } = deps;
   const rootIdArray = buildSourceWindowRootIds(backlinkDataArray);
   if (
     rootIdArray.length <= 0 ||
@@ -799,8 +926,17 @@ export async function loadOrderedBacklinkSourceWindowBlocks({
     blockArray.push(block);
   }
 
+  const incompleteRootIdArray = Array.from(orderedBlocksByRootId.entries())
+    .filter(([, blockArray]) => !hasCompleteDocumentOrder(blockArray, indexMap))
+    .map(([rootId]) => rootId);
+  const kramdownOrderMapByRootId = await getKramdownOrderMapByRootId(
+    incompleteRootIdArray,
+    { getBlockKramdown },
+  );
+
   for (const [rootId, blockArray] of orderedBlocksByRootId.entries()) {
-    if (hasCompleteDocumentOrder(blockArray, indexMap)) {
+    const hasFullDocumentOrder = hasCompleteDocumentOrder(blockArray, indexMap);
+    if (hasFullDocumentOrder) {
       blockArray.forEach((block) => {
         block.__backlinkSourceDocumentOrder = indexMap.get(block.id);
       });
@@ -810,10 +946,32 @@ export async function loadOrderedBacklinkSourceWindowBlocks({
       continue;
     }
 
-    blockArray.forEach((block) => {
-      delete block.__backlinkSourceDocumentOrder;
+    const kramdownOrderMap = kramdownOrderMapByRootId.get(rootId) || new Map();
+    const fallbackIndexMap = new Map();
+    for (const block of blockArray) {
+      const explicitIndex = indexMap.get(block.id);
+      if (Number.isFinite(explicitIndex)) {
+        fallbackIndexMap.set(block.id, explicitIndex);
+        continue;
+      }
+      const kramdownIndex = kramdownOrderMap.get(block.id);
+      if (Number.isFinite(kramdownIndex)) {
+        fallbackIndexMap.set(block.id, kramdownIndex);
+      }
+    }
+
+    const siblingOrderMapByParentId = await getSiblingOrderMapByParentId(blockArray, {
+      getChildBlocks,
     });
-    const orderedBlocks = buildTreeOrderedBlocks(blockArray, rootId, new Map());
+    const orderedBlocks = buildTreeOrderedBlocks(
+      blockArray,
+      rootId,
+      fallbackIndexMap,
+      siblingOrderMapByParentId,
+    );
+    orderedBlocks.forEach((block, order) => {
+      block.__backlinkSourceDocumentOrder = order;
+    });
     blockArray.length = 0;
     blockArray.push(...orderedBlocks);
   }

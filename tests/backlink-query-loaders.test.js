@@ -154,6 +154,61 @@ test("getSiblingBlockGroupArray groups immediate previous and next siblings by p
   ]);
 });
 
+test("getSiblingBlockGroupArray keeps ordinary block neighbors in the actual parent order when sorts are identical", async () => {
+  const result = await getSiblingBlockGroupArray(
+    {
+      backlinkBlocks: [{ id: "block-focus", parent_id: "doc-a" }],
+    },
+    {
+      generateGetBacklinkSiblingBlockArraySql: () => "SIBLING_SQL",
+      sql: async () => [
+        { id: "block-tail", parent_id: "doc-a", sort: 10, path: "/same", type: "p" },
+        { id: "block-intro", parent_id: "doc-a", sort: 10, path: "/same", type: "p" },
+        { id: "block-focus", parent_id: "doc-a", sort: 10, path: "/same", type: "p" },
+        { id: "block-meta", parent_id: "doc-a", sort: 10, path: "/same", type: "p" },
+      ],
+      getChildBlocks: async () => [
+        { id: "block-intro" },
+        { id: "block-focus" },
+        { id: "block-meta" },
+        { id: "block-tail" },
+      ],
+      isArrayEmpty: (value) => !value || value.length === 0,
+      isStrNotBlank: (value) => value !== "",
+    },
+  );
+
+  assert.deepEqual(result, [
+    {
+      backlinkBlockId: "block-focus",
+      currentSiblingBlock: {
+        id: "block-focus",
+        parent_id: "doc-a",
+        sort: 10,
+        path: "/same",
+        type: "p",
+      },
+      previousSiblingBlock: {
+        id: "block-intro",
+        parent_id: "doc-a",
+        sort: 10,
+        path: "/same",
+        type: "p",
+      },
+      nextSiblingBlock: {
+        id: "block-meta",
+        parent_id: "doc-a",
+        sort: 10,
+        path: "/same",
+        type: "p",
+      },
+      beforeSiblingBlocks: [],
+      afterSiblingBlocks: [{ id: "block-tail", parent_id: "doc-a", sort: 10, path: "/same", type: "p" }],
+      expandedSiblingBlocks: [{ id: "block-tail", parent_id: "doc-a", sort: 10, path: "/same", type: "p" }],
+    },
+  ]);
+});
+
 test("getSiblingBlockGroupArray uses sibling list items when backlink block is inside a list item", async () => {
   const result = await getSiblingBlockGroupArray(
     {

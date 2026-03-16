@@ -232,9 +232,6 @@ async function getSiblingOrderMapByParentId(parentSiblingMap = new Map(), deps =
       if (!parentId || !Array.isArray(siblingList) || siblingList.length <= 0) {
         return;
       }
-      if (!siblingList.every((block) => block?.type === "i")) {
-        return;
-      }
 
       const childBlocks = await getChildBlocks(parentId);
       if (!Array.isArray(childBlocks) || childBlocks.length <= 0) {

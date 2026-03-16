@@ -89,6 +89,7 @@ import {
 } from "./backlink-document-view-state.js";
 import { sanitizeBacklinkKeywords } from "./backlink-panel-formatting.js";
 import { mergeTurnPageBacklinkPanelRenderData } from "./backlink-panel-render-data.js";
+import { resolveBacklinkPanelRefreshRootId } from "./backlink-panel-refresh.js";
 
 export function createBacklinkPanelController(state) {
   let preClickOpenArea = "focus";
@@ -799,6 +800,22 @@ export function createBacklinkPanelController(state) {
     initBaseData();
   }
 
+  function refreshBacklinkPanelToCurrentMainDocument() {
+    const nextRootId = resolveBacklinkPanelRefreshRootId({
+      currentTab: state.currentTab,
+      fallbackRootId: state.rootId,
+      fallbackLastViewedDocId: EnvConfig.ins.lastViewedDocId,
+    });
+    if (!nextRootId) {
+      return;
+    }
+
+    state.rootId = nextRootId;
+    state.focusBlockId = null;
+    CacheManager.ins.deleteBacklinkPanelAllCache(nextRootId);
+    initBaseData();
+  }
+
   function resetFilterQueryParametersToDefault() {
     const defaultQueryParams =
       BacklinkFilterPanelAttributeService.ins.getDefaultQueryParams();
@@ -956,6 +973,7 @@ export function createBacklinkPanelController(state) {
     collapseAllBacklinkListItemNode,
     resetFilterQueryParametersToDefault,
     resetBacklinkQueryParametersToDefault,
+    refreshBacklinkPanelToCurrentMainDocument,
     handleRelatedDefBlockClick,
     handleRelatedDefBlockContextmenu,
     handleRelatedDocBlockClick,

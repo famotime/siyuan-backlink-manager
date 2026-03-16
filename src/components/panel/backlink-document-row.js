@@ -25,8 +25,6 @@ function normalizeBacklinkContextControlState(contextControlState = {}) {
   return {
     contextVisibilityLevel,
     levelLabel: getBacklinkContextLevelLabel(contextVisibilityLevel),
-    nextActionText: contextControlState.nextActionText || "",
-    visibleSourceSummary: contextControlState.visibleSourceSummary || "",
     budgetHint: contextControlState.budgetHint || "",
   };
 }
@@ -64,8 +62,6 @@ function buildBacklinkContextControlRowHtml(contextControlState = {}) {
 <button type="button" class="block__icon ariaLabel backlink-context-step-button next" aria-label="切换到下一个上下文层级">
 <svg><use xlink:href="#iconRight"></use></svg>
 </button>
-<span class="b3-list-item__meta backlink-context-next-action">${normalizedState.nextActionText}</span>
-<span class="b3-list-item__meta backlink-context-visible-summary">${normalizedState.visibleSourceSummary}</span>
 <span class="b3-list-item__meta backlink-context-budget-hint">${normalizedState.budgetHint}</span>
 </div>`;
 }
@@ -115,12 +111,6 @@ function updateBacklinkContextControlRow(
   const stateGroupElement = documentLiElement.querySelector(
     ".backlink-context-state-group",
   );
-  const nextActionElement = documentLiElement.querySelector(
-    ".backlink-context-next-action",
-  );
-  const visibleSummaryElement = documentLiElement.querySelector(
-    ".backlink-context-visible-summary",
-  );
   const budgetHintElement = documentLiElement.querySelector(
     ".backlink-context-budget-hint",
   );
@@ -144,12 +134,6 @@ function updateBacklinkContextControlRow(
     stateGroupElement.innerHTML = buildBacklinkContextStateGroupHtml(
       normalizedState.contextVisibilityLevel,
     );
-  }
-  if (nextActionElement) {
-    nextActionElement.textContent = normalizedState.nextActionText;
-  }
-  if (visibleSummaryElement) {
-    visibleSummaryElement.textContent = normalizedState.visibleSourceSummary;
   }
   if (budgetHintElement) {
     budgetHintElement.textContent = normalizedState.budgetHint;

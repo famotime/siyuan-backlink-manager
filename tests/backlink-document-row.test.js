@@ -43,10 +43,8 @@ test("buildBacklinkDocumentListItemHtml renders title aria text and progress tex
     html,
     /backlink-chip backlink-chip--flat backlink-context-state active/,
   );
-  assert.match(html, /backlink-context-next-action/);
-  assert.match(html, /下一步：近邻/);
-  assert.match(html, /backlink-context-visible-summary/);
-  assert.match(html, /已显示：反链块/);
+  assert.doesNotMatch(html, /backlink-context-next-action/);
+  assert.doesNotMatch(html, /backlink-context-visible-summary/);
   assert.match(html, /backlink-context-budget-hint/);
   assert.match(html, /部分上下文已裁剪/);
 });
@@ -82,8 +80,6 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and 
     },
   };
   const stateGroupElement = { innerHTML: "" };
-  const nextActionElement = { textContent: "" };
-  const visibleSummaryElement = { textContent: "" };
   const budgetHintElement = { textContent: "" };
   const documentLiElement = {
     attrs: {},
@@ -101,8 +97,6 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and 
       if (selector === ".backlink-context-step-button.previous") return previousContextButton;
       if (selector === ".backlink-context-step-button.next") return nextContextButton;
       if (selector === ".backlink-context-state-group") return stateGroupElement;
-      if (selector === ".backlink-context-next-action") return nextActionElement;
-      if (selector === ".backlink-context-visible-summary") return visibleSummaryElement;
       if (selector === ".backlink-context-budget-hint") return budgetHintElement;
       return null;
     },
@@ -153,8 +147,6 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and 
     /backlink-chip backlink-chip--flat backlink-context-state active/,
   );
   assert.match(stateGroupElement.innerHTML, /近邻/);
-  assert.equal(nextActionElement.textContent, "下一步：扩展");
-  assert.equal(visibleSummaryElement.textContent, "已显示：父级、前相邻块");
   assert.equal(budgetHintElement.textContent, "部分上下文已裁剪，继续展开查看更多");
   assert.equal(previousButton.disabled, false);
   assert.equal(nextButton.disabled, false);

@@ -264,8 +264,6 @@
     border-color: var(--backlink-chip-primary-border);
 }
 
-.backlink-panel__area .backlink-context-next-action,
-.backlink-panel__area .backlink-context-visible-summary,
 .backlink-panel__area .backlink-context-budget-hint {
     display: inline-flex;
     align-items: center;
@@ -277,18 +275,8 @@
     font-size: 11px;
 }
 
-.backlink-panel__area .backlink-context-next-action:empty,
-.backlink-panel__area .backlink-context-visible-summary:empty,
 .backlink-panel__area .backlink-context-budget-hint:empty {
     display: none;
-}
-
-.backlink-panel__area .backlink-context-next-action {
-    color: var(--b3-theme-primary);
-}
-
-.backlink-panel__area .backlink-context-visible-summary {
-    color: var(--b3-theme-on-surface-light);
 }
 
 .backlink-panel__area .backlink-context-budget-hint {

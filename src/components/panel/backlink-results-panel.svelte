@@ -18,6 +18,7 @@
     export let hideBacklinkProtyleBreadcrumb = false;
     export let backlinkULElement;
     export let resetBacklinkQueryParametersToDefault;
+    export let refreshBacklinkPanelToCurrentMainDocument;
     export let updateRenderData;
     export let handleBacklinkKeywordInput;
     export let expandAllBacklinkDocument;
@@ -41,6 +42,13 @@
             <svg class="block__logoicon"><use xlink:href="#iconLink"></use></svg>反向链接
         </div>
         <span class="fn__flex-1"></span>
+        <span class="fn__space"></span>
+        <span
+            class="block__icon b3-tooltips b3-tooltips__sw"
+            aria-label="刷新反链"
+            on:click|stopPropagation={refreshBacklinkPanelToCurrentMainDocument}
+            on:keydown={handleKeyDownDefault}
+        ><svg><use xlink:href="#iconRefresh"></use></svg></span>
         <span class="fn__space"></span>
         <span
             class="block__icon b3-tooltips b3-tooltips__sw"

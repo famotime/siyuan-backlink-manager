@@ -55,8 +55,14 @@
         get rootId() {
             return rootId;
         },
+        set rootId(value) {
+            rootId = value;
+        },
         get focusBlockId() {
             return focusBlockId;
+        },
+        set focusBlockId(value) {
+            focusBlockId = value;
         },
         get currentTab() {
             return currentTab;
@@ -339,6 +345,7 @@
         {displayHintBacklinkBlockCacheUsage}
         {hideBacklinkProtyleBreadcrumb}
         resetBacklinkQueryParametersToDefault={controller.resetBacklinkQueryParametersToDefault}
+        refreshBacklinkPanelToCurrentMainDocument={controller.refreshBacklinkPanelToCurrentMainDocument}
         updateRenderData={controller.updateRenderData}
         handleBacklinkKeywordInput={controller.handleBacklinkKeywordInput}
         expandAllBacklinkDocument={controller.expandAllBacklinkDocument}

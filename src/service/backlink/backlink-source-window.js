@@ -536,7 +536,11 @@ function buildNearbyBacklinkSourceWindow(backlinkBlockNode, context) {
           backlinkBlockNode.block.id,
           ...resolveReadableListItemShellBlockIds(endBlockId, context),
         ])
-      : [],
+      : dedupeBlockIdArray([
+          startBlockId,
+          backlinkBlockNode.block.id,
+          endBlockId,
+        ]),
     renderMode: isListItemContext ? "document" : "scroll",
   });
 }

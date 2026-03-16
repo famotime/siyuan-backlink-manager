@@ -261,8 +261,46 @@ test("buildBacklinkSourceWindow keeps nearby mode on the surrounding original pa
     sourceDocumentOrder: 3,
     windowBlockIds: ["block-toolkit", "block-example", "block-after"],
     defaultExpandMode: "document_local_full",
+    visibleBlockIds: ["block-toolkit", "block-example", "block-after"],
     renderMode: "scroll",
   });
+});
+
+test("buildBacklinkSourceWindow keeps nearby mode on the adjacent blocks for ordinary backlinks without expanding their heading sections", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "heading-alpha", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "block-before", type: "p", parent_id: "doc-a" },
+    { id: "heading-beta", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "block-focus", type: "p", parent_id: "doc-a" },
+    { id: "heading-gamma", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "block-after", type: "p", parent_id: "doc-a" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "block-focus",
+        root_id: "doc-a",
+        parent_id: "doc-a",
+        type: "p",
+      },
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "nearby",
+  });
+
+  assert.deepEqual(sourceWindow.windowBlockIds, [
+    "heading-beta",
+    "block-focus",
+    "heading-gamma",
+  ]);
+  assert.deepEqual(sourceWindow.visibleBlockIds, [
+    "heading-beta",
+    "block-focus",
+    "heading-gamma",
+  ]);
+  assert.equal(sourceWindow.startBlockId, "heading-beta");
+  assert.equal(sourceWindow.endBlockId, "heading-gamma");
 });
 
 test("buildBacklinkSourceWindow keeps nearby mode on the paragraph before and after a heading backlink block", () => {

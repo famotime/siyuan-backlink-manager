@@ -162,6 +162,37 @@ test("buildBacklinkSourceWindow uses the nearest top-level structural container 
   assert.equal(sourceWindow.endBlockId, "item-b");
 });
 
+test("buildBacklinkSourceWindow uses the document preface before the first heading for ordinary blocks without a heading section", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "intro-a", type: "p", parent_id: "doc-a" },
+    { id: "intro-focus", type: "p", parent_id: "doc-a" },
+    { id: "intro-b", type: "p", parent_id: "doc-a" },
+    { id: "heading-h2", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "body-a", type: "p", parent_id: "doc-a" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "intro-focus",
+        root_id: "doc-a",
+        parent_id: "doc-a",
+        type: "p",
+      },
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "extended",
+  });
+
+  assert.deepEqual(sourceWindow.windowBlockIds, [
+    "intro-a",
+    "intro-focus",
+    "intro-b",
+  ]);
+  assert.equal(sourceWindow.startBlockId, "intro-a");
+  assert.equal(sourceWindow.endBlockId, "intro-b");
+});
+
 test("buildBacklinkSourceWindow keeps core mode on the original paragraph block", () => {
   const orderedBlocks = createDocumentBlocks([
     { id: "heading-skills", type: "h", subtype: "h2", parent_id: "doc-a" },

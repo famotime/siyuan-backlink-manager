@@ -316,6 +316,15 @@ function findSectionEndIndexByHeadingStart(startIndex, orderedDocumentBlocks = [
   return orderedDocumentBlocks.length - 1;
 }
 
+function findFirstHeadingIndex(orderedDocumentBlocks = []) {
+  for (let currentIndex = 0; currentIndex < orderedDocumentBlocks.length; currentIndex += 1) {
+    if (orderedDocumentBlocks[currentIndex]?.type === "h") {
+      return currentIndex;
+    }
+  }
+  return -1;
+}
+
 function isStructuralContainerBlock(block = {}) {
   return block?.type === "l" || block?.type === "i";
 }
@@ -567,7 +576,11 @@ function buildExtendedBacklinkSourceWindow(backlinkBlockNode, context) {
       safeEndIndex = findBlockSubtreeEndIndex(safeStartIndex, context);
     } else {
       safeStartIndex = 0;
-      safeEndIndex = context.orderedDocumentBlocks.length - 1;
+      const firstHeadingIndex = findFirstHeadingIndex(context.orderedDocumentBlocks);
+      safeEndIndex =
+        firstHeadingIndex > 0
+          ? firstHeadingIndex - 1
+          : context.orderedDocumentBlocks.length - 1;
     }
   }
 

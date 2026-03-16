@@ -548,6 +548,38 @@ function buildExtendedBacklinkSourceWindow(backlinkBlockNode, context) {
     return null;
   }
 
+  const focusBlock = context.blockById.get(focusBlockId);
+  if (focusBlock?.type === "h") {
+    const previousIndex = focusIndex - 1;
+    let safeStartIndex = focusIndex;
+    if (previousIndex >= 0) {
+      const previousSectionHeadingStartIndex = findContainingHeadingStartIndex(
+        previousIndex,
+        context.orderedDocumentBlocks,
+      );
+      safeStartIndex =
+        previousSectionHeadingStartIndex >= 0
+          ? previousSectionHeadingStartIndex
+          : 0;
+    }
+    const safeEndIndex = Math.max(
+      focusIndex,
+      findSectionEndIndexByHeadingStart(
+        focusIndex,
+        context.orderedDocumentBlocks,
+      ),
+    );
+
+    return buildSourceWindowFromRange({
+      backlinkBlockNode,
+      context,
+      anchorBlockId: focusBlockId,
+      startIndex: safeStartIndex,
+      endIndex: safeEndIndex,
+      renderMode: "scroll",
+    });
+  }
+
   const sectionHeadingStartIndex = findContainingHeadingStartIndex(
     focusIndex,
     context.orderedDocumentBlocks,

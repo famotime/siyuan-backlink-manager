@@ -265,6 +265,74 @@ test("buildBacklinkSourceWindow keeps nearby mode on the surrounding original pa
   });
 });
 
+test("buildBacklinkSourceWindow keeps nearby mode on the paragraph before and after a heading backlink block", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "heading-prev", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "block-before-heading", type: "p", parent_id: "doc-a" },
+    { id: "heading-focus", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "block-after-heading", type: "p", parent_id: "doc-a" },
+    { id: "block-tail", type: "p", parent_id: "doc-a" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "heading-focus",
+        root_id: "doc-a",
+        parent_id: "doc-a",
+        type: "h",
+      },
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "nearby",
+  });
+
+  assert.deepEqual(sourceWindow.windowBlockIds, [
+    "block-before-heading",
+    "heading-focus",
+    "block-after-heading",
+  ]);
+  assert.equal(sourceWindow.startBlockId, "block-before-heading");
+  assert.equal(sourceWindow.endBlockId, "block-after-heading");
+});
+
+test("buildBacklinkSourceWindow extends heading backlinks from the previous paragraph section through the current heading section", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "heading-prev", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "block-before-heading", type: "p", parent_id: "doc-a" },
+    { id: "heading-focus", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "block-after-heading", type: "p", parent_id: "doc-a" },
+    { id: "heading-nested", type: "h", subtype: "h3", parent_id: "doc-a" },
+    { id: "block-nested", type: "p", parent_id: "doc-a" },
+    { id: "heading-next", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "block-tail", type: "p", parent_id: "doc-a" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "heading-focus",
+        root_id: "doc-a",
+        parent_id: "doc-a",
+        type: "h",
+      },
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "extended",
+  });
+
+  assert.deepEqual(sourceWindow.windowBlockIds, [
+    "heading-prev",
+    "block-before-heading",
+    "heading-focus",
+    "block-after-heading",
+    "heading-nested",
+    "block-nested",
+  ]);
+  assert.equal(sourceWindow.startBlockId, "heading-prev");
+  assert.equal(sourceWindow.endBlockId, "block-nested");
+});
+
 test("buildBacklinkSourceWindow keeps nearby mode on sibling list items and adds explicit shell visibility metadata", () => {
   const orderedBlocks = createDocumentBlocks([
     { id: "heading-skills", type: "h", subtype: "h2", parent_id: "doc-a" },

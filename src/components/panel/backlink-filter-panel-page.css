@@ -248,9 +248,9 @@
     appearance: none;
     cursor: pointer;
     font: inherit;
-    height: 18px;
-    min-height: 16px;
-    padding: 3px 6px;
+    height: 14px;
+    min-height: 14px;
+    padding: 0 3px;
     line-height: 1;
     font-size: 12px;
     color: var(--b3-theme-on-surface-light);
@@ -262,6 +262,37 @@
     color: var(--b3-theme-primary);
     background: var(--backlink-chip-primary-surface);
     border-color: var(--backlink-chip-primary-border);
+}
+
+.backlink-panel__area .backlink-context-next-action,
+.backlink-panel__area .backlink-context-visible-summary,
+.backlink-panel__area .backlink-context-budget-hint {
+    display: inline-flex;
+    align-items: center;
+    max-width: 16em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+    font-size: 11px;
+}
+
+.backlink-panel__area .backlink-context-next-action:empty,
+.backlink-panel__area .backlink-context-visible-summary:empty,
+.backlink-panel__area .backlink-context-budget-hint:empty {
+    display: none;
+}
+
+.backlink-panel__area .backlink-context-next-action {
+    color: var(--b3-theme-primary);
+}
+
+.backlink-panel__area .backlink-context-visible-summary {
+    color: var(--b3-theme-on-surface-light);
+}
+
+.backlink-panel__area .backlink-context-budget-hint {
+    color: var(--b3-theme-warning);
 }
 
 .backlink-panel__area .backlink-saved-criteria-tag {

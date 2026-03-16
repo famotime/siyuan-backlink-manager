@@ -2,7 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildBacklinkContextControlState,
   buildBacklinkPaginationState,
+  getBacklinkContextLevelLabel,
   getBacklinkSummaryText,
 } from "../src/components/panel/backlink-panel-header.js";
 
@@ -73,5 +75,65 @@ test("falls back to backlink block summary text when document copy is missing", 
       2,
     ),
     "Found 2 backlink blocks",
+  );
+});
+
+test("returns the localized label for each backlink context level", () => {
+  assert.equal(getBacklinkContextLevelLabel("core"), "核心");
+  assert.equal(getBacklinkContextLevelLabel("nearby"), "近邻");
+  assert.equal(getBacklinkContextLevelLabel("extended"), "扩展");
+  assert.equal(getBacklinkContextLevelLabel("full"), "全文");
+  assert.equal(getBacklinkContextLevelLabel("unknown"), "核心");
+});
+
+test("buildBacklinkContextControlState summarizes the current level and the next action", () => {
+  assert.deepEqual(
+    buildBacklinkContextControlState({
+      contextVisibilityLevel: "nearby",
+      activeBacklink: {
+        contextBundle: {
+          visibleFragments: [
+            { sourceType: "self", visibilityLevel: "core" },
+            { sourceType: "parent", visibilityLevel: "nearby" },
+            { sourceType: "sibling_prev", visibilityLevel: "nearby" },
+          ],
+          budgetSummary: {
+            truncated: true,
+          },
+        },
+      },
+    }),
+    {
+      contextVisibilityLevel: "nearby",
+      levelLabel: "近邻",
+      nextLevelLabel: "扩展",
+      nextActionText: "下一步：扩展",
+      visibleSourceSummary: "已显示：父级、前相邻块",
+      budgetHint: "部分上下文已裁剪，继续展开查看更多",
+    },
+  );
+});
+
+test("buildBacklinkContextControlState hides the next action once full mode is reached", () => {
+  assert.deepEqual(
+    buildBacklinkContextControlState({
+      contextVisibilityLevel: "full",
+      activeBacklink: {
+        contextBundle: {
+          visibleFragments: [],
+          budgetSummary: {
+            truncated: true,
+          },
+        },
+      },
+    }),
+    {
+      contextVisibilityLevel: "full",
+      levelLabel: "全文",
+      nextLevelLabel: "全文",
+      nextActionText: "",
+      visibleSourceSummary: "已进入全文模式",
+      budgetHint: "",
+    },
   );
 });

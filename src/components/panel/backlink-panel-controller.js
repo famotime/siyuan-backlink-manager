@@ -52,7 +52,6 @@ import {
 } from "./backlink-document-open-target.js";
 import {
   createBacklinkDocumentListItemElement,
-  getBacklinkContextLevelLabel,
   updateBacklinkDocumentLiNavigation,
 } from "./backlink-document-row.js";
 import {
@@ -72,6 +71,7 @@ import {
   syncBacklinkDocumentProtyleState,
 } from "./backlink-protyle-rendering.js";
 import {
+  buildBacklinkContextControlState,
   applySavedPanelCriteria,
   clonePanelQueryParamsForSave,
   resetBacklinkQueryParameters,
@@ -450,12 +450,10 @@ export function createBacklinkPanelController(state) {
       state.backlinkDocumentViewState,
       documentGroup?.documentId,
     );
-    const contextVisibilityLevel = renderState.contextVisibilityLevel;
-
-    return {
-      contextVisibilityLevel,
-      levelLabel: getBacklinkContextLevelLabel(contextVisibilityLevel),
-    };
+    return buildBacklinkContextControlState({
+      contextVisibilityLevel: renderState.contextVisibilityLevel,
+      activeBacklink: documentGroup?.activeBacklink || null,
+    });
   }
 
   function clearBacklinkProtyleList() {

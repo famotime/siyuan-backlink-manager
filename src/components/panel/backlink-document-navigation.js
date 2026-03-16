@@ -14,6 +14,19 @@ function normalizeActiveIndex(index, totalCount) {
   return index;
 }
 
+function getBacklinkSourceDocumentOrder(backlinkData = null) {
+  if (Number.isFinite(backlinkData?.sourceDocumentOrder)) {
+    return backlinkData.sourceDocumentOrder;
+  }
+
+  const sourceWindowOrder = backlinkData?.sourceWindows?.core?.sourceDocumentOrder;
+  if (Number.isFinite(sourceWindowOrder)) {
+    return sourceWindowOrder;
+  }
+
+  return Number.POSITIVE_INFINITY;
+}
+
 export function getCyclicBacklinkIndex(totalCount, currentIndex, direction) {
   if (totalCount <= 1) {
     return 0;
@@ -59,6 +72,22 @@ export function groupBacklinksByDocument(
   }
 
   return documentGroups.map((group) => {
+    group.backlinks = group.backlinks
+      .map((backlink, index) => ({
+        backlink,
+        index,
+      }))
+      .sort((itemA, itemB) => {
+        const sourceOrderResult =
+          getBacklinkSourceDocumentOrder(itemA.backlink) -
+          getBacklinkSourceDocumentOrder(itemB.backlink);
+        if (sourceOrderResult !== 0) {
+          return sourceOrderResult;
+        }
+        return itemA.index - itemB.index;
+      })
+      .map((item) => item.backlink);
+
     const activeIndex = normalizeActiveIndex(
       activeIndexByDocument.get(group.documentId),
       group.backlinks.length,

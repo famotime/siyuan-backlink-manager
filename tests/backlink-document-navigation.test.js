@@ -57,3 +57,30 @@ test("cycles next and previous navigation indexes within a document group", () =
   assert.equal(getCyclicBacklinkIndex(3, 0, "previous"), 2);
   assert.equal(getCyclicBacklinkIndex(1, 0, "next"), 0);
 });
+
+test("sorts backlinks within the same document by source document order before cycling", () => {
+  const backlinkDocumentArray = [{ id: "doc-a", content: "Alpha" }];
+  const backlinkDataArray = [
+    {
+      backlinkBlock: { id: "a-3", root_id: "doc-a", content: "Alpha ref 3", box: "box-a" },
+      sourceDocumentOrder: 30,
+    },
+    {
+      backlinkBlock: { id: "a-1", root_id: "doc-a", content: "Alpha ref 1", box: "box-a" },
+      sourceDocumentOrder: 10,
+    },
+    {
+      backlinkBlock: { id: "a-2", root_id: "doc-a", content: "Alpha ref 2", box: "box-a" },
+      sourceDocumentOrder: 20,
+    },
+  ];
+
+  const groups = groupBacklinksByDocument(backlinkDocumentArray, backlinkDataArray);
+
+  assert.deepEqual(
+    groups[0].backlinks.map((backlink) => backlink.backlinkBlock.id),
+    ["a-1", "a-2", "a-3"],
+  );
+  assert.equal(groups[0].activeBacklink.backlinkBlock.id, "a-1");
+  assert.equal(getCyclicBacklinkIndex(groups[0].backlinks.length, groups[0].activeIndex, "next"), 1);
+});

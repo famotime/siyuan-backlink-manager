@@ -440,6 +440,7 @@ function buildSourceWindowFromRange({
     startBlockId: startBlockId || windowBlockIds[0],
     endBlockId: endBlockId || windowBlockIds[windowBlockIds.length - 1],
     focusBlockId: backlinkBlockNode.block.id,
+    sourceDocumentOrder: context.indexById.get(backlinkBlockNode.block.id),
     windowBlockIds,
     defaultExpandMode: "document_local_full",
   };
@@ -658,6 +659,8 @@ export function attachBacklinkSourceWindows({
 
     backlinkData.sourceWindows = backlinkBlockNode.sourceWindows;
     backlinkData.sourceWindow = backlinkBlockNode.sourceWindow;
+    backlinkData.sourceDocumentOrder =
+      backlinkBlockNode.sourceWindows?.core?.sourceDocumentOrder;
   }
 
   return backlinkDataArray;

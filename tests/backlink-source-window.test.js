@@ -50,6 +50,7 @@ test("buildBacklinkSourceWindow uses the nearest heading section around the back
     startBlockId: "heading-prev",
     endBlockId: "item-title",
     focusBlockId: "block-brand",
+    sourceDocumentOrder: 5,
     windowBlockIds: [
       "heading-prev",
       "item-expand",
@@ -189,6 +190,7 @@ test("buildBacklinkSourceWindow keeps core mode on the original paragraph block"
     startBlockId: "block-official",
     endBlockId: "block-official",
     focusBlockId: "block-official",
+    sourceDocumentOrder: 2,
     windowBlockIds: ["block-official"],
     defaultExpandMode: "document_local_full",
     renderMode: "scroll",
@@ -225,6 +227,7 @@ test("buildBacklinkSourceWindow keeps nearby mode on the surrounding original pa
     startBlockId: "block-toolkit",
     endBlockId: "block-after",
     focusBlockId: "block-example",
+    sourceDocumentOrder: 3,
     windowBlockIds: ["block-toolkit", "block-example", "block-after"],
     defaultExpandMode: "document_local_full",
     renderMode: "scroll",
@@ -268,6 +271,7 @@ test("buildBacklinkSourceWindow keeps nearby mode on sibling list items and adds
     startBlockId: "item-nearby",
     endBlockId: "block-logo",
     focusBlockId: "block-brand",
+    sourceDocumentOrder: 6,
     windowBlockIds: [
       "item-nearby",
       "item-brand",

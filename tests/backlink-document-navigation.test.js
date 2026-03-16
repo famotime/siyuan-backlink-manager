@@ -33,6 +33,24 @@ test("groups backlinks by document and defaults to the first backlink in each gr
   );
 });
 
+test("keeps document group order aligned with backlinkDocumentArray instead of first backlink occurrence", () => {
+  const backlinkDocumentArray = [
+    { id: "doc-b", content: "Beta" },
+    { id: "doc-a", content: "Alpha" },
+  ];
+  const backlinkDataArray = [
+    { backlinkBlock: { id: "a-1", root_id: "doc-a", content: "Alpha ref 1", box: "box-a" } },
+    { backlinkBlock: { id: "b-1", root_id: "doc-b", content: "Beta ref 1", box: "box-b" } },
+  ];
+
+  const groups = groupBacklinksByDocument(backlinkDocumentArray, backlinkDataArray);
+
+  assert.deepEqual(
+    groups.map((group) => group.documentId),
+    ["doc-b", "doc-a"],
+  );
+});
+
 test("uses saved active indexes when rebuilding document groups", () => {
   const backlinkDocumentArray = [{ id: "doc-a", content: "Alpha" }];
   const backlinkDataArray = [
@@ -83,4 +101,48 @@ test("sorts backlinks within the same document by source document order before c
   );
   assert.equal(groups[0].activeBacklink.backlinkBlock.id, "a-1");
   assert.equal(getCyclicBacklinkIndex(groups[0].backlinks.length, groups[0].activeIndex, "next"), 1);
+});
+
+test("sorts backlinks within the same document by block document order when sourceDocumentOrder is missing", () => {
+  const backlinkDocumentArray = [{ id: "doc-a", content: "Alpha" }];
+  const backlinkDataArray = [
+    {
+      backlinkBlock: {
+        id: "a-3",
+        root_id: "doc-a",
+        content: "Alpha ref 3",
+        box: "box-a",
+        sort: 30,
+        path: "/doc-a/3",
+      },
+    },
+    {
+      backlinkBlock: {
+        id: "a-1",
+        root_id: "doc-a",
+        content: "Alpha ref 1",
+        box: "box-a",
+        sort: 10,
+        path: "/doc-a/1",
+      },
+    },
+    {
+      backlinkBlock: {
+        id: "a-2",
+        root_id: "doc-a",
+        content: "Alpha ref 2",
+        box: "box-a",
+        sort: 20,
+        path: "/doc-a/2",
+      },
+    },
+  ];
+
+  const groups = groupBacklinksByDocument(backlinkDocumentArray, backlinkDataArray);
+
+  assert.deepEqual(
+    groups[0].backlinks.map((backlink) => backlink.backlinkBlock.id),
+    ["a-1", "a-2", "a-3"],
+  );
+  assert.equal(groups[0].activeBacklink.backlinkBlock.id, "a-1");
 });

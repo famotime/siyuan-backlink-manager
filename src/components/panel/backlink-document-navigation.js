@@ -41,15 +41,6 @@ function compareByOptionalNumber(valueA, valueB) {
   return 0;
 }
 
-function getBacklinkBlockSortValue(backlinkData = null) {
-  const sortValue = Number(backlinkData?.backlinkBlock?.sort);
-  return Number.isFinite(sortValue) ? sortValue : Number.POSITIVE_INFINITY;
-}
-
-function getBacklinkBlockPath(backlinkData = null) {
-  return String(backlinkData?.backlinkBlock?.path || "");
-}
-
 export function getCyclicBacklinkIndex(totalCount, currentIndex, direction) {
   if (totalCount <= 1) {
     return 0;
@@ -116,21 +107,6 @@ export function groupBacklinksByDocument(
         index,
       }))
       .sort((itemA, itemB) => {
-        const blockSortResult = compareByOptionalNumber(
-          getBacklinkBlockSortValue(itemA.backlink),
-          getBacklinkBlockSortValue(itemB.backlink),
-        );
-        if (blockSortResult !== 0) {
-          return blockSortResult;
-        }
-
-        const pathResult = getBacklinkBlockPath(itemA.backlink).localeCompare(
-          getBacklinkBlockPath(itemB.backlink),
-        );
-        if (pathResult !== 0) {
-          return pathResult;
-        }
-
         const sourceOrderResult = compareByOptionalNumber(
           getBacklinkSourceDocumentOrder(itemA.backlink),
           getBacklinkSourceDocumentOrder(itemB.backlink),

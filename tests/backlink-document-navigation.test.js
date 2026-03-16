@@ -103,7 +103,7 @@ test("falls back to sourceDocumentOrder when block document order fields are una
   assert.equal(getCyclicBacklinkIndex(groups[0].backlinks.length, groups[0].activeIndex, "next"), 1);
 });
 
-test("sorts backlinks within the same document by block document order before stale sourceDocumentOrder", () => {
+test("keeps sourceDocumentOrder ahead of block metadata order", () => {
   const backlinkDocumentArray = [{ id: "doc-a", content: "Alpha" }];
   const backlinkDataArray = [
     {
@@ -115,7 +115,7 @@ test("sorts backlinks within the same document by block document order before st
         sort: 30,
         path: "/doc-a/3",
       },
-      sourceDocumentOrder: 1,
+      sourceDocumentOrder: 30,
     },
     {
       backlinkBlock: {
@@ -126,7 +126,7 @@ test("sorts backlinks within the same document by block document order before st
         sort: 10,
         path: "/doc-a/1",
       },
-      sourceDocumentOrder: 99,
+      sourceDocumentOrder: 10,
     },
     {
       backlinkBlock: {
@@ -137,7 +137,7 @@ test("sorts backlinks within the same document by block document order before st
         sort: 20,
         path: "/doc-a/2",
       },
-      sourceDocumentOrder: 50,
+      sourceDocumentOrder: 20,
     },
   ];
 
@@ -150,7 +150,7 @@ test("sorts backlinks within the same document by block document order before st
   assert.equal(groups[0].activeBacklink.backlinkBlock.id, "a-1");
 });
 
-test("sorts backlinks within the same document by block document order when sourceDocumentOrder is missing", () => {
+test("keeps original api order when sourceDocumentOrder is missing", () => {
   const backlinkDocumentArray = [{ id: "doc-a", content: "Alpha" }];
   const backlinkDataArray = [
     {
@@ -189,7 +189,57 @@ test("sorts backlinks within the same document by block document order when sour
 
   assert.deepEqual(
     groups[0].backlinks.map((backlink) => backlink.backlinkBlock.id),
-    ["a-1", "a-2", "a-3"],
+    ["a-3", "a-1", "a-2"],
   );
-  assert.equal(groups[0].activeBacklink.backlinkBlock.id, "a-1");
+  assert.equal(groups[0].activeBacklink.backlinkBlock.id, "a-3");
+});
+
+test("sorts heading backlinks by sourceDocumentOrder instead of heading metadata priority", () => {
+  const backlinkDocumentArray = [{ id: "doc-a", content: "Alpha" }];
+  const backlinkDataArray = [
+    {
+      backlinkBlock: {
+        id: "heading-late",
+        root_id: "doc-a",
+        content: "## Late heading",
+        box: "box-a",
+        type: "h",
+        sort: 1,
+        path: "/doc-a/heading-late",
+      },
+      sourceDocumentOrder: 40,
+    },
+    {
+      backlinkBlock: {
+        id: "para-middle",
+        root_id: "doc-a",
+        content: "middle paragraph",
+        box: "box-a",
+        type: "p",
+        sort: 999,
+        path: "/doc-a/para-middle",
+      },
+      sourceDocumentOrder: 20,
+    },
+    {
+      backlinkBlock: {
+        id: "heading-early",
+        root_id: "doc-a",
+        content: "## Early heading",
+        box: "box-a",
+        type: "h",
+        sort: 2,
+        path: "/doc-a/heading-early",
+      },
+      sourceDocumentOrder: 10,
+    },
+  ];
+
+  const groups = groupBacklinksByDocument(backlinkDocumentArray, backlinkDataArray);
+
+  assert.deepEqual(
+    groups[0].backlinks.map((backlink) => backlink.backlinkBlock.id),
+    ["heading-early", "para-middle", "heading-late"],
+  );
+  assert.equal(groups[0].activeBacklink.backlinkBlock.id, "heading-early");
 });

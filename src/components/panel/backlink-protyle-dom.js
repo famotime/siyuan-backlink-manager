@@ -308,6 +308,55 @@ function collectVisibleBlockIdsWithDescendants(
   return expandedVisibleBlockIdSet;
 }
 
+function collectVisibleBlockIdsFromExpandedListShells(
+  sourceWindow = null,
+  blockElementArray = [],
+) {
+  const visibleBlockIds = Array.isArray(sourceWindow?.visibleBlockIds)
+    ? sourceWindow.visibleBlockIds
+    : [];
+  const windowBlockIdSet = new Set(
+    Array.isArray(sourceWindow?.windowBlockIds) ? sourceWindow.windowBlockIds : [],
+  );
+  if (visibleBlockIds.length <= 0 || windowBlockIdSet.size <= 0) {
+    return new Set();
+  }
+
+  const blockElementMap = new Map();
+  for (const blockElement of blockElementArray) {
+    const blockId = blockElement?.getAttribute?.("data-node-id");
+    if (!blockId) {
+      continue;
+    }
+    blockElementMap.set(blockId, blockElement);
+  }
+
+  const expandedVisibleBlockIdSet = new Set();
+  for (const blockId of visibleBlockIds) {
+    const blockElement = blockElementMap.get(blockId);
+    const blockType = blockElement?.getAttribute?.("data-type");
+    if (
+      !blockElement ||
+      (blockType !== "NodeListItem" && blockType !== "NodeList") ||
+      blockElement?.getAttribute?.("fold") === "1"
+    ) {
+      continue;
+    }
+
+    const descendantBlockElements =
+      blockElement.querySelectorAll?.("[data-node-id]") || [];
+    for (const descendantBlockElement of descendantBlockElements) {
+      const descendantBlockId =
+        descendantBlockElement?.getAttribute?.("data-node-id");
+      if (descendantBlockId && windowBlockIdSet.has(descendantBlockId)) {
+        expandedVisibleBlockIdSet.add(descendantBlockId);
+      }
+    }
+  }
+
+  return expandedVisibleBlockIdSet;
+}
+
 function unfoldVisibleListItemAncestors(
   visibleBlockIdSet,
   blockElementArray = [],
@@ -378,7 +427,13 @@ export function hideBlocksOutsideBacklinkSourceWindow(
         : visibleBlockIds;
   const visibleBlockIdSet = collectVisibleBlockIdsWithAncestors(
     collectVisibleBlockIdsWithDescendants(
-      new Set(visibleBlockIds),
+      new Set([
+        ...visibleBlockIds,
+        ...collectVisibleBlockIdsFromExpandedListShells(
+          sourceWindow,
+          blockElementArray,
+        ),
+      ]),
       blockElementArray,
       descendantSourceBlockIds,
     ),

@@ -431,3 +431,76 @@ test("hideBlocksOutsideBacklinkSourceWindow respects explicit visibleBlockIds wi
   assert.deepEqual(nestedItem.classList.added, ["fn__none"]);
   assert.deepEqual(nestedText.classList.added, ["fn__none"]);
 });
+
+test("hideBlocksOutsideBacklinkSourceWindow keeps descendant child lists visible when a visible list item shell is unfolded", () => {
+  const makeBlock = (id, dataType = "", folded = false) => ({
+    id,
+    parentElement: null,
+    getAttribute(name) {
+      if (name === "data-node-id") {
+        return id;
+      }
+      if (name === "data-type") {
+        return dataType;
+      }
+      if (name === "fold") {
+        return folded ? "1" : null;
+      }
+      return null;
+    },
+    querySelectorAll() {
+      return [];
+    },
+    classList: {
+      added: [],
+      removed: [],
+      add(name) {
+        this.added.push(name);
+      },
+      remove(name) {
+        this.removed.push(name);
+      },
+    },
+  });
+
+  const itemShell = makeBlock("item-shell", "NodeListItem", false);
+  const focusBlock = makeBlock("block-focus", "NodeParagraph", false);
+  const nestedList = makeBlock("list-nested", "NodeList", false);
+  const nestedItem = makeBlock("item-nested", "NodeListItem", false);
+  const nestedText = makeBlock("block-nested", "NodeParagraph", false);
+  focusBlock.parentElement = itemShell;
+  nestedList.parentElement = itemShell;
+  nestedItem.parentElement = nestedList;
+  nestedText.parentElement = nestedItem;
+  itemShell.querySelectorAll = () => [focusBlock, nestedList, nestedItem, nestedText];
+
+  const protyleWysiwygElement = {
+    querySelectorAll() {
+      return [itemShell, focusBlock, nestedList, nestedItem, nestedText];
+    },
+  };
+  const protyleContentElement = {
+    querySelector() {
+      return protyleWysiwygElement;
+    },
+  };
+
+  hideBlocksOutsideBacklinkSourceWindow(
+    {
+      sourceWindows: {
+        core: {
+          windowBlockIds: ["item-shell", "block-focus", "list-nested", "item-nested", "block-nested"],
+          visibleBlockIds: ["item-shell", "block-focus"],
+        },
+      },
+    },
+    protyleContentElement,
+    "core",
+  );
+
+  assert.deepEqual(itemShell.classList.removed, ["fn__none"]);
+  assert.deepEqual(focusBlock.classList.removed, ["fn__none"]);
+  assert.deepEqual(nestedList.classList.removed, ["fn__none"]);
+  assert.deepEqual(nestedItem.classList.removed, ["fn__none"]);
+  assert.deepEqual(nestedText.classList.removed, ["fn__none"]);
+});

@@ -716,3 +716,74 @@ test("uses the list item shell as zoomInId in extended mode when the backlink fo
     },
   );
 });
+
+test("keeps the same focus block id across context level switches inside the backlink tab", () => {
+  const activeBacklink = {
+    backlinkBlock: {
+      id: "backlink-child",
+      root_id: "doc-1",
+      box: "box-1",
+    },
+    sourceWindows: {
+      core: {
+        contextPlan: {
+          identity: {
+            rootId: "doc-1",
+            anchorBlockId: "list-item-1",
+            focusBlockId: "backlink-child",
+          },
+          bodyRange: {
+            startBlockId: "list-item-1",
+            endBlockId: "backlink-child",
+          },
+        },
+      },
+      nearby: {
+        contextPlan: {
+          identity: {
+            rootId: "doc-1",
+            anchorBlockId: "list-item-1",
+            focusBlockId: "backlink-child",
+          },
+          bodyRange: {
+            startBlockId: "block-prev",
+            endBlockId: "block-next",
+          },
+        },
+      },
+      extended: {
+        contextPlan: {
+          identity: {
+            rootId: "doc-1",
+            anchorBlockId: "list-item-1",
+            focusBlockId: "backlink-child",
+          },
+          bodyRange: {
+            startBlockId: "heading-1",
+            endBlockId: "block-tail",
+          },
+        },
+      },
+    },
+  };
+
+  const coreOptions = buildBacklinkDocumentRenderOptions({
+    documentId: "doc-1",
+    activeBacklink,
+    contextVisibilityLevel: "core",
+  });
+  const nearbyOptions = buildBacklinkDocumentRenderOptions({
+    documentId: "doc-1",
+    activeBacklink,
+    contextVisibilityLevel: "nearby",
+  });
+  const extendedOptions = buildBacklinkDocumentRenderOptions({
+    documentId: "doc-1",
+    activeBacklink,
+    contextVisibilityLevel: "extended",
+  });
+
+  assert.equal(coreOptions.scrollAttr.focusId, "backlink-child");
+  assert.equal(nearbyOptions.scrollAttr.focusId, "backlink-child");
+  assert.equal(extendedOptions.scrollAttr.focusId, "backlink-child");
+});

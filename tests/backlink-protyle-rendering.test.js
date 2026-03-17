@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   applyCreatedBacklinkProtyleState,
   batchRenderBacklinkDocumentGroups,
+  renderBacklinkDocumentGroup,
   syncBacklinkDocumentProtyleState,
 } from "../src/components/panel/backlink-protyle-rendering.js";
 
@@ -66,6 +67,102 @@ test("batchRenderBacklinkDocumentGroups renders empty content hint when there ar
   assert.deepEqual(groups, []);
   assert.equal(appended[0].tag, "p");
   assert.equal(appended[0].innerText, "empty");
+});
+
+test("renderBacklinkDocumentGroup preserves folded items and heading expansion across rerenders", () => {
+  const backlinkDocumentFoldMap = new Map();
+  const backlinkProtyleItemFoldMap = new Map();
+  const backlinkProtyleHeadingExpandMap = new Map();
+  const removedEditors = [];
+  const addedEditors = [];
+  const applySnapshots = [];
+  const existingEditor = {
+    id: "editor-old",
+    destroyCalled: false,
+    destroy() {
+      this.destroyCalled = true;
+    },
+  };
+  const backlinkDocumentEditorMap = new Map([["doc-a", existingEditor]]);
+
+  const editor = renderBacklinkDocumentGroup({
+    documentGroup: {
+      documentId: "doc-a",
+      activeBacklink: {
+        backlinkBlock: {
+          id: "block-a",
+          box: "box-a",
+        },
+      },
+    },
+    documentLiElement: {},
+    editorElement: { innerHTML: "stale" },
+    backlinkDocumentEditorMap,
+    backlinkDocumentViewState: {},
+    deps: {
+      updateBacklinkDocumentLiNavigation: () => {},
+      syncBacklinkDocumentProtyleState: (targetEditor) =>
+        syncBacklinkDocumentProtyleState(targetEditor, {
+          backlinkDocumentFoldMap,
+          backlinkProtyleItemFoldMap,
+          backlinkProtyleHeadingExpandMap,
+          captureBacklinkProtyleState: () => ({
+            backlinkBlockId: "block-a",
+            backlinkRootId: "doc-a",
+            isFolded: true,
+            foldedItemIds: ["item-1", "item-2"],
+            expandHeadingMore: true,
+          }),
+          markBacklinkDocumentFoldState: (map, key, value) => map.set(key, value),
+        }),
+      removeEditor: (targetEditor) => removedEditors.push(targetEditor.id),
+      ProtyleCtor: class FakeProtyle {
+        constructor(_app, _editorElement, _options) {
+          this.protyle = {};
+        }
+      },
+      app: {},
+      buildBacklinkDocumentRenderOptions: () => ({}),
+      getBacklinkDocumentRenderState: () => ({
+        showFullDocument: false,
+        contextVisibilityLevel: "nearby",
+      }),
+      applyCreatedBacklinkProtyleState: ({ backlinkData, protyle }) => {
+        applySnapshots.push({
+          backlinkId: backlinkData.backlinkBlock.id,
+          foldIds: Array.from(backlinkProtyleItemFoldMap.get("block-a") || []),
+          headingExpanded: backlinkProtyleHeadingExpandMap.get("block-a"),
+          documentFolded: backlinkDocumentFoldMap.get("doc-a"),
+          protyle,
+        });
+      },
+      addEditor: (targetEditor) => addedEditors.push(targetEditor),
+    },
+  });
+
+  assert.equal(existingEditor.destroyCalled, true);
+  assert.deepEqual(removedEditors, ["editor-old"]);
+  assert.equal(backlinkDocumentFoldMap.get("doc-a"), true);
+  assert.deepEqual(Array.from(backlinkProtyleItemFoldMap.get("block-a").values()), [
+    "item-1",
+    "item-2",
+  ]);
+  assert.equal(backlinkProtyleHeadingExpandMap.get("block-a"), true);
+  assert.deepEqual(applySnapshots.map((item) => ({
+    backlinkId: item.backlinkId,
+    foldIds: item.foldIds,
+    headingExpanded: item.headingExpanded,
+    documentFolded: item.documentFolded,
+  })), [
+    {
+      backlinkId: "block-a",
+      foldIds: ["item-1", "item-2"],
+      headingExpanded: true,
+      documentFolded: true,
+    },
+  ]);
+  assert.equal(backlinkDocumentEditorMap.get("doc-a"), editor);
+  assert.deepEqual(addedEditors, [editor]);
 });
 
 test("applyCreatedBacklinkProtyleState expands full document mode and skips item hiding", () => {

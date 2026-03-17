@@ -99,6 +99,8 @@ export function createBacklinkPanelController(state) {
   let preClickOpenArea = "focus";
   let lastKnownFocusedWndElement = null;
   let detachDocumentInteractionTracking = null;
+  const detachDocumentGroupRefreshTrackingMap = new Map();
+  const backlinkDocumentGroupRefreshTimeoutMap = new Map();
 
   function getEditors() {
     if (state.currentTab) {
@@ -139,6 +141,64 @@ export function createBacklinkPanelController(state) {
         protyle: protyle.protyle,
       });
     });
+  }
+
+  function clearBacklinkDocumentGroupRefreshTimeout(documentId) {
+    const timeoutId = backlinkDocumentGroupRefreshTimeoutMap.get(documentId);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      backlinkDocumentGroupRefreshTimeoutMap.delete(documentId);
+    }
+  }
+
+  function scheduleBacklinkDocumentGroupRefresh(
+    documentId,
+    delay = 0,
+    {
+      focusBlockId = null,
+    } = {},
+  ) {
+    if (!documentId) {
+      return;
+    }
+
+    clearBacklinkDocumentGroupRefreshTimeout(documentId);
+    const timeoutId = setTimeout(() => {
+      backlinkDocumentGroupRefreshTimeoutMap.delete(documentId);
+      refreshBacklinkDocumentGroupDataById(documentId, { focusBlockId,});
+    }, delay);
+    backlinkDocumentGroupRefreshTimeoutMap.set(documentId, timeoutId);
+  }
+
+  function attachBacklinkDocumentGroupRefreshTracking(editor, documentId) {
+    if (!editor?.protyle?.contentElement || !documentId) {
+      return () => {};
+    }
+
+    detachDocumentGroupRefreshTrackingMap.get(documentId)?.();
+
+    const contentElement = editor.protyle.contentElement;
+    const handleFocusOut = () => {
+      const focusBlockId = editor?.protyle?.block?.id || state.focusBlockId;
+      scheduleBacklinkDocumentGroupRefresh(documentId, 80, { focusBlockId });
+    };
+    const handleDrop = () => {
+      const focusBlockId = editor?.protyle?.block?.id || state.focusBlockId;
+      scheduleBacklinkDocumentGroupRefresh(documentId, 0, { focusBlockId });
+    };
+
+    contentElement.addEventListener("focusout", handleFocusOut);
+    contentElement.addEventListener("drop", handleDrop);
+
+    const detach = () => {
+      clearBacklinkDocumentGroupRefreshTimeout(documentId);
+      contentElement.removeEventListener("focusout", handleFocusOut);
+      contentElement.removeEventListener("drop", handleDrop);
+      detachDocumentGroupRefreshTrackingMap.delete(documentId);
+    };
+
+    detachDocumentGroupRefreshTrackingMap.set(documentId, detach);
+    return detach;
   }
 
   function updateLastCriteria() {
@@ -351,7 +411,12 @@ export function createBacklinkPanelController(state) {
     documentLiElement,
     editorElement,
   ) {
-    renderBacklinkDocumentGroupByHelper({
+    const documentId = documentGroup?.documentId;
+    if (documentId) {
+      detachDocumentGroupRefreshTrackingMap.get(documentId)?.();
+    }
+
+    const editor = renderBacklinkDocumentGroupByHelper({
       documentGroup,
       documentLiElement,
       editorElement,
@@ -424,6 +489,10 @@ export function createBacklinkPanelController(state) {
         addEditor,
       },
     });
+    if (documentId) {
+      attachBacklinkDocumentGroupRefreshTracking(editor, documentId);
+    }
+    return editor;
   }
 
   function batchCreateOfficialBacklinkProtyle(
@@ -471,6 +540,9 @@ export function createBacklinkPanelController(state) {
 
   function clearBacklinkProtyleList() {
     const editors = getEditors();
+    for (const documentId of detachDocumentGroupRefreshTrackingMap.keys()) {
+      detachDocumentGroupRefreshTrackingMap.get(documentId)?.();
+    }
     if (isArrayNotEmpty(editors)) {
       editors.forEach((editor) => {
         syncBacklinkDocumentProtyleState(editor, {
@@ -504,6 +576,91 @@ export function createBacklinkPanelController(state) {
     state.displayHintBacklinkBlockCacheUsage = Boolean(
       state.backlinkFilterPanelRenderData.usedCache,
     );
+  }
+
+  function findBacklinkDocumentRenderTargets(documentId) {
+    if (!documentId || !state.backlinkULElement?.querySelectorAll) {
+      return { documentLiElement: null, editorElement: null };
+    }
+
+    const documentLiElement = Array.from(
+      state.backlinkULElement.querySelectorAll("li.list-item__document-name"),
+    ).find((element) => element.getAttribute("data-node-id") === documentId);
+
+    return {
+      documentLiElement: documentLiElement || null,
+      editorElement: documentLiElement?.nextElementSibling || null,
+    };
+  }
+
+  function refreshBacklinkDocumentGroupById(
+    documentId,
+    {
+      documentLiElement = null,
+      editorElement = null,
+    } = {},
+  ) {
+    if (!documentId || !state.backlinkFilterPanelRenderData) {
+      return null;
+    }
+
+    const renderTargets = documentLiElement && editorElement
+      ? { documentLiElement, editorElement }
+      : findBacklinkDocumentRenderTargets(documentId);
+    if (!renderTargets.documentLiElement || !renderTargets.editorElement) {
+      return null;
+    }
+    const targetDocumentLiElement = renderTargets.documentLiElement;
+    const targetEditorElement = renderTargets.editorElement;
+
+    state.backlinkDocumentGroupArray = groupBacklinksByDocument(
+      state.backlinkFilterPanelRenderData.backlinkDocumentArray,
+      state.backlinkFilterPanelRenderData.backlinkDataArray,
+      state.backlinkDocumentActiveIndexMap,
+    );
+
+    const nextDocumentGroup = state.backlinkDocumentGroupArray.find(
+      (group) => group.documentId === documentId,
+    );
+    if (!nextDocumentGroup) {
+      return null;
+    }
+
+    renderBacklinkDocumentGroup(
+      nextDocumentGroup,
+      targetDocumentLiElement,
+      targetEditorElement,
+    );
+    return nextDocumentGroup;
+  }
+
+  async function refreshBacklinkDocumentGroupDataById(
+    documentId,
+    {
+      focusBlockId = null,
+    } = {},
+  ) {
+    if (
+      !documentId ||
+      !state.backlinkFilterPanelBaseData ||
+      !state.queryParams
+    ) {
+      return null;
+    }
+
+    state.focusBlockId = focusBlockId || state.focusBlockId;
+    await loadBacklinkPanelBaseData();
+    state.backlinkFilterPanelRenderData = await getBacklinkPanelRenderData(
+      state.backlinkFilterPanelBaseData,
+      state.queryParams,
+    );
+    if (state.backlinkFilterPanelRenderData.rootId !== state.rootId) {
+      return null;
+    }
+
+    state.queryParams = state.queryParams;
+    await refreshFilterDisplayData();
+    return refreshBacklinkDocumentGroupById(documentId);
   }
 
   function stepBacklinkDocumentContext(documentLiElement, direction = "next") {
@@ -546,7 +703,13 @@ export function createBacklinkPanelController(state) {
     if (nextVisibilityLevel === "full") {
       markBacklinkDocumentFullView(state.backlinkDocumentViewState, documentId);
     }
-    renderBacklinkDocumentGroup(documentGroup, documentLiElement, editorElement);
+    refreshBacklinkDocumentGroupById(
+      documentId,
+      {
+        documentLiElement,
+        editorElement,
+      },
+    );
   }
 
   function expandAllBacklinkDocument() {
@@ -621,6 +784,32 @@ export function createBacklinkPanelController(state) {
     });
   }
 
+  async function loadBacklinkPanelBaseData() {
+    if (!state.rootId) {
+      return null;
+    }
+
+    const settingConfig = SettingService.ins.SettingConfig;
+    state.hideBacklinkProtyleBreadcrumb =
+      settingConfig.hideBacklinkProtyleBreadcrumb;
+
+    state.backlinkFilterPanelBaseData = await getBacklinkPanelData({
+      rootId: state.rootId,
+      focusBlockId: state.focusBlockId,
+      queryParentDefBlock: settingConfig.queryParentDefBlock,
+      querrChildDefBlockForListItem:
+        settingConfig.querrChildDefBlockForListItem,
+      queryChildDefBlockForHeadline:
+        settingConfig.queryChildDefBlockForHeadline,
+      queryCurDocDefBlockRange: state.queryCurDocDefBlockRange,
+    });
+    state.displayHintPanelBaseDataCacheUsage = Boolean(
+      state.backlinkFilterPanelBaseData?.userCache,
+    );
+
+    return state.backlinkFilterPanelBaseData;
+  }
+
   async function initBaseData() {
     if (!state.rootId) {
       return;
@@ -639,22 +828,7 @@ export function createBacklinkPanelController(state) {
     state.previousRootId = state.rootId;
     state.previousFocusBlockId = state.focusBlockId;
     const settingConfig = SettingService.ins.SettingConfig;
-    state.hideBacklinkProtyleBreadcrumb =
-      settingConfig.hideBacklinkProtyleBreadcrumb;
-
-    state.backlinkFilterPanelBaseData = await getBacklinkPanelData({
-      rootId: state.rootId,
-      focusBlockId: state.focusBlockId,
-      queryParentDefBlock: settingConfig.queryParentDefBlock,
-      querrChildDefBlockForListItem:
-        settingConfig.querrChildDefBlockForListItem,
-      queryChildDefBlockForHeadline:
-        settingConfig.queryChildDefBlockForHeadline,
-      queryCurDocDefBlockRange: state.queryCurDocDefBlockRange,
-    });
-    state.displayHintPanelBaseDataCacheUsage = Boolean(
-      state.backlinkFilterPanelBaseData?.userCache,
-    );
+    await loadBacklinkPanelBaseData();
 
     const defaultPanelCriteria =
       await BacklinkFilterPanelAttributeService.ins.getPanelCriteria(state.rootId);
@@ -804,20 +978,7 @@ export function createBacklinkPanelController(state) {
       direction,
     );
     state.backlinkDocumentActiveIndexMap.set(documentId, nextIndex);
-    state.backlinkDocumentGroupArray = groupBacklinksByDocument(
-      state.backlinkFilterPanelRenderData.backlinkDocumentArray,
-      state.backlinkFilterPanelRenderData.backlinkDataArray,
-      state.backlinkDocumentActiveIndexMap,
-    );
-
-    const nextDocumentGroup = state.backlinkDocumentGroupArray.find(
-      (group) => group.documentId === documentId,
-    );
-    renderBacklinkDocumentGroup(
-      nextDocumentGroup,
-      documentLiElement,
-      editorElement,
-    );
+    refreshBacklinkDocumentGroupById(documentId);
   }
 
   function clearCacheAndRefresh() {
@@ -999,6 +1160,7 @@ export function createBacklinkPanelController(state) {
     resetFilterQueryParametersToDefault,
     resetBacklinkQueryParametersToDefault,
     refreshBacklinkPanelToCurrentMainDocument,
+    refreshBacklinkDocumentGroupById,
     handleRelatedDefBlockClick,
     handleRelatedDefBlockContextmenu,
     handleRelatedDocBlockClick,

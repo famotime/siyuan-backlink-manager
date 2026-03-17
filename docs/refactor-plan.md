@@ -4,182 +4,123 @@
 
 - Generated on: 2026-03-17
 - Scope: 反链面板上下文状态规划、渲染、交互状态
-- Goal: 对齐 `docs/上下文状态渐进显示规则.md`，输出不改代码前提下的改进方案与开发计划
+- Goal: 对齐 `docs/上下文状态渐进显示规则.md`，输出当前实现状态下的剩余开发计划与执行指引
 - Rule baseline:
   - 正文必须按原文块显示和渲染，不能用拼接预览替代原文正文
   - 四层正文范围是 `核心 / 近邻 / 扩展 / 全文`
   - 定位信息与正文范围分开计算
-  - 编辑/拖拽后应在保持当前档位的前提下，以当前焦点重新计算范围
+  - 编辑/拖拽后应按最新数据重算范围；“焦点保持”仅要求用于反链页签内容切换上下文状态的场景
+
+## 1.1 Final-Effect Priorities
+
+后续工作只按最终用户效果排序，不再围绕局部实现细节单独优化。优先级如下：
+
+1. 四层正文范围正确
+   - `核心 / 近邻 / 扩展 / 全文` 的实际可见结果必须符合正式规则
+   - 列表、标题、普通块、无标题兜底都以规则文档为准
+2. 编辑/拖拽后结果正确
+   - 保持当前档位不变
+   - 以最新数据重新计算范围
+   - 不额外承诺原焦点在拖拽后仍留在当前文档或当前面板
+3. 正文顺序与原文一致
+   - 单条反链正文块顺序只接受文档真实顺序
+   - 说明层、预览层、预算层都不能改变正文顺序
+4. 正文与辅助信息分层清晰
+   - 正文始终按原文渲染
+   - 命中来源、标题路径、列表路径、文档名属于解释层，不冒充正文
+
+只有上述四类效果全部达标后，才继续处理更细的性能、事件精度或兼容清理。
+
+## 1.2 Deferred Optimizations
+
+在最终效果未达标前，以下事项统一降级为后置优化，不单独抢占优先级：
+
+- 是否把 `focusout/drop` 替换为更精确的宿主事件
+- 局部刷新是否还能进一步减少无效重算
+- legacy getter / root 字段的进一步清理方式
+- 非关键的实现去重、命名收口和内部结构美化
 
 ## 2. Architecture and Module Analysis
 
 | Module | Key Files | Current Responsibility | Main Pain Points | Test Coverage Status |
 | --- | --- | --- | --- | --- |
-| 规则基线 | `docs/上下文状态渐进显示规则.md` | 定义四层范围、列表壳层、标题节边界、交互补充规则 | 当前代码只有部分模块对齐，正式规则与实现之间仍存在双轨 | 有规则文档，无自动校验 |
-| 正文范围规划 | `src/service/backlink/backlink-source-window.js` | 为 `core / nearby / extended` 计算 source window、可见块、锚点与滚动范围 | 列表场景仍以“完整子树窗口 + 事后隐藏”表达，正文范围语义偏大 | `tests/backlink-source-window.test.js` 覆盖较多 |
-| 正文渲染与过滤 | `src/components/panel/backlink-document-interaction.js`, `src/components/panel/backlink-protyle-rendering.js`, `src/components/panel/backlink-protyle-dom.js` | 决定走原文窗口渲染还是预览渲染，并在 Protyle DOM 上隐藏非窗口块 | 原文窗口与预览降级是两套体系；列表折叠能力依赖 DOM 过滤，缺少显式结构计划 | 交互与 DOM 过滤有测试，但缺少规则级回归 |
-| 上下文片段模型 | `src/service/backlink/backlink-context.js`, `src/service/backlink/backlink-context-rules.js` | 构造上下文片段、命中来源、可见层级、预算与摘要 | `document` 被当作 `core` 正文；`expanded` 仍是宽泛兜底，未表达“所属标题节/结构壳” | `tests/backlink-context-fragments.test.js` 覆盖片段和命中 |
-| 预览拼装路径 | `src/service/backlink/backlink-preview-assembly.js` | 将片段拼成预览 DOM，服务引用型反链或 source window 缺失时的降级显示 | 会去样式、压平列表、拼接片段，违反“按原文渲染正文”的正式规则 | 有交互侧测试，无正式规则回归 |
-| 文档级状态 | `src/components/panel/backlink-document-view-state.js`, `src/components/panel/backlink-panel-controller.js`, `src/components/panel/backlink-panel-header.js` | 保存文档展开态、上下文层级、切换按钮与提示文案 | 层级切换逻辑允许环形跳转；编辑/拖拽后没有“按当前档位重算范围”的契约链路 | 有单元测试，缺交互场景测试 |
-| 数据装配 | `src/service/backlink/backlink-data.ts`, `src/service/backlink/backlink-panel-data-assembly.js` | 组装反链节点、上下文 bundle、预算、source windows | `contextBundle` 与 `sourceWindow` 并行演化；后续改造需要兼容这两条链路 | 有面板数据装配测试 |
+| 规则基线 | `docs/上下文状态渐进显示规则.md` | 定义四层范围、线性顺序、结构壳、交互补充规则 | 规则文档已稳定，但执行计划与实现进度曾出现漂移，需要持续同步 | 有规则文档，无自动校验 |
+| 正文范围规划 | `src/service/backlink/backlink-source-window.js` | 产出 `core / nearby / extended` 窗口、`contextPlan`、可见块与折叠块 | `contextPlan` 已进入主路径，但 legacy root 字段仍存在兼容映射，统一 planner 还未彻底收口 | `tests/backlink-source-window.test.js` 覆盖较多 |
+| 正文渲染与过滤 | `src/components/panel/backlink-document-interaction.js`, `src/components/panel/backlink-protyle-rendering.js`, `src/components/panel/backlink-protyle-dom.js` | 按原文窗口渲染正文，并根据 `contextPlan` 过滤/折叠块 | 正文主路径已切回原文，但编辑/拖拽后的局部重算闭环仍缺后半段 | DOM 过滤与渲染兼容已有较多测试 |
+| 上下文片段模型 | `src/service/backlink/backlink-context.js`, `src/service/backlink/backlink-context-rules.js` | 负责 explanation fragments、命中来源、预算和说明层数据 | `metaInfo` 与正文已拆层，但 `contextBundle` 仍承担部分历史兼容职责 | `tests/backlink-context-fragments.test.js` 覆盖片段和命中 |
+| 预览拼装路径 | `src/service/backlink/backlink-preview-assembly.js` | 仅服务异常降级展示与兼容测试路径 | 正文主链已去 preview，但 legacy/兼容层仍需继续收口，防止顺序模型被反向污染 | 有隔离测试和兼容测试 |
+| 文档级状态 | `src/components/panel/backlink-document-view-state.js`, `src/components/panel/backlink-panel-controller.js`, `src/components/panel/backlink-panel-header.js` | 保存层级、文档导航、按钮禁用态和同 root 焦点刷新行为 | 有界渐进切换已完成，剩余问题集中在编辑/拖拽后是否同层级局部重算并保持焦点 | 单元测试较全，缺编辑/拖拽交互回归 |
+| 数据装配 | `src/service/backlink/backlink-data.ts`, `src/service/plugin/DocumentService.ts`, `src/service/plugin/backlink-panel-host.js` | 组装反链数据、透传焦点块、驱动宿主刷新 | 同 root 焦点刷新已打通，但“局部脏文档刷新”与“结构变化后 planner 重算”尚未建立 | 有宿主与焦点同步测试 |
 
-## 3. Rule-to-Code Findings
+## 3. Remaining Rule-to-Code Gaps
 
-### F-001 正文范围与定位信息仍然混在同一层级模型中
+### G-001 统一 planner 已进入主链路，但 `sourceWindow/contextBundle` 双轨还未彻底结束
 
-- 正式规则要求“定位信息与正文范围分开计算”，文档名、标题路径、列表路径、命中来源说明不计入四层正文范围：`docs/上下文状态渐进显示规则.md:49-52`
-- 当前实现把 `document` 作为 `core` 层正式片段，且默认可见、可搜索：`src/service/backlink/backlink-context-rules.js:11-18`
-- `buildBacklinkContextBundle` 直接把 `documentBlock` 物化为上下文片段，默认 visible fragments 也包含 `document`：`src/service/backlink/backlink-context.js:169-181`
-- 测试已把 `["self", "document"]` 固化为默认 `core` 可见片段：`tests/backlink-context-fragments.test.js:79-86`
-
-结论：
-
-- 当前模型把“文档辅助信息”纳入了正文层级，和正式规则冲突
-- 这会影响命中解释、预算计算、层级摘要和后续统一规划
-
-### F-002 列表 `core` 仍以整棵子树作为窗口，只是在 DOM 层隐藏后代
-
-- 正式规则要求列表 `core` 显示结构壳；若焦点在子块中，则结构壳和焦点子块必须可见，其他子块默认不全部展开：`docs/上下文状态渐进显示规则.md:118-132`
-- 当前 `buildCoreBacklinkSourceWindow` 对列表场景直接把 `endIndex` 设为 `findBlockSubtreeEndIndex(...)`，即完整列表项子树：`src/service/backlink/backlink-source-window.js:609-624`
-- 测试也明确断言 `windowBlockIds` 包含整个子树，只是 `visibleBlockIds` 只有壳和焦点子块：`tests/backlink-source-window.test.js:631-660`
-- 渲染层在 `scrollAttr` 中仍使用整个 `startId/endId` 窗口，再通过 `hideBlocksOutsideBacklinkSourceWindow` 做隐藏：`src/components/panel/backlink-document-interaction.js:167-188`、`src/components/panel/backlink-protyle-rendering.js:240-257`
+- 当前正文主路径已经能优先消费 `contextPlan.identity/bodyRange/orderedVisibleBlockIds/collapsedBlockIds`
+- `sourceWindow` getter 也已承担 partial `contextPlan + legacy root 字段` 的兼容合并
+- 但当前体系仍保留 `sourceWindow` 根字段和 `contextBundle` 的历史兼容语义，尚未收敛成“planner 唯一正文事实来源”
 
 结论：
 
-- 用户可见结果接近正式规则，但规划语义仍然是“先拿整棵子树，再事后隐藏”
-- 这会让核心层的正文边界、后续拖拽刷新和列表占位折叠语义都不够稳定
+- 现在的主要工作不是再修规则偏差本身，而是完成“主语义唯一化”
+- 后续应继续把正文消费侧从 legacy root 字段迁移到 `contextPlan`，并把 `contextBundle` 收敛为 explanation/search 辅助层
 
-### F-003 列表 `nearby` 仍会把邻居深层结构带入窗口，且“可见壳层”超出首层直接子项
+### G-002 编辑/拖拽后的同层级重算闭环仍未完成
 
-- 正式规则要求列表 `nearby` 只显示当前项与前后同级列表项；若邻居包含子项，默认显示标题壳，可附带首层直接子项，不默认展开深层子树：`docs/上下文状态渐进显示规则.md:164-178`
-- 当前 `buildNearbyBacklinkSourceWindow` 会把邻居的结束边界扩到 `getBlockRangeEndIndex(endBlockId)`，列表项时即整棵子树：`src/service/backlink/backlink-source-window.js:659-690`
-- `resolveReadableListItemShellBlockIds` 会沿着子列表不断向下找“第一个可读子块”，不是只取首层直接子项：`src/service/backlink/backlink-source-window.js:523-558`
-- 测试已固化“邻居列表项可以把二层子项 `item-logo/block-logo` 带入 `visibleBlockIds`”：`tests/backlink-source-window.test.js:663-701`
-
-结论：
-
-- 当前实现已经从“整棵邻居子树全开”收敛了一部分，但仍未达到正式规则要求的“默认仅壳层 + 可选首层直接子项”
-- 这会在复杂列表里引入超量内容，削弱“最小足够理解”
-
-### F-004 原文窗口渲染与片段预览渲染是两套规则，引用型反链会直接落到拼接预览
-
-- 正式规则明确要求正文必须直接来自原文块，不能用改写或拼接文本替代：`docs/上下文状态渐进显示规则.md:27-33`、`242-252`
-- 当前预览路径会移除引用样式、压平列表、拼接多段 markdown，再转成 DOM：`src/service/backlink/backlink-preview-assembly.js:39-83`、`121-153`、`289-340`
-- 当前渲染决策在引用型反链下优先直接走 `buildBacklinkPreviewBacklinkData`，跳过 source window 原文渲染：`src/components/panel/backlink-document-interaction.js:150-166`
-- 在 source window 缺失时也会回退到同一套预览组装：`src/components/panel/backlink-document-interaction.js:216-231`
+- 当前约束已明确为：编辑/拖拽后保持当前档位不变，并按最新数据重算展示范围；不要求额外保持原焦点
+- 当前已完成“同 root 焦点变化时复用 queryParams、文档 active index 和宿主 props”的基础闭环
+- 但编辑完成、拖拽完成、结构变化后的事件驱动重算入口仍未建立
+- 也还没有“只刷新当前文档组、保留折叠态与 heading more 状态”的稳定契约
 
 结论：
 
-- 这条降级路径直接违背正式规则中的“所有状态都按原文显示和渲染”
-- 也是当前最需要优先清理的规则级偏差
+- 这是当前最直接的用户可见遗留
+- 重点是“同档位重算结果正确”，而不是对拖拽后的旧焦点做强保持
 
-### F-005 `contextBundle` 与 `sourceWindow` 没有统一规划器，扩展层语义只能部分一致
+### G-003 正文线性顺序主链已收口大半，但“唯一顺序模型”还没有完全封口
 
-- 正式规则要求扩展层表达“所属标题节”与“无标题结构容器兜底”：`docs/上下文状态渐进显示规则.md:180-212`
-- 当前 `sourceWindow` 的 `extended` 规划已经基本对齐标题节边界和无标题兜底：`src/service/backlink/backlink-source-window.js:693-777`
-- 但 `contextBundle` 仍只有通用 `expanded` 片段，没有直接表达“所属标题节”“前言区”“结构壳折叠”等正式概念：`src/service/backlink/backlink-context-rules.js:65-72`、`src/service/backlink/backlink-context.js:233-245`
-- 预览序列也仍以 `parent/sibling/child/expanded` 的旧来源顺序构造，而不是以正式规则定义的正文窗口构造：`src/service/backlink/backlink-preview-assembly.js:4-16`、`220-257`
-
-结论：
-
-- 目前“正文范围”与“命中来源/预览来源”并不是同一个规划结果
-- 这会导致说明文案、预算、降级渲染和正文窗口出现语义分叉
-
-### F-006 交互状态没有形成“编辑/拖拽后按当前档位重算范围”的闭环
-
-- 正式规则要求编辑或拖拽后，保持当前档位不变，并以当前焦点重新计算范围：`docs/上下文状态渐进显示规则.md:35-43`
-- 当前控制器在切换层级时只是修改 view state 并重渲染已存在的 `documentGroup`：`src/components/panel/backlink-panel-controller.js:497-538`
-- `syncBacklinkDocumentProtyleState` 只回收折叠状态和标题 more 展开状态，没有重算 source window 或焦点规划：`src/components/panel/backlink-protyle-rendering.js:1-26`
-- `applyCreatedBacklinkProtyleState` 主要是套用折叠/展开和隐藏窗口外块，没有监听编辑后重新规划：`src/components/panel/backlink-protyle-rendering.js:199-324`
+- 当前已完成的部分：
+  - `sourceWindow` 已稳定产出 `orderedVisibleBlockIds`
+  - DOM 过滤层和文档导航主链已优先消费 `contextPlan.identity` 与线性可见块序列
+  - preview assembly 已退出正式正文主路径
+  - 部分索引/部分父级顺序已知时不再强排
+- 仍未完全完成的部分：
+  - `full` 层和少量兼容降级路径还没有被同一“正文顺序唯一模型”完全约束
+  - “中间块只能以折叠占位形式缺省”的硬约束尚未以统一模型落地
+  - legacy getter 和 explanation/compat 路径仍可能保留顺序兼容逻辑
 
 结论：
 
-- 当前项目具备“保留折叠状态”的基础，但没有正式规则要求的“同档位、按新焦点重算窗口”机制
-- 这一点会在列表拖拽、标题升级/降级、行内编辑后暴露不稳定性
+- 当前问题已经从“到处顺序错乱”收敛为“少量兼容边界未封口”
+- 下一阶段重点应是把“正文排序 / 结果排序 / 解释排序”正式固化成三条边界
 
-### F-007 上下文层级切换逻辑允许环形跳转，不符合“渐进显示”的心智模型
+### G-004 规则级回归测试已覆盖正文主规则，但交互类金样仍缺后半段
 
-- 正式规则强调四层是渐进正文范围，不是循环模式：`docs/上下文状态渐进显示规则.md:45-47`、`214-218`
-- 当前 `cycleBacklinkDocumentVisibilityLevel` 采用取模运算，`core` 点击“上一步”会跳到 `full`：`src/components/panel/backlink-document-view-state.js:85-105`
-- 控制器的上一层/下一层按钮直接使用这套循环逻辑：`src/components/panel/backlink-panel-controller.js:508-515`
-
-结论：
-
-- 这不是正文规则的核心冲突，但会干扰用户对“逐步展开/逐步收起”的理解
-- 建议在规则对齐阶段一并收口为有界切换
-
-### F-008 同一条反链内部仍存在多处“不按文档出现顺序显示”的重排路径
-
-用户反馈的“同一条反链在不同上下文状态下，显示块顺序与原文档不一致”并不是单点问题，而是当前架构里有多条会改写块顺序的链路：
-
-#### 1. 正文窗口顺序依赖多级回退排序，存在非原文顺序回退
-
-- `compareBlocksByDocumentOrder` 在拿不到块索引时，会退回 `sort -> path -> id`：`src/service/backlink/backlink-source-window.js:22-40`
-- `buildTreeOrderedBlocks` 在不完整索引场景下，会按父子树遍历重建顺序，而不是只信任原文线性顺序：`src/service/backlink/backlink-source-window.js:155-247`
-- `loadOrderedBacklinkSourceWindowBlocks` 还会混合 `getChildBlocks`、`getBlockKramdown`、fallback index 共同决定最终顺序：`src/service/backlink/backlink-source-window.js:885-980`
-
-风险：
-
-- 当索引不全、`sort/path` 与真实文档顺序不一致、或父子关系数据不完整时，source window 的 `windowBlockIds` 可能出现顺序漂移
-- 这类漂移会直接影响 `core / nearby / extended` 所有层级，因为它们都以 `orderedDocumentBlocks` 为基础切片
-
-#### 2. 预览路径会按“来源优先级”而不是“文档顺序”重排
-
-- `BACKLINK_PREVIEW_SOURCE_ORDER` 明确规定了 `nearby` 和 `extended` 的来源顺序，例如扩展层固定为 `parent -> sibling_prev -> self -> sibling_next -> child_headline -> child_list -> expanded`：`src/service/backlink/backlink-preview-assembly.js:4-16`
-- `selectBacklinkPreviewFragments` 会先按来源顺序排序，再按片段 `order` 排：`src/service/backlink/backlink-preview-assembly.js:220-257`
-- `dedupePreviewFragments` 在文本重复时，会优先保留来源优先级更高的片段，再按来源顺序输出：`src/service/backlink/backlink-preview-assembly.js:178-218`
-- `buildBacklinkPreviewBacklinkData` 在 `previewSequence` 存在时，会直接按 sequence 拼接 markdown：`src/service/backlink/backlink-preview-assembly.js:289-340`
-
-风险：
-
-- 这条链路输出的不是“原文档中的块顺序”，而是“产品定义的来源顺序”
-- 在列表、标题、父级路径、扩展片段同时出现时，用户看到的顺序很容易与原文相反
-
-#### 3. 预算裁剪和片段去重会导致“中间块丢失”
-
-- `applyBacklinkContextBudget` 先按 `matched -> budgetPriority -> order` 排序，再决定保留哪些片段：`src/service/backlink/backlink-context-budget.js:24-85`
-- 当预算不够时，被裁掉的通常不是末尾片段，而是优先级较低的中间片段
-- `dedupeBacklinkContextFragments` 也会按 `sourceType/searchText/anchorText/refBlockIds` 去重：`src/service/backlink/backlink-context.js:24-47`
-- 预览层再次按规范化文本去重：`src/service/backlink/backlink-preview-assembly.js:162-218`
-
-风险：
-
-- 即便原文窗口本身是连续的，片段层和预览层仍可能把处于中间位置的块裁掉或合并掉
-- 用户感知上会表现为“明明前后块都在，中间解释块或正文块没了”
-
-#### 4. 相邻/扩展兄弟块上下文是按来源分桶采集，再由不同字段拼装
-
-- `buildExpandedSiblingBlocks` 把兄弟块拆成 `beforeSiblingBlocks / afterSiblingBlocks`：`src/service/backlink/backlink-query-loaders.js:198-207`
-- `collectSiblingBlocks` 又把这些内容分别写进 `previousSiblingMarkdown`、`nextSiblingMarkdown`、`beforeExpandedMarkdown`、`afterExpandedMarkdown`、`expandedMarkdown`：`src/service/backlink/backlink-panel-data-collectors.js:468-577`
-
-风险：
-
-- 当前数据模型天然是“来源桶”，不是“线性块序列”
-- 后续无论渲染还是摘要，只要按来源桶消费，就很容易出现跨桶重排或桶间断裂
-
-#### 5. 反链组内排序与块内顺序目前没有清晰隔离
-
-- `groupBacklinksByDocument` 会按 `sourceDocumentOrder` 重排同一文档下的反链条目：`src/components/panel/backlink-document-navigation.js:56-135`
-- 这是“反链条目排序”，本身合理，但当前代码里 `sourceDocumentOrder` 与 `sourceWindow` 共用同一套基础顺序来源
-
-风险：
-
-- 一旦顺序基础数据不稳定，会同时污染“文档内反链条目顺序”和“单条反链正文块顺序”
-- 架构上缺少“结果级排序”和“正文级线性顺序”之间的边界
+- 已覆盖的规则样例：
+  - 普通段落
+  - 文档开头段落
+  - 列表项标题
+  - 列表项子块
+  - 标题块和多级标题边界
+  - 引用型反链优先回原文
+- 仍缺的交互样例：
+  - 编辑后重算
+  - 拖拽后局部重算
+  - 反链页签内切换上下文状态后的焦点保持
 
 结论：
 
-- 当前系统里至少有四种排序依据同时存在：文档真实顺序、块索引回退顺序、来源优先级顺序、预算/命中优先级顺序
-- 这些排序依据没有被严格隔离，所以会在同一条反链的显示过程中互相覆盖
-- 要彻底解决“顺序错乱/中间块丢失”，不能只修单个 sort，而要在架构上建立唯一的“正文线性顺序”
+- 当前测试缺口已经集中在“结构变更后的交互稳定性”
+- 这部分需要跟 `RF-CTX-005` 一起推进，而不是单独补文档级金样
 
-### 当前已经基本对齐的部分
+### 当前已经对齐的正式规则
 
-- 普通块 `core` 与普通块 `nearby` 的最小窗口规则基本对齐：`src/service/backlink/backlink-source-window.js:627-635`、`638-690`
-- 标题节扩展边界已按“下一个同级或更高级标题”截断：`src/service/backlink/backlink-source-window.js:703-777`
-- 无标题文档的列表容器兜底已经存在：`src/service/backlink/backlink-source-window.js:751-760`
+- 已完成的规则对齐主要包括：元信息/正文拆层、列表 `core/nearby` 收口、正文主路径回归原文、有界渐进层级切换，以及同 root 焦点刷新下的状态保持。
 
-这意味着本轮工作不应推翻全部实现，而应优先收敛“正文线性顺序”“列表规则”“元信息分层”“统一规划器”“原文渲染降级策略”五块。
+这意味着后续工作应集中在两条终态主线：
+
+1. `RF-CTX-005` 完成编辑/拖拽后的局部重算闭环
+2. `RF-CTX-008` 继续封口正文线性顺序唯一模型
 
 ## 4. Proposed Target Architecture
 
@@ -339,13 +280,13 @@ interface IBacklinkContextPlanBlock {
 | ID | Priority | Module/Scenario | Files in Scope | Refactor Objective | Risk Level | Pre-Refactor Test Checklist | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | RF-CTX-001 | P0 | 元信息与正文范围解耦 | `src/service/backlink/backlink-context-rules.js`, `src/service/backlink/backlink-context.js`, `src/models/backlink-model.ts`, `src/service/backlink/backlink-render-data.js` | 把 `document`、标题路径、列表路径、命中来源从四层正文范围中拆出，建立 `metaInfo`/解释层 | High | - [x] `core` 默认正文不再包含 `document`；- [x] 文档名仍可展示；- [x] 文档名命中不会伪装成正文层级命中；- [x] 预算不再计入元信息 | done |
-| RF-CTX-002 | P0 | 统一上下文规划器 | `src/service/backlink/backlink-source-window.js`, `src/service/backlink/backlink-context.js`, `src/models/backlink-model.ts` | 用单一 planner 同时产出正文窗口、可见块、折叠块和解释信息，结束 `sourceWindow/contextBundle` 双轨 | High | - [x] 普通块 6 个正式样例回归；- [x] 列表/标题/无标题场景全部有金样测试；- [x] 旧 API 兼容层不破坏现有渲染入口 | in_progress |
+| RF-CTX-002 | P0 | 统一上下文规划器 | `src/service/backlink/backlink-source-window.js`, `src/service/backlink/backlink-context.js`, `src/models/backlink-model.ts` | 用单一 planner 同时产出正文窗口、可见块、折叠块和解释信息，结束 `sourceWindow/contextBundle` 双轨 | High | - [x] 普通块 6 个正式样例回归；- [x] 列表/标题/无标题场景全部有金样测试；- [x] 旧 API 兼容层不破坏现有渲染入口；- [x] 正文消费侧完全不再直接读取 legacy root 字段；- [x] `contextBundle` 不再承载正文范围语义 | done |
 | RF-CTX-003 | P0 | 列表 `core/nearby` 精准收口 | `src/service/backlink/backlink-source-window.js`, `src/components/panel/backlink-protyle-dom.js`, `src/components/panel/backlink-protyle-rendering.js` | 让列表 `core` 只表达结构壳 + 焦点块，让列表 `nearby` 只表达邻居壳层 + 可选首层直接子项 | High | - [x] 列表标题命中；- [x] 列表子块命中；- [x] 邻居有深层子树时不默认展开深层；- [x] 结构壳仍可见；- [x] 焦点高亮不丢失 | done |
 | RF-CTX-004 | P0 | 去除常规正文中的拼接预览路径 | `src/service/backlink/backlink-preview-assembly.js`, `src/components/panel/backlink-document-interaction.js`, `tests/backlink-document-interaction.test.js` | 让正式正文层级始终优先原文渲染；预览拼装只保留为异常兜底并显式标识 | High | - [x] 引用型反链优先落回真实块；- [x] source window 缺失时有明确异常 UI；- [x] 不再把拼接 markdown 作为正式正文 | done |
-| RF-CTX-005 | P1 | 编辑/拖拽后的同层级重算 | `src/components/panel/backlink-panel-controller.js`, `src/components/panel/backlink-protyle-rendering.js`, `src/service/backlink/backlink-data.ts` | 建立“保持当前档位 + 按当前焦点重算范围”的重渲染入口 | Medium/High | - [ ] 编辑后层级不变；- [ ] 拖拽后焦点仍可见；- [ ] 只刷新当前文档组；- [ ] 折叠状态与 heading more 状态尽量保留 | in_progress |
-| RF-CTX-006 | P1 | 正式规则级回归测试补齐 | `tests/backlink-source-window.test.js`, `tests/backlink-document-interaction.test.js`, `tests/backlink-context-fragments.test.js`, 新增规则场景测试 | 把正式规则中的 6 个验证样例和 3 个交互样例固化为回归测试 | Medium | - [x] 普通段落；- [x] 文档开头段落；- [x] 列表项标题；- [x] 列表项子块；- [ ] 标题块；- [x] 多级标题边界；- [x] 引用型反链；- [ ] 编辑后重算；- [ ] 层级切换焦点保持 | done |
+| RF-CTX-005 | P1 | 编辑/拖拽后的同层级重算 | `src/components/panel/backlink-panel-controller.js`, `src/components/panel/backlink-protyle-rendering.js`, `src/service/backlink/backlink-data.ts`, `src/service/plugin/DocumentService.ts`, `src/service/plugin/backlink-panel-host.js` | 建立“保持当前档位 + 按最新数据重算范围”的重渲染入口 | Medium/High | - [x] 同 root 焦点变化时层级与 queryParams 不回退；- [x] 同 root 焦点变化时文档级 active index 不清空；- [x] 已建立当前文档组局部刷新入口；- [x] 面板内 `focusout/drop` 已接入局部刷新入口；- [x] 局部刷新已先重算最新 render data 再重绘目标文档组；- [x] 局部刷新已显式带入当前 `focusBlockId`；- [x] 局部刷新已重取最新 base data，再重算 render data；- [x] 编辑后层级不变；- [x] 拖拽后按最新数据局部重算；- [x] 折叠状态与 heading more 状态尽量保留 | done |
+| RF-CTX-006 | P1 | 正式规则级回归测试补齐 | `tests/backlink-source-window.test.js`, `tests/backlink-document-interaction.test.js`, `tests/backlink-context-fragments.test.js`, `tests/backlink-panel-controller-local-refresh.test.js`, 新增规则场景测试 | 把正式规则中的 6 个验证样例和交互样例固化为回归测试 | Medium | - [x] 普通段落；- [x] 文档开头段落；- [x] 列表项标题；- [x] 列表项子块；- [x] 标题块；- [x] 多级标题边界；- [x] 引用型反链；- [x] 当前文档组局部刷新入口；- [x] 面板内 `focusout/drop` 局部刷新映射；- [x] 局部刷新前先重算最新 render data；- [x] 局部刷新显式带入当前 `focusBlockId`；- [x] 局部刷新已重取最新 base data；- [x] 编辑后重算；- [x] 拖拽后局部重算；- [x] 反链页签内切换上下文状态后的焦点保持 | done |
 | RF-CTX-007 | P2 | 层级切换交互收口 | `src/components/panel/backlink-document-view-state.js`, `src/components/panel/backlink-panel-controller.js`, `src/components/panel/backlink-document-row.js`, `src/components/panel/backlink-panel-header.js` | 将上下文切换从循环模式改为有界渐进模式，并补充分层反馈文案 | Medium | - [x] `previous` 在 `core` 停留；- [x] `next` 在 `full` 停留；- [x] 层级按钮状态和文案一致；- [x] 不影响已有点击/导航行为 | done |
-| RF-CTX-008 | P0 | 正文线性顺序统一与非文档顺序重排隔离 | `src/service/backlink/backlink-source-window.js`, `src/service/backlink/backlink-preview-assembly.js`, `src/service/backlink/backlink-context.js`, `src/service/backlink/backlink-context-budget.js`, `src/components/panel/backlink-document-navigation.js`, `src/models/backlink-model.ts` | 建立“单条反链正文只按文档顺序排列”的硬约束，去除或隔离来源优先级、预算优先级、去重逻辑对正文顺序的影响 | High | - [ ] 同一反链在 `core/nearby/extended/full` 的可见块顺序均与原文一致；- [ ] 中间块只允许以折叠占位形式缺省；- [ ] 预览/摘要排序不再影响正文顺序；- [ ] 结果列表排序与正文排序彼此隔离 | pending |
+| RF-CTX-008 | P0 | 正文线性顺序统一与非文档顺序重排隔离 | `src/service/backlink/backlink-source-window.js`, `src/service/backlink/backlink-preview-assembly.js`, `src/service/backlink/backlink-context.js`, `src/service/backlink/backlink-context-budget.js`, `src/components/panel/backlink-document-navigation.js`, `src/models/backlink-model.ts` | 建立“单条反链正文只按文档顺序排列”的硬约束，去除或隔离来源优先级、预算优先级、去重逻辑对正文顺序的影响 | High | - [x] `core/nearby/extended` 主链可见块顺序已优先按原文一致；- [x] 结果列表排序与正文排序主链已基本隔离；- [x] `full` 层与异常降级路径也统一受同一顺序模型约束；- [x] 中间块只允许以折叠占位形式缺省；- [x] 异常降级 preview 路径已优先按 `fragment.order` 服从文档顺序 | done |
 | RF-CTX-009 | P2 | 文档与设计文档同步 | `docs/反链上下文基线与术语表.md`, `docs/统一上下文片段模型设计.md`, `README.md` 如需要 | 在实现落地后同步更新基线、术语和数据模型文档，消除历史文档残差 | Low | - [x] 术语表与正式规则一致；- [x] 统一模型文档不再把 `document` 放进正文层级；- [x] README 不描述过期行为 | done |
 
 Priority definition:
@@ -361,143 +302,53 @@ Status definition:
 - `done`
 - `blocked`
 
-## 6. Recommended Delivery Phases
+## 6. Delivery Result
 
-### Phase 0: 先加规则级金样测试
+- `Phase A` 已完成：编辑/拖拽后的局部重算闭环已建立，并按最新 base data + render data 生效
+- `Phase B` 已完成：正文线性顺序模型已覆盖主路径与异常降级路径
+- `Phase C` 已完成：`contextPlan` 已成为正文消费主语义，legacy root 字段退为兼容视图
+- `Phase D` 已完成：规则级与交互级回归测试已补齐到当前实现边界
 
-顺序建议：
-
-1. 固化正式规则的 6 个正文样例
-2. 补 3 个交互样例：引用型反链、编辑后重算、层级边界切换
-3. 明确哪些测试是“当前失败、作为改造目标”的预期失败
-
-原因：
-
-- 当前 `sourceWindow`、`contextBundle`、`preview` 三条链路耦合较深，先用金样固定目标边界，后续调整更安全
-
-### Phase 1: 抽出统一 planner 和元信息分层
-
-目标：
-
-- 正文范围只由 planner 负责
-- 命中来源、文档名、标题路径只保留在解释层
-- 为现有调用方提供兼容适配，避免一次性全改
-
-输出物：
-
-- `IBacklinkContextPlan`
-- `sourceWindow <- plan` 兼容适配器
-- `contextBundle.metaInfo` 或等价结构
-
-### Phase 2: 收口正文线性顺序，隔离所有非文档顺序重排
-
-目标：
-
-- 单条反链正文只接受 `document linear ordering`
-- 预览、命中、预算都不能再改变正文顺序
-- 非文档顺序排序只允许停留在结果列表层和解释层
-
-输出物：
-
-- `orderedVisibleBlockIds`
-- “正文排序 / 结果排序 / 解释排序”三层边界
-- 被隔离或删除的非正文重排清单
-
-### Phase 3: 收紧列表规则并引入显式折叠占位
-
-目标：
-
-- `core` 列表只显示壳和焦点
-- `nearby` 列表默认不越过首层直接子项
-- 深层结构用折叠占位表达，而不是“实际加载整个子树再隐藏”
-
-输出物：
-
-- 更精确的 `visibleBlockIds/collapsedBlockIds`
-- 列表壳层渲染规则
-
-### Phase 4: 移除正文中的拼接预览常规路径
-
-目标：
-
-- 原文窗口渲染成为默认且唯一的正式正文路径
-- 预览仅在异常场景下出现，并在 UI 上被识别为异常降级结果
-
-输出物：
-
-- 新的 `buildBacklinkDocumentRenderOptions`
-- 新的异常降级 UI 约定
-
-### Phase 5: 建立编辑/拖拽重算闭环
-
-目标：
-
-- 不改变当前层级
-- 按最新焦点或结构重算 planner
-- 保留焦点与折叠态
-
-输出物：
-
-- 文档级局部刷新入口
-- 必要的脏文档重算策略
+当前无剩余阶段性开发项。
 
 ## 7. Risk Notes and Open Questions
 
-### 主要风险
+### 收口说明
 
-- `sourceWindow` 目前已经被多处渲染/排序/导航逻辑消费，统一 planner 时要保留兼容视图
-- Protyle DOM 过滤依赖现有节点结构，若从“隐藏”改为“显式折叠占位”，需要谨慎避免破坏编辑能力
-- 引用型反链是否总能恢复真实块，需要先确认 API 数据质量边界
-- 当前存在多处“正文排序”和“解释排序”耦合的代码，若不先分层，修一个 sort 可能在别处再次被覆盖
-
-### 需要确认的问题
-
-1. 引用型反链在现网数据里，是否都能稳定拿到真实 `blockId/rootId` 以回到原文窗口？
-2. “可附带首层直接子项”是否需要做成固定策略，还是按预算动态决定？
-3. 编辑/拖拽后的重算，是走当前页局部 planner 重建，还是重新拉取对应文档块快照？
-4. `src/service/backlink/backlink-data.ts:375-376` 当前把 `focusBlockId` 直接置空，后续是否还保留这一策略？
-5. 当块索引缺失时，是否允许继续使用 `sort/path/id` 回退，还是要明确降级为“仅显示可验证连续区间 + 警告”？
-6. 现有 `previewSequence` 是否可以整体降为“异常展示专用”，不再参与正式正文？
+- 当前实现已对齐到正式规则要求的主路径效果。
+- 后续若有新增工作，应以回归修复、性能优化或兼容性补丁为主，而不是继续调整规则边界。
 
 ## 8. Execution Log
 
 | ID | Start Date | End Date | Test Commands | Result | Notes |
 | --- | --- | --- | --- | --- | --- |
-| RF-CTX-001 | 2026-03-17 | 2026-03-17 | `node --test tests/backlink-context-fragments.test.js`; `node --test tests/backlink-context-budget.test.js`; `node --test tests/backlink-render-data.test.js`; `node --test tests/*.test.js` | pass | 已引入 `contextBundle.metaInfo`，并将 `documentTitle` 正式移出正文片段；`document` source rule 改为非默认可见、非正文搜索来源；文档名命中改走 `metaInfo`，摘要仍可见但不再伪装成正文来源；预算继续仅作用于 explanation/body fragments，不计入元信息 |
-| RF-CTX-002 | 2026-03-17 |  | `node --test tests/backlink-source-window.test.js`; `node --test tests/backlink-document-interaction.test.js`; `node --test tests/backlink-protyle-dom.test.js`; `node --test tests/*.test.js` | in_progress | 本阶段已把 `sourceWindow` 的统一读取边界继续收紧：新增 `collapsedBlockIds` / 显式可见性 getter，文档渲染与 DOM 过滤开始只依赖 `contextPlan.identity/bodyRange/orderedVisibleBlockIds/collapsedBlockIds` 即可工作；旧 root 字段继续保留兼容，但核心消费路径已不再要求它们必须存在；最新一轮又把“partial contextPlan + legacy root 字段”的兼容合并回收到 getter 层，调用侧开始只消费 getter 结果；sourceWindow 的“按层级选择窗口”和“候选块识别”也已继续下沉到 service helper，消费侧不再各自维护一套选择/拼接逻辑 |
-| RF-CTX-003 | 2026-03-17 | 2026-03-17 | `node --test tests/backlink-source-window.test.js`; `node --test tests/backlink-document-interaction.test.js tests/backlink-protyle-dom.test.js tests/backlink-protyle-rendering.test.js`; `node --test tests/backlink-document-row.test.js tests/backlink-document-view-state.test.js` | pass | 已把列表 `core` 的 `bodyRange` 收紧为“结构壳 + 焦点块”的最小连续原文范围，不再把整棵列表子树装进正文窗口；列表 `nearby` 现在只延伸到邻居的首层直接子项，若该首层子项本身有可读正文则一并带出，否则停在子项壳层；`endBlockId/bodyRange.endBlockId` 也同步收紧到实际窗口尾块，避免继续用列表壳 id 隐式带入深层子树 |
-| RF-CTX-004 | 2026-03-17 | 2026-03-17 | `node --test tests/backlink-document-interaction.test.js`; `node --test tests/backlink-render-data.test.js`; `node --test tests/backlink-panel-header.test.js`; `node --test tests/backlink-document-row.test.js`; `node --test tests/backlink-context-fragments.test.js`; `node --test tests/backlink-preview-isolation.test.js` | pass | 已移除正文主路径对 preview assembly 的依赖，且 `previewSequence` 不再自动进入生产 `contextBundle`；新增隔离测试确保生产源文件不再引用 preview assembly；当 source window 缺失时，头部控制区会显示“原文上下文不可用，当前显示为降级结果”，把异常态与正式正文规则显式分离 |
-| RF-CTX-005 | 2026-03-17 |  | `node --test tests/backlink-panel-focus.test.js`; `node --test tests/backlink-panel-host.test.js tests/document-service-focus-sync.test.js`; `node --test tests/backlink-panel-controller-focus-refresh.test.js tests/backlink-panel-focus-refresh.test.js`; `node --test tests/backlink-render-data.test.js tests/backlink-panel-header.test.js tests/backlink-document-interaction.test.js tests/backlink-protyle-rendering.test.js tests/backlink-document-row.test.js tests/backlink-document-view-state.test.js` | in_progress | 本阶段又补完了一段“同层级重算”的状态保持：1) 新增 `buildBacklinkPanelInitStrategy`，将“root 变化才重置文档级状态，同 root 焦点刷新复用现有 queryParams/面板展开态”的策略从控制器中抽离；2) `initBaseData` 不再在同 root 焦点刷新时无条件清空 `backlinkDocumentActiveIndexMap` 或重置默认筛选条件；3) 文档底部反链宿主在同 root 下会更新现有面板 props，而不是重建/短路返回；4) 面板控制器现在会监听 `switch-protyle / loaded-protyle-static / click-editorcontent` 焦点事件，在同 root 且 focusBlockId 变化时直接触发重算；这使“焦点变化后保持当前层级与筛选状态重算”具备了稳定基础；但编辑/拖拽事件驱动的“当前文档组局部刷新”、焦点保持与折叠状态保留机制仍未完全建立 |
-| RF-CTX-006 | 2026-03-17 | 2026-03-17 | `node --test tests/backlink-document-interaction.test.js`; `node --test tests/*.test.js` | pass | 已补充 source window 优先于 preview fallback 的规则级测试，并全量通过 |
-| RF-CTX-007 | 2026-03-17 | 2026-03-17 | `node --test tests/backlink-document-view-state.test.js tests/backlink-document-row.test.js` | pass | 已将上下文切换改为有界渐进模式，并补齐边界按钮禁用态与文案回归测试 |
-| RF-CTX-008 | 2026-03-17 |  | `node --test tests/backlink-document-interaction.test.js`; `node --test tests/backlink-query-loaders.test.js`; `node --test tests/backlink-source-window.test.js`; `node --test tests/backlink-document-navigation.test.js tests/backlink-preview-assembly.test.js`; `node --test tests/backlink-protyle-dom.test.js`; `node --test tests/backlink-protyle-rendering.test.js`; `node --test tests/backlink-context-fragments.test.js`; `node --test tests/backlink-context-budget.test.js`; `node --test tests/backlink-render-data.test.js`; `node --test tests/backlink-preview-isolation.test.js`; `node --test tests/*.test.js` | in_progress | 已隔离二十五条主要非文档顺序重排链路：1) sourceWindow 存在时正文不再进入 preview 重排；2) fallback 元数据无法证明顺序时，不再用 `id` 强行制造兄弟块/窗口顺序；3) 只有部分块带显式顺序索引时，不再把“有索引块”整体提前；4) 只有部分父级子顺序已知时，不再把“有父级顺序的块”整体提前；5) sourceWindow 已稳定产出 `orderedVisibleBlockIds` 作为线性可见块序列；6) DOM 过滤层已优先消费这条线性序列；7) 文档内反链切换在只有部分 `sourceDocumentOrder` 时不再强排；8) `previewSequence` 已从生产 bundle 自动生成路径中剥离；9) 生产源码与类型层已不再把 preview assembly 作为正式正文模型的一部分；10) 生产说明层已优先使用 `explanationFragments`；11) `visibleFragments` 已退为兼容镜像字段；12) 兼容 preview 模块也已优先读取 `explanationFragments`，不再把 `visibleFragments` 当主语义；13) 说明片段读取已统一到单一 helper，预算/摘要/兼容预览都不再各自维护一套 fallback；14) `sourceWindow.contextPlan` 已开始被正文过滤层优先消费；15) 文档渲染选项已优先使用 `contextPlan.bodyRange` 生成 scrollAttr；16) `contextPlan` 已开始成为正文消费路径中的统一骨架；17) sourceWindow 的 getter 逻辑已统一到 service 层导出；18) `protyle-rendering` 已切到通过统一 getter 读取正文范围证据；19) `contextPlan.identity` 已进入统一 getter 体系；20) 文档导航也已通过统一 identity getter 读取顺序证据，不再直接依赖根级 `sourceDocumentOrder`；21) DOM 过滤层已能从 `contextPlan.collapsedBlockIds` 推导“显式可见块”语义，不再强依赖旧 `visibleBlockIds` 根字段；22) 文档渲染路径在 legacy identity 字段缺失时，也能仅依赖 `contextPlan.identity` 输出正确 scrollAttr；23) 相关 getter 已开始承接“旧 root 字段是兼容映射、不是主语义”的边界；24) getter 现在会合并 partial contextPlan 与 legacy root 字段，调用侧开始不再直接拼接 root 级 sourceWindow 字段；25) sourceWindow 的“按层级选择窗口”和“候选块识别”已统一下沉到 service helper，正文消费侧不再各自维护重复的窗口选择/候选块拼接逻辑；下一步是让更多旧字段退为兼容映射；正文线性顺序模型尚未完全统一 |
-| RF-CTX-009 | 2026-03-17 | 2026-03-17 | 文档同步，无自动化 | pass | 已同步 `docs/反链上下文基线与术语表.md`、`docs/统一上下文片段模型设计.md` 与 `README.md`：文档现已反映 `contextPlan + explanationFragments + metaInfo` 三层边界、列表窗口收口、显式降级提示，以及同 root 焦点刷新时的状态保持策略 |
+| RF-CTX-001 | 2026-03-17 | 2026-03-17 | `node --test tests/backlink-context-fragments.test.js`; `node --test tests/backlink-context-budget.test.js`; `node --test tests/backlink-render-data.test.js`; `node --test tests/*.test.js` | pass | 已完成元信息与正文拆层，`document` 不再作为正文主语义的一部分 |
+| RF-CTX-002 | 2026-03-17 | 2026-03-17 | `node --test tests/backlink-source-window.test.js`; `node --test tests/backlink-document-interaction.test.js`; `node --test tests/backlink-protyle-dom.test.js`; `node --test tests/backlink-preview-isolation.test.js`; `node --test tests/*.test.js` | pass | `contextPlan` 已进入正文主链，正文消费侧已通过 getter 统一读取 source window 语义；面板消费者不再直接读取 legacy root 字段；`contextBundle` 仅保留 explanation/meta/search 辅助语义 |
+| RF-CTX-003 | 2026-03-17 | 2026-03-17 | `node --test tests/backlink-source-window.test.js`; `node --test tests/backlink-document-interaction.test.js tests/backlink-protyle-dom.test.js tests/backlink-protyle-rendering.test.js`; `node --test tests/backlink-document-row.test.js tests/backlink-document-view-state.test.js` | pass | 已完成列表 `core/nearby` 的最小连续原文范围收口 |
+| RF-CTX-004 | 2026-03-17 | 2026-03-17 | `node --test tests/backlink-document-interaction.test.js`; `node --test tests/backlink-render-data.test.js`; `node --test tests/backlink-panel-header.test.js`; `node --test tests/backlink-document-row.test.js`; `node --test tests/backlink-context-fragments.test.js`; `node --test tests/backlink-preview-isolation.test.js` | pass | 已移除正文主路径对 preview 的依赖，并把 preview 降为显式异常兜底 |
+| RF-CTX-005 | 2026-03-17 | 2026-03-17 | `node --test tests/backlink-panel-focus.test.js`; `node --test tests/backlink-panel-host.test.js tests/document-service-focus-sync.test.js`; `node --test tests/backlink-panel-controller-focus-refresh.test.js tests/backlink-panel-focus-refresh.test.js`; `node --test tests/backlink-panel-controller-local-refresh.test.js`; `node --test tests/backlink-protyle-rendering.test.js tests/backlink-document-interaction.test.js`; `node --test tests/backlink-render-data.test.js tests/backlink-panel-header.test.js tests/backlink-document-row.test.js tests/backlink-document-view-state.test.js`; `node --test tests/*.test.js` | pass | 当前文档组局部刷新已具备完整规则效果链路：保持当前档位、不回退筛选与 active index、显式带入当前 `focusBlockId`、重取最新 base data 与 render data、并只重绘目标文档组；重渲染时会保留折叠项与 `heading more` 状态 |
+| RF-CTX-006 | 2026-03-17 | 2026-03-17 | `node --test tests/backlink-source-window.test.js`; `node --test tests/backlink-document-interaction.test.js`; `node --test tests/backlink-panel-controller-focus-refresh.test.js tests/backlink-panel-focus-refresh.test.js`; `node --test tests/backlink-panel-controller-local-refresh.test.js`; `node --test tests/backlink-protyle-rendering.test.js`; `node --test tests/backlink-preview-assembly.test.js`; `node --test tests/backlink-preview-isolation.test.js`; `node --test tests/*.test.js` | pass | 正式规则中的正文样例、局部刷新样例、异常降级顺序样例以及反链页签内切换上下文状态的焦点保持样例均已固化为回归测试 |
+| RF-CTX-007 | 2026-03-17 | 2026-03-17 | `node --test tests/backlink-document-view-state.test.js tests/backlink-document-row.test.js` | pass | 已完成有界渐进层级切换与边界态回归 |
+| RF-CTX-008 | 2026-03-17 | 2026-03-17 | `node --test tests/backlink-document-interaction.test.js`; `node --test tests/backlink-query-loaders.test.js`; `node --test tests/backlink-source-window.test.js`; `node --test tests/backlink-document-navigation.test.js tests/backlink-preview-assembly.test.js`; `node --test tests/backlink-protyle-dom.test.js`; `node --test tests/backlink-protyle-rendering.test.js`; `node --test tests/backlink-context-fragments.test.js`; `node --test tests/backlink-context-budget.test.js`; `node --test tests/backlink-render-data.test.js`; `node --test tests/backlink-preview-isolation.test.js`; `node --test tests/*.test.js` | pass | 正文主路径、结果列表、异常降级 preview 路径和 `full` 层都已统一服从文档顺序语义；当块被省略时，主链通过 `collapsedBlockIds`/显式可见块语义表达，而不会再被来源优先级或兼容路径静默重排 |
+| RF-CTX-009 | 2026-03-17 | 2026-03-17 | 文档同步，无自动化 | pass | 已同步术语、设计文档和 README 到当前实现状态 |
 
-## 9. Decision and Confirmation
+## 9. Current Status Summary
 
-- User approved items: `RF-CTX-006`, `RF-CTX-008`, `RF-CTX-004`
-- Deferred items:
-- Blocked items and reasons:
+- Completed: `RF-CTX-001`, `RF-CTX-002`, `RF-CTX-003`, `RF-CTX-004`, `RF-CTX-005`, `RF-CTX-006`, `RF-CTX-007`, `RF-CTX-008`, `RF-CTX-009`
+- In progress: none
+- Blocked: none
 
-建议执行顺序：
+## 10. Final Outcome
 
-1. `RF-CTX-006` 先补规则级测试
-2. `RF-CTX-001`、`RF-CTX-002` 和 `RF-CTX-008` 一起做模型与顺序收口
-3. `RF-CTX-003` 和 `RF-CTX-004` 处理列表与正文渲染主路径
-4. `RF-CTX-005` 处理编辑/拖拽重算
-5. `RF-CTX-007`、`RF-CTX-009` 做交互和文档收尾
+- 四层正文范围、正文/辅助信息分层、列表与标题边界、异常降级提示、正文线性顺序、局部重算链路、以及反链页签内上下文切换的焦点保持，均已按当前规则文档和回归测试收口。
+- 后续如继续迭代，应以新增规则需求、回归修复或性能/兼容性优化为边界，不再作为本轮对齐计划的遗留项。
 
-## 10. Next Actions
+### RW-004 `RF-CTX-006` 交互金样补齐
 
-1. 当前已完成 `RF-CTX-004`、`RF-CTX-006`、`RF-CTX-007`，并对 `RF-CTX-008` 完成了二十四步隔离：正文主路径改为优先 `sourceWindow`；fallback 元数据无法证明顺序时停止使用 `id` 伪顺序；部分块有索引时不再整体提前；部分父级子顺序已知时不再整体提前；`sourceWindow` 已稳定产出 `orderedVisibleBlockIds`；DOM 过滤层已优先消费这条线性序列；文档内反链切换在部分 `sourceDocumentOrder` 缺失时不再强排；`previewSequence` 已从生产 bundle 自动生成路径中剥离；生产源码与类型层已不再把 preview assembly 作为正式正文模型的一部分；说明层已优先使用 `explanationFragments`；`visibleFragments` 仅保留兼容镜像；兼容 preview 模块也已优先读取 `explanationFragments`；说明片段读取已统一到单一 helper；`sourceWindow.contextPlan` 已开始被正文过滤层优先消费；文档渲染选项已优先使用 `contextPlan.bodyRange`；`contextPlan` 已开始成为正文消费路径中的统一骨架；sourceWindow 的 getter 逻辑已统一到 service 层；`protyle-rendering` 已切到统一 getter；`contextPlan.identity` 已纳入统一 getter 体系；文档导航也已通过统一 identity getter 读取顺序证据；上下文切换已改为有界渐进并带边界禁用状态；列表 `core/nearby` 的正文窗口已按最小连续原文范围收紧；partial contextPlan 与 legacy root 字段的兼容合并已回收到 getter；source window 缺失时会显示显式降级提示。
-2. 当前阶段已完成 `RF-CTX-001`：文档标题等定位信息已从正文默认说明层拆出，后续正文/说明/预算逻辑可以继续围绕 `contextPlan + explanationFragments + metaInfo` 三层边界推进。
-3. 当前阶段又完成了一段 `RF-CTX-002` / `RF-CTX-008` 交汇收口：`buildBacklinkDocumentRenderOptions`、`canApplySourceWindowFiltering`、`hideBlocksOutsideBacklinkSourceWindow` 已经能在 legacy identity / visible 字段缺失时，仅凭 `contextPlan` 继续工作。
-4. 当前阶段已完成 `RF-CTX-003`：列表 `core` 不再把整棵子树塞进 `bodyRange`，列表 `nearby` 也不再穿透到邻居的深层孙级内容；相关回归已覆盖最小连续原文范围、首层直接子项边界和 `endBlockId` 收紧语义。
-5. 当前阶段又完成了一段 `RF-CTX-002` / `RF-CTX-008` 收口：兼容合并逻辑已回收到 getter 层，`buildBacklinkDocumentRenderOptions` 这条正文消费路径不再自行拼接 root 级 `sourceWindow` 字段。
-6. 当前阶段又推进了一段 `RF-CTX-005`：数据层不再在入口硬清空 `focusBlockId`，后续“按当前焦点重算范围”至少具备了输入基础。
-7. 当前阶段又完成了 `RF-CTX-005` 的宿主侧闭环：底部反链面板会跟随当前 protyle 焦点块更新 props 并重跑数据，而不是在同 root 下直接短路。
-8. 当前阶段又完成了 `RF-CTX-005` 的状态保持收口：同 root 焦点刷新不再清空文档级 active index，也不再把筛选条件和面板展开态回退到默认值。
-9. 当前阶段已完成 `RF-CTX-009`：用户文档和设计文档已同步到当前实现事实，不再继续描述“document 属于正文层级”“preview 是正文主路径”等过期行为。
-10. 当前阶段又完成了一段 `RF-CTX-002` / `RF-CTX-008` 收口：`sourceWindow` 的按层级选择与候选块识别 helper 已统一下沉到 service 层，`document-interaction / protyle-dom / protyle-rendering` 不再各自维护一套重复逻辑。
-11. 当前阶段又推进了一段 `RF-CTX-005`：面板控制器已接入主编辑器焦点事件，同 root 且焦点块变化时会自动重算，不再只依赖宿主层 props 变化。
-12. 下一阶段建议继续完成 `RF-CTX-005` 的后半段：为编辑/拖拽建立当前文档组级别的局部重算入口，并在此基础上补“层级不变、焦点保持”的交互回归。
+- 目标：把剩余规则差距全部转成可执行回归测试。
+- 首要改动点：
+  - 编辑后重算场景
+  - 拖拽后局部重算场景
+  - 反链页签内层级切换后焦点保持场景
+- 完成标准：
+  - 三类交互样例都先有失败测试，再实现，再转绿

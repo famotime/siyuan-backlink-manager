@@ -176,6 +176,33 @@ function getPreviewSourcePriority(sourceType) {
   return BACKLINK_PREVIEW_SOURCE_PRIORITY[sourceType] || 99;
 }
 
+function comparePreviewFragmentOrder(
+  fragmentA = {},
+  fragmentB = {},
+  visibilityLevel = "core",
+) {
+  const orderA = fragmentA?.order;
+  const orderB = fragmentB?.order;
+  const hasOrderA = Number.isFinite(orderA);
+  const hasOrderB = Number.isFinite(orderB);
+
+  if (hasOrderA && hasOrderB && orderA !== orderB) {
+    return orderA - orderB;
+  }
+  if (hasOrderA !== hasOrderB) {
+    return hasOrderA ? -1 : 1;
+  }
+
+  const sourceOrderResult =
+    getPreviewSourceOrder(fragmentA.sourceType, visibilityLevel) -
+    getPreviewSourceOrder(fragmentB.sourceType, visibilityLevel);
+  if (sourceOrderResult !== 0) {
+    return sourceOrderResult;
+  }
+
+  return (fragmentA.order || 0) - (fragmentB.order || 0);
+}
+
 function dedupePreviewFragments(fragments = [], visibilityLevel = "core") {
   const fragmentByText = new Map();
 
@@ -188,6 +215,19 @@ function dedupePreviewFragments(fragments = [], visibilityLevel = "core") {
     const existingFragment = fragmentByText.get(dedupeKey);
     if (!existingFragment) {
       fragmentByText.set(dedupeKey, fragment);
+      continue;
+    }
+
+    const orderResult = comparePreviewFragmentOrder(
+      fragment,
+      existingFragment,
+      visibilityLevel,
+    );
+    if (orderResult < 0) {
+      fragmentByText.set(dedupeKey, fragment);
+      continue;
+    }
+    if (orderResult > 0) {
       continue;
     }
 
@@ -207,15 +247,9 @@ function dedupePreviewFragments(fragments = [], visibilityLevel = "core") {
     }
   }
 
-  return Array.from(fragmentByText.values()).sort((fragmentA, fragmentB) => {
-    const sourceOrderResult =
-      getPreviewSourceOrder(fragmentA.sourceType, visibilityLevel) -
-      getPreviewSourceOrder(fragmentB.sourceType, visibilityLevel);
-    if (sourceOrderResult !== 0) {
-      return sourceOrderResult;
-    }
-    return (fragmentA.order || 0) - (fragmentB.order || 0);
-  });
+  return Array.from(fragmentByText.values()).sort((fragmentA, fragmentB) =>
+    comparePreviewFragmentOrder(fragmentA, fragmentB, visibilityLevel),
+  );
 }
 
 export function selectBacklinkPreviewFragments({
@@ -243,15 +277,9 @@ export function selectBacklinkPreviewFragments({
       }
       return normalizeFragmentText(fragment.renderMarkdown || fragment.text).length > 0;
     })
-    .sort((fragmentA, fragmentB) => {
-      const sourceOrderResult =
-        getPreviewSourceOrder(fragmentA.sourceType, visibilityLevel) -
-        getPreviewSourceOrder(fragmentB.sourceType, visibilityLevel);
-      if (sourceOrderResult !== 0) {
-        return sourceOrderResult;
-      }
-      return (fragmentA.order || 0) - (fragmentB.order || 0);
-    });
+    .sort((fragmentA, fragmentB) =>
+      comparePreviewFragmentOrder(fragmentA, fragmentB, visibilityLevel),
+    );
 
   return dedupePreviewFragments(selectedFragments, visibilityLevel);
 }

@@ -103,6 +103,24 @@ test("selectBacklinkPreviewFragments adds parent and child context in extended m
   );
 });
 
+test("selectBacklinkPreviewFragments prefers document order over source priority when fragment order is available", () => {
+  const fragments = selectBacklinkPreviewFragments({
+    contextVisibilityLevel: "nearby",
+    contextBundle: {
+      explanationFragments: [
+        { sourceType: "self", text: "self", visibilityLevel: "core", order: 10 },
+        { sourceType: "sibling_prev", text: "prev", visibilityLevel: "nearby", order: 20 },
+        { sourceType: "sibling_next", text: "next", visibilityLevel: "nearby", order: 30 },
+      ],
+    },
+  });
+
+  assert.deepEqual(
+    fragments.map((fragment) => `${fragment.sourceType}:${fragment.order}`),
+    ["self:10", "sibling_prev:20", "sibling_next:30"],
+  );
+});
+
 test("selectBacklinkPreviewFragments prefers explanationFragments over legacy visibleFragments", () => {
   const fragments = selectBacklinkPreviewFragments({
     contextVisibilityLevel: "nearby",
@@ -212,6 +230,45 @@ test("buildBacklinkPreviewBacklinkData removes duplicate preview fragments from 
   assert.equal(backlinkData.length, 2);
   assert.equal(backlinkData[0].dom.includes("Repeated paragraph"), true);
   assert.equal(backlinkData[1].dom.includes("Next paragraph"), true);
+});
+
+test("buildBacklinkPreviewBacklinkData keeps degraded preview fragments in document order", () => {
+  const backlinkData = buildBacklinkPreviewBacklinkData({
+    activeBacklink: createActiveBacklink({
+      explanationFragments: [
+        {
+          sourceType: "self",
+          text: "Self paragraph",
+          renderMarkdown: "Self paragraph",
+          visibilityLevel: "core",
+          order: 10,
+        },
+        {
+          sourceType: "sibling_prev",
+          text: "Previous paragraph",
+          renderMarkdown: "Previous paragraph",
+          visibilityLevel: "nearby",
+          order: 20,
+        },
+        {
+          sourceType: "sibling_next",
+          text: "Next paragraph",
+          renderMarkdown: "Next paragraph",
+          visibilityLevel: "nearby",
+          order: 30,
+        },
+      ],
+    }),
+    contextVisibilityLevel: "nearby",
+    deps: {
+      markdownToBlockDOM: (markdown) => `<article>${markdown}</article>`,
+    },
+  });
+
+  assert.deepEqual(
+    backlinkData.map((item) => item.previewFragments[0].sourceType),
+    ["self", "sibling_prev", "sibling_next"],
+  );
 });
 
 test("buildBacklinkPreviewBacklinkData uses renderMarkdown for sibling list items", () => {

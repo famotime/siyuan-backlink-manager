@@ -49,6 +49,24 @@ test("buildBacklinkVisibleSourceSummary summarizes only the sources introduced a
   assert.equal(result, "已显示：父级、前相邻块");
 });
 
+test("buildBacklinkVisibleSourceSummary prefers explanationFragments over legacy visibleFragments", () => {
+  const result = buildBacklinkVisibleSourceSummary({
+    contextVisibilityLevel: "nearby",
+    contextBundle: {
+      explanationFragments: [
+        { sourceType: "self", visibilityLevel: "core" },
+        { sourceType: "parent", visibilityLevel: "nearby" },
+      ],
+      visibleFragments: [
+        { sourceType: "self", visibilityLevel: "core" },
+        { sourceType: "sibling_prev", visibilityLevel: "nearby" },
+      ],
+    },
+  });
+
+  assert.equal(result, "已显示：父级");
+});
+
 test("buildBacklinkVisibleSourceSummary merges long source lists into a compact summary", () => {
   const result = buildBacklinkVisibleSourceSummary({
     contextVisibilityLevel: "nearby",

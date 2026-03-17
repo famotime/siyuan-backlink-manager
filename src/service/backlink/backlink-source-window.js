@@ -16,7 +16,8 @@ function compareBlocksByFallbackOrder(blockA = {}, blockB = {}) {
     return pathResult;
   }
 
-  return String(blockA?.id ?? "").localeCompare(String(blockB?.id ?? ""));
+  // Preserve the original query order when fallback metadata cannot prove order.
+  return 0;
 }
 
 function compareBlocksByDocumentOrder(
@@ -31,9 +32,6 @@ function compareBlocksByDocumentOrder(
 
   if (hasIndexA && hasIndexB) {
     return indexA - indexB;
-  }
-  if (hasIndexA !== hasIndexB) {
-    return hasIndexA ? -1 : 1;
   }
 
   return compareBlocksByFallbackOrder(blockA, blockB);
@@ -412,6 +410,27 @@ function dedupeBlockIdArray(blockIdArray = []) {
   return dedupedBlockIds;
 }
 
+function orderBlockIdsByWindowOrder(windowBlockIds = [], blockIds = []) {
+  const dedupedBlockIds = dedupeBlockIdArray(blockIds);
+  if (!Array.isArray(windowBlockIds) || windowBlockIds.length <= 0) {
+    return dedupedBlockIds;
+  }
+
+  const blockIdSet = new Set(dedupedBlockIds);
+  const orderedBlockIds = windowBlockIds.filter((blockId) => blockIdSet.has(blockId));
+  if (orderedBlockIds.length >= dedupedBlockIds.length) {
+    return orderedBlockIds;
+  }
+
+  const orderedBlockIdSet = new Set(orderedBlockIds);
+  for (const blockId of dedupedBlockIds) {
+    if (!orderedBlockIdSet.has(blockId)) {
+      orderedBlockIds.push(blockId);
+    }
+  }
+  return orderedBlockIds;
+}
+
 function getHeadingLevel(block = {}) {
   if (block?.type !== "h") {
     return Number.POSITIVE_INFINITY;
@@ -599,6 +618,10 @@ function buildSourceWindowFromRange({
   if (dedupedVisibleBlockIds.length > 0) {
     sourceWindow.visibleBlockIds = dedupedVisibleBlockIds;
   }
+  sourceWindow.orderedVisibleBlockIds = orderBlockIdsByWindowOrder(
+    windowBlockIds,
+    dedupedVisibleBlockIds.length > 0 ? dedupedVisibleBlockIds : windowBlockIds,
+  );
   if (renderMode) {
     sourceWindow.renderMode = renderMode;
   }

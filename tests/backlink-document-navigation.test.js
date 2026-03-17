@@ -194,6 +194,45 @@ test("keeps original api order when sourceDocumentOrder is missing", () => {
   assert.equal(groups[0].activeBacklink.backlinkBlock.id, "a-3");
 });
 
+test("keeps original relative order when only part of a document group has sourceDocumentOrder", () => {
+  const backlinkDocumentArray = [{ id: "doc-a", content: "Alpha" }];
+  const backlinkDataArray = [
+    {
+      backlinkBlock: {
+        id: "a-3",
+        root_id: "doc-a",
+        content: "Alpha ref 3",
+        box: "box-a",
+      },
+    },
+    {
+      backlinkBlock: {
+        id: "a-1",
+        root_id: "doc-a",
+        content: "Alpha ref 1",
+        box: "box-a",
+      },
+      sourceDocumentOrder: 10,
+    },
+    {
+      backlinkBlock: {
+        id: "a-2",
+        root_id: "doc-a",
+        content: "Alpha ref 2",
+        box: "box-a",
+      },
+    },
+  ];
+
+  const groups = groupBacklinksByDocument(backlinkDocumentArray, backlinkDataArray);
+
+  assert.deepEqual(
+    groups[0].backlinks.map((backlink) => backlink.backlinkBlock.id),
+    ["a-3", "a-1", "a-2"],
+  );
+  assert.equal(groups[0].activeBacklink.backlinkBlock.id, "a-3");
+});
+
 test("sorts heading backlinks by sourceDocumentOrder instead of heading metadata priority", () => {
   const backlinkDocumentArray = [{ id: "doc-a", content: "Alpha" }];
   const backlinkDataArray = [

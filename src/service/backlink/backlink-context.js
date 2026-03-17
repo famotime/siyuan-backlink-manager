@@ -14,13 +14,6 @@ function pushFragment(fragmentArray, fragment) {
   fragmentArray.push(fragment);
 }
 
-function pushPreviewSequenceItem(sequence = [], item = null) {
-  if (!item || !item.renderMarkdown) {
-    return;
-  }
-  sequence.push(item);
-}
-
 function buildBacklinkContextFragmentDedupeKey(fragment = {}) {
   return [
     fragment.sourceType || "",
@@ -260,8 +253,8 @@ export function buildBacklinkContextBundle(backlinkBlockNode, deps) {
     backlinkBlockId: backlinkBlockNode.block.id,
     rootId: backlinkBlockNode.block.root_id,
     fragments: dedupedFragments,
+    explanationFragments: dedupedFragments.filter((fragment) => fragment.defaultVisible),
     visibleFragments: dedupedFragments.filter((fragment) => fragment.defaultVisible),
-    previewSequence: buildBacklinkPreviewSequence(backlinkBlockNode),
     matchedFragments: [],
     includeCurDocDefBlockIds,
     includeRelatedDefBlockIds,
@@ -273,88 +266,6 @@ export function buildBacklinkContextBundle(backlinkBlockNode, deps) {
   return bundle;
 }
 
-function buildBacklinkPreviewSequence(backlinkBlockNode = {}) {
-  const selfRenderMarkdown =
-    backlinkBlockNode.selfRenderMarkdown ||
-    backlinkBlockNode.block?.markdown ||
-    backlinkBlockNode.block?.content ||
-    "";
-  const nearby = [];
-  const extended = [];
-
-  pushPreviewSequenceItem(nearby, {
-    sequenceRole: "sibling_prev",
-    sourceType: "sibling_prev",
-    renderMarkdown:
-      backlinkBlockNode.previousSiblingRenderMarkdown ||
-      backlinkBlockNode.previousSiblingMarkdown ||
-      "",
-  });
-  pushPreviewSequenceItem(nearby, {
-    sequenceRole: "self",
-    sourceType: "self",
-    renderMarkdown: selfRenderMarkdown,
-  });
-  pushPreviewSequenceItem(nearby, {
-    sequenceRole: "sibling_next",
-    sourceType: "sibling_next",
-    renderMarkdown:
-      backlinkBlockNode.nextSiblingRenderMarkdown ||
-      backlinkBlockNode.nextSiblingMarkdown ||
-      "",
-  });
-
-  pushPreviewSequenceItem(extended, {
-    sequenceRole: "parent",
-    sourceType: "parent",
-    renderMarkdown:
-      backlinkBlockNode.parentRenderMarkdown || backlinkBlockNode.parentMarkdown || "",
-  });
-  pushPreviewSequenceItem(extended, {
-    sequenceRole: "expanded_before",
-    sourceType: "expanded",
-    renderMarkdown:
-      backlinkBlockNode.beforeExpandedRenderMarkdown ||
-      backlinkBlockNode.beforeExpandedMarkdown ||
-      "",
-  });
-  extended.push(...nearby);
-  pushPreviewSequenceItem(extended, {
-    sequenceRole: "expanded_after",
-    sourceType: "expanded",
-    renderMarkdown:
-      backlinkBlockNode.afterExpandedRenderMarkdown ||
-      backlinkBlockNode.afterExpandedMarkdown ||
-      "",
-  });
-  pushPreviewSequenceItem(extended, {
-    sequenceRole: "child_headline",
-    sourceType: "child_headline",
-    renderMarkdown: backlinkBlockNode.headlineChildMarkdown || "",
-  });
-  pushPreviewSequenceItem(extended, {
-    sequenceRole: "child_list",
-    sourceType: "child_list",
-    renderMarkdown:
-      backlinkBlockNode.parentListItemTreeNode?.getFilterMarkdown?.(
-        backlinkBlockNode.parentListItemTreeNode?.includeChildIdArray,
-        backlinkBlockNode.parentListItemTreeNode?.excludeChildIdArray,
-      ) || "",
-  });
-
-  return {
-    core: [
-      {
-        sequenceRole: "self",
-        sourceType: "self",
-        renderMarkdown: selfRenderMarkdown,
-      },
-    ].filter((item) => item.renderMarkdown),
-    nearby,
-    extended,
-  };
-}
-
 export function hydrateBacklinkContextBundles(backlinkBlockNodeArray = [], deps) {
   for (const backlinkBlockNode of backlinkBlockNodeArray) {
     buildBacklinkContextBundle(backlinkBlockNode, deps);
@@ -363,12 +274,14 @@ export function hydrateBacklinkContextBundles(backlinkBlockNodeArray = [], deps)
 
 export function applyBacklinkContextVisibility(bundle, visibilityLevel = "core") {
   const levelOrder = getBacklinkContextVisibilityLevelOrder(visibilityLevel);
-  bundle.visibleFragments = (bundle.fragments || []).filter((fragment) => {
+  const explanationFragments = (bundle.fragments || []).filter((fragment) => {
     const fragmentLevelOrder = getBacklinkContextVisibilityLevelOrder(
       fragment.visibilityLevel || "full",
     );
     return fragmentLevelOrder <= levelOrder;
   });
+  bundle.explanationFragments = explanationFragments;
+  bundle.visibleFragments = explanationFragments;
   return bundle;
 }
 

@@ -24,6 +24,32 @@ test("normalizeBacklinkContextBudget fills default limits", () => {
 
 test("applyBacklinkContextBudget keeps matched fragments before non-matched fragments", () => {
   const bundle = {
+    explanationFragments: [
+      {
+        id: "doc",
+        sourceType: "document",
+        matched: false,
+        budgetPriority: 2,
+        order: 1,
+        displayText: "document",
+      },
+      {
+        id: "parent",
+        sourceType: "parent",
+        matched: true,
+        budgetPriority: 3,
+        order: 2,
+        displayText: "matched-parent",
+      },
+      {
+        id: "child",
+        sourceType: "child_headline",
+        matched: false,
+        budgetPriority: 4,
+        order: 3,
+        displayText: "child",
+      },
+    ],
     visibleFragments: [
       {
         id: "doc",
@@ -58,6 +84,10 @@ test("applyBacklinkContextBudget keeps matched fragments before non-matched frag
   });
 
   assert.deepEqual(
+    bundle.explanationFragments.map((fragment) => fragment.id),
+    ["doc", "parent"],
+  );
+  assert.deepEqual(
     bundle.visibleFragments.map((fragment) => fragment.id),
     ["doc", "parent"],
   );
@@ -67,6 +97,32 @@ test("applyBacklinkContextBudget keeps matched fragments before non-matched frag
 
 test("applyBacklinkContextBudget preserves matched fragments even when the char budget is exceeded", () => {
   const bundle = {
+    explanationFragments: [
+      {
+        id: "self",
+        sourceType: "self",
+        matched: false,
+        budgetPriority: 1,
+        order: 0,
+        displayText: "short",
+      },
+      {
+        id: "matched",
+        sourceType: "parent",
+        matched: true,
+        budgetPriority: 3,
+        order: 1,
+        displayText: "this matched fragment is intentionally long",
+      },
+      {
+        id: "sibling",
+        sourceType: "sibling_prev",
+        matched: false,
+        budgetPriority: 3,
+        order: 2,
+        displayText: "other",
+      },
+    ],
     visibleFragments: [
       {
         id: "self",
@@ -101,6 +157,10 @@ test("applyBacklinkContextBudget preserves matched fragments even when the char 
   });
 
   assert.deepEqual(
+    bundle.explanationFragments.map((fragment) => fragment.id),
+    ["self", "matched"],
+  );
+  assert.deepEqual(
     bundle.visibleFragments.map((fragment) => fragment.id),
     ["self", "matched"],
   );
@@ -111,6 +171,29 @@ test("applyBacklinkContextBudgetToNodes updates every node bundle in place", () 
   const backlinkBlockNodeArray = [
     {
       contextBundle: {
+        explanationFragments: [
+          {
+            id: "self",
+            matched: false,
+            budgetPriority: 1,
+            order: 0,
+            displayText: "self",
+          },
+          {
+            id: "matched",
+            matched: true,
+            budgetPriority: 3,
+            order: 1,
+            displayText: "matched fragment",
+          },
+          {
+            id: "sibling",
+            matched: false,
+            budgetPriority: 3,
+            order: 2,
+            displayText: "other fragment",
+          },
+        ],
         visibleFragments: [
           {
             id: "self",
@@ -143,6 +226,12 @@ test("applyBacklinkContextBudgetToNodes updates every node bundle in place", () 
     maxVisibleChars: 20,
   });
 
+  assert.deepEqual(
+    backlinkBlockNodeArray[0].contextBundle.explanationFragments.map(
+      (fragment) => fragment.id,
+    ),
+    ["self", "matched"],
+  );
   assert.deepEqual(
     backlinkBlockNodeArray[0].contextBundle.visibleFragments.map(
       (fragment) => fragment.id,

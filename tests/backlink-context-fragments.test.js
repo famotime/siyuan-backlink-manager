@@ -89,18 +89,7 @@ test("buildBacklinkContextBundle materializes ordered fragments and default visi
   assert.equal(bundle.fragments[2].budgetPriority, 3);
   assert.equal(bundle.fragments[2].renderMarkdown, "## parent ((def-parent 'parent-anchor'))");
   assert.equal(bundle.fragments[6].renderMarkdown, "- expanded sibling");
-  assert.deepEqual(
-    bundle.previewSequence.extended.map((item) => item.sequenceRole),
-    [
-      "parent",
-      "expanded_before",
-      "sibling_prev",
-      "self",
-      "sibling_next",
-      "expanded_after",
-      "child_headline",
-    ],
-  );
+  assert.equal(bundle.previewSequence, undefined);
   assert.ok(bundle.includeCurDocDefBlockIds.has("def-current"));
   assert.ok(bundle.includeRelatedDefBlockIds.has("def-parent"));
 });

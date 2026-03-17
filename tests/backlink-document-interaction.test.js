@@ -280,7 +280,7 @@ test("uses source window renderMode when planner marks the window as document-sc
   );
 });
 
-test("uses preview backlink data instead of source window for reference-only backlinks", () => {
+test("keeps source window rendering ahead of preview fallback for reference-only backlinks", () => {
   const activeBacklink = {
     backlinkBlock: {
       id: "backlink-1",
@@ -330,7 +330,14 @@ test("uses preview backlink data instead of source window for reference-only bac
     }),
     {
       blockId: "doc-1",
-      backlinkData: [{ dom: "<div>preview</div>" }],
+      scrollAttr: {
+        rootId: "doc-1",
+        startId: "backlink-1",
+        endId: "backlink-1",
+        scrollTop: 0,
+        focusId: "backlink-1",
+        zoomInId: "backlink-1",
+      },
       render: {
         background: false,
         title: false,
@@ -340,6 +347,97 @@ test("uses preview backlink data instead of source window for reference-only bac
       },
     },
   );
+});
+
+test("does not invoke preview fallback when source window already provides document-ordered rendering", () => {
+  let previewCallCount = 0;
+  const activeBacklink = {
+    backlinkBlock: {
+      id: "backlink-1",
+      root_id: "doc-1",
+      box: "box-1",
+      markdown: "((20260221114249-31dbi9g \"“OpenClaw” 安装 ——Skills\"))",
+    },
+    sourceWindows: {
+      extended: {
+        rootId: "doc-1",
+        startBlockId: "block-prev",
+        endBlockId: "block-next",
+        focusBlockId: "backlink-1",
+        anchorBlockId: "backlink-1",
+      },
+    },
+  };
+
+  const options = buildBacklinkDocumentRenderOptions({
+    documentId: "doc-1",
+    activeBacklink,
+    contextVisibilityLevel: "extended",
+    deps: {
+      buildBacklinkPreviewBacklinkData: () => {
+        previewCallCount += 1;
+        return [{ dom: "<div>preview</div>" }];
+      },
+    },
+  });
+
+  assert.equal(previewCallCount, 0);
+  assert.deepEqual(options, {
+    blockId: "doc-1",
+    scrollAttr: {
+      rootId: "doc-1",
+      startId: "block-prev",
+      endId: "block-next",
+      scrollTop: 0,
+      focusId: "backlink-1",
+      zoomInId: "backlink-1",
+    },
+    render: {
+      background: false,
+      title: false,
+      gutter: true,
+      scroll: false,
+      breadcrumb: false,
+    },
+  });
+});
+
+test("falls back to the original backlink dom instead of preview assembly when no source window is available", () => {
+  let previewCallCount = 0;
+  const activeBacklink = {
+    backlinkBlock: {
+      id: "backlink-1",
+      root_id: "doc-1",
+      box: "box-1",
+      markdown: "((20260221114249-31dbi9g \"“OpenClaw” 安装 ——Skills\"))",
+    },
+    dom: "<div data-node-id=\"backlink-1\">legacy</div>",
+  };
+
+  const options = buildBacklinkDocumentRenderOptions({
+    documentId: "doc-1",
+    activeBacklink,
+    contextVisibilityLevel: "nearby",
+    deps: {
+      buildBacklinkPreviewBacklinkData: () => {
+        previewCallCount += 1;
+        return [{ dom: "<div>preview</div>" }];
+      },
+    },
+  });
+
+  assert.equal(previewCallCount, 0);
+  assert.deepEqual(options, {
+    blockId: "doc-1",
+    backlinkData: [activeBacklink],
+    render: {
+      background: false,
+      title: false,
+      gutter: true,
+      scroll: false,
+      breadcrumb: false,
+    },
+  });
 });
 
 test("uses the original anchor block directly in core mode", () => {

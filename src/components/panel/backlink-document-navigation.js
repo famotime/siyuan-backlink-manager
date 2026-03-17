@@ -34,9 +34,6 @@ function compareByOptionalNumber(valueA, valueB) {
   if (hasValueA && hasValueB) {
     return valueA - valueB;
   }
-  if (hasValueA !== hasValueB) {
-    return hasValueA ? -1 : 1;
-  }
 
   return 0;
 }

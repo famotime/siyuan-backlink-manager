@@ -82,12 +82,8 @@ export interface IBacklinkContextBundle {
     backlinkBlockId: string;
     rootId: string;
     fragments: IBacklinkContextFragment[];
+    explanationFragments: IBacklinkContextFragment[];
     visibleFragments: IBacklinkContextFragment[];
-    previewSequence?: {
-        core?: Array<{ sequenceRole: string; sourceType: string; renderMarkdown: string; text?: string }>;
-        nearby?: Array<{ sequenceRole: string; sourceType: string; renderMarkdown: string; text?: string }>;
-        extended?: Array<{ sequenceRole: string; sourceType: string; renderMarkdown: string; text?: string }>;
-    };
     matchedFragments: IBacklinkContextFragment[];
     includeCurDocDefBlockIds: Set<string>;
     includeRelatedDefBlockIds: Set<string>;
@@ -113,6 +109,8 @@ export interface IBacklinkSourceWindow {
     endBlockId: string;
     focusBlockId: string;
     windowBlockIds: string[];
+    visibleBlockIds?: string[];
+    orderedVisibleBlockIds?: string[];
     defaultExpandMode: string;
 }
 

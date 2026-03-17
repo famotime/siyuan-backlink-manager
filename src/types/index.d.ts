@@ -158,6 +158,8 @@ interface IBacklinkData {
         endBlockId: string;
         focusBlockId: string;
         windowBlockIds?: string[];
+        visibleBlockIds?: string[];
+        orderedVisibleBlockIds?: string[];
         defaultExpandMode?: string;
     };
 }

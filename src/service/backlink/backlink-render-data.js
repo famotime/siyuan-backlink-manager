@@ -45,8 +45,10 @@ export function buildBacklinkVisibleSourceSummary({
     return "已进入全文模式";
   }
 
-  const visibleFragments = Array.isArray(contextBundle?.visibleFragments)
-    ? contextBundle.visibleFragments
+  const visibleFragments = Array.isArray(contextBundle?.explanationFragments)
+    ? contextBundle.explanationFragments
+    : Array.isArray(contextBundle?.visibleFragments)
+      ? contextBundle.visibleFragments
     : [];
   const levelLabels = [];
   const seenSourceTypes = new Set();

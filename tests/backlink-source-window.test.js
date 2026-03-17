@@ -61,6 +61,14 @@ test("buildBacklinkSourceWindow uses the nearest heading section around the back
       "item-title",
     ],
     defaultExpandMode: "document_local_full",
+    orderedVisibleBlockIds: [
+      "heading-prev",
+      "item-expand",
+      "item-nearby",
+      "item-brand",
+      "block-brand",
+      "item-title",
+    ],
     renderMode: "scroll",
   });
 });
@@ -264,6 +272,7 @@ test("buildBacklinkSourceWindow keeps core mode on the original paragraph block"
     focusBlockId: "block-official",
     sourceDocumentOrder: 2,
     windowBlockIds: ["block-official"],
+    orderedVisibleBlockIds: ["block-official"],
     defaultExpandMode: "document_local_full",
     renderMode: "scroll",
   });
@@ -303,6 +312,7 @@ test("buildBacklinkSourceWindow keeps nearby mode on the surrounding original pa
     windowBlockIds: ["block-toolkit", "block-example", "block-after"],
     defaultExpandMode: "document_local_full",
     visibleBlockIds: ["block-toolkit", "block-example", "block-after"],
+    orderedVisibleBlockIds: ["block-toolkit", "block-example", "block-after"],
     renderMode: "scroll",
   });
 });
@@ -408,6 +418,14 @@ test("buildBacklinkSourceWindow extends heading backlinks from the previous para
     "heading-nested",
     "block-nested",
   ]);
+  assert.deepEqual(sourceWindow.orderedVisibleBlockIds, [
+    "heading-prev",
+    "block-before-heading",
+    "heading-focus",
+    "block-after-heading",
+    "heading-nested",
+    "block-nested",
+  ]);
   assert.equal(sourceWindow.startBlockId, "heading-prev");
   assert.equal(sourceWindow.endBlockId, "block-nested");
 });
@@ -461,6 +479,14 @@ test("buildBacklinkSourceWindow keeps nearby mode on sibling list items and adds
     ],
     defaultExpandMode: "document_local_full",
     visibleBlockIds: [
+      "item-nearby",
+      "item-brand",
+      "block-brand",
+      "item-title",
+      "item-logo",
+      "block-logo",
+    ],
+    orderedVisibleBlockIds: [
       "item-nearby",
       "item-brand",
       "block-brand",
@@ -698,6 +724,15 @@ test("buildBacklinkSourceWindow keeps nearby list mode on shells and direct read
     "item-logo",
     "block-logo",
   ]);
+  assert.deepEqual(sourceWindow.orderedVisibleBlockIds, [
+    "item-nearby",
+    "block-nearby",
+    "item-brand",
+    "block-brand",
+    "item-title",
+    "item-logo",
+    "block-logo",
+  ]);
 });
 
 test("attachBacklinkSourceWindows adds heading-bounded source windows to extended backlinks", () => {
@@ -818,6 +853,154 @@ test("loadOrderedBacklinkSourceWindowBlocks preserves parent-before-child tree o
   assert.deepEqual(
     orderedBlocksByRootId.get("doc-a").map((block) => block.id),
     ["item-brand", "block-brand", "item-next"],
+  );
+});
+
+test("loadOrderedBacklinkSourceWindowBlocks keeps original query order when fallback metadata ties", async () => {
+  const orderedBlocksByRootId = await loadOrderedBacklinkSourceWindowBlocks({
+    backlinkDataArray: [
+      {
+        backlinkBlock: {
+          id: "block-focus",
+          root_id: "doc-a",
+        },
+      },
+    ],
+    deps: {
+      queryDocumentBlocksByRootIds: async () => [
+        {
+          id: "block-tail",
+          root_id: "doc-a",
+          parent_id: "doc-a",
+          type: "p",
+          sort: 10,
+          path: "/doc-a/same",
+        },
+        {
+          id: "block-focus",
+          root_id: "doc-a",
+          parent_id: "doc-a",
+          type: "p",
+          sort: 10,
+          path: "/doc-a/same",
+        },
+        {
+          id: "block-intro",
+          root_id: "doc-a",
+          parent_id: "doc-a",
+          type: "p",
+          sort: 10,
+          path: "/doc-a/same",
+        },
+      ],
+      getBlockIndexMap: async () => new Map(),
+    },
+  });
+
+  assert.deepEqual(
+    orderedBlocksByRootId.get("doc-a").map((block) => block.id),
+    ["block-tail", "block-focus", "block-intro"],
+  );
+});
+
+test("loadOrderedBacklinkSourceWindowBlocks keeps original relative order when only part of the document has explicit order indexes", async () => {
+  const orderedBlocksByRootId = await loadOrderedBacklinkSourceWindowBlocks({
+    backlinkDataArray: [
+      {
+        backlinkBlock: {
+          id: "block-focus",
+          root_id: "doc-a",
+        },
+      },
+    ],
+    deps: {
+      queryDocumentBlocksByRootIds: async () => [
+        {
+          id: "block-tail",
+          root_id: "doc-a",
+          parent_id: "doc-a",
+          type: "p",
+          sort: 10,
+          path: "/doc-a/same",
+        },
+        {
+          id: "block-focus",
+          root_id: "doc-a",
+          parent_id: "doc-a",
+          type: "p",
+          sort: 10,
+          path: "/doc-a/same",
+        },
+        {
+          id: "block-intro",
+          root_id: "doc-a",
+          parent_id: "doc-a",
+          type: "p",
+          sort: 10,
+          path: "/doc-a/same",
+        },
+      ],
+      getBlockIndexMap: async () =>
+        new Map([
+          ["block-focus", 1],
+        ]),
+    },
+  });
+
+  assert.deepEqual(
+    orderedBlocksByRootId.get("doc-a").map((block) => block.id),
+    ["block-tail", "block-focus", "block-intro"],
+  );
+});
+
+test("loadOrderedBacklinkSourceWindowBlocks keeps original relative order when parent child order is only partially known", async () => {
+  const orderedBlocksByRootId = await loadOrderedBacklinkSourceWindowBlocks({
+    backlinkDataArray: [
+      {
+        backlinkBlock: {
+          id: "block-focus",
+          root_id: "doc-a",
+        },
+      },
+    ],
+    deps: {
+      queryDocumentBlocksByRootIds: async () => [
+        {
+          id: "block-tail",
+          root_id: "doc-a",
+          parent_id: "doc-a",
+          type: "p",
+          sort: 10,
+          path: "/doc-a/same",
+        },
+        {
+          id: "block-focus",
+          root_id: "doc-a",
+          parent_id: "doc-a",
+          type: "p",
+          sort: 10,
+          path: "/doc-a/same",
+        },
+        {
+          id: "block-intro",
+          root_id: "doc-a",
+          parent_id: "doc-a",
+          type: "p",
+          sort: 10,
+          path: "/doc-a/same",
+        },
+      ],
+      getBlockIndexMap: async () => new Map(),
+      getChildBlocks: async () => [
+        { id: "block-focus" },
+        { id: "block-intro" },
+      ],
+    },
+  });
+
+  assert.deepEqual(
+    orderedBlocksByRootId.get("doc-a").map((block) => block.id),
+    ["block-tail", "block-focus", "block-intro"],
   );
 });
 

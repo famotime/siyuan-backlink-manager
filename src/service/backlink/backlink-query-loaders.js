@@ -191,7 +191,8 @@ function sortSiblingBlocks(blockArray = []) {
       return pathResult;
     }
 
-    return String(a?.id ?? "").localeCompare(String(b?.id ?? ""));
+    // Keep the original query order when sibling metadata cannot prove a tighter order.
+    return 0;
   });
 }
 
@@ -263,10 +264,10 @@ function sortSiblingBlocksByParent(parentId, blockArray = [], siblingOrderMapByP
   blockArray.sort((a, b) => {
     const orderA = siblingOrderMap.has(a?.id) ? siblingOrderMap.get(a.id) : Infinity;
     const orderB = siblingOrderMap.has(b?.id) ? siblingOrderMap.get(b.id) : Infinity;
-    if (orderA !== orderB) {
+    if (Number.isFinite(orderA) && Number.isFinite(orderB) && orderA !== orderB) {
       return orderA - orderB;
     }
-    return String(a?.id ?? "").localeCompare(String(b?.id ?? ""));
+    return 0;
   });
 }
 

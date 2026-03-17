@@ -209,6 +209,106 @@ test("getSiblingBlockGroupArray keeps ordinary block neighbors in the actual par
   ]);
 });
 
+test("getSiblingBlockGroupArray keeps original query order when sibling metadata ties and parent order is unavailable", async () => {
+  const result = await getSiblingBlockGroupArray(
+    {
+      backlinkBlocks: [{ id: "block-focus", parent_id: "doc-a" }],
+    },
+    {
+      generateGetBacklinkSiblingBlockArraySql: () => "SIBLING_SQL",
+      sql: async () => [
+        { id: "block-tail", parent_id: "doc-a", sort: 10, path: "/same", type: "p" },
+        { id: "block-focus", parent_id: "doc-a", sort: 10, path: "/same", type: "p" },
+        { id: "block-intro", parent_id: "doc-a", sort: 10, path: "/same", type: "p" },
+      ],
+      isArrayEmpty: (value) => !value || value.length === 0,
+      isStrNotBlank: (value) => value !== "",
+    },
+  );
+
+  assert.deepEqual(result, [
+    {
+      backlinkBlockId: "block-focus",
+      currentSiblingBlock: {
+        id: "block-focus",
+        parent_id: "doc-a",
+        sort: 10,
+        path: "/same",
+        type: "p",
+      },
+      previousSiblingBlock: {
+        id: "block-tail",
+        parent_id: "doc-a",
+        sort: 10,
+        path: "/same",
+        type: "p",
+      },
+      nextSiblingBlock: {
+        id: "block-intro",
+        parent_id: "doc-a",
+        sort: 10,
+        path: "/same",
+        type: "p",
+      },
+      beforeSiblingBlocks: [],
+      afterSiblingBlocks: [],
+      expandedSiblingBlocks: [],
+    },
+  ]);
+});
+
+test("getSiblingBlockGroupArray keeps original relative order when parent child order is only partially known", async () => {
+  const result = await getSiblingBlockGroupArray(
+    {
+      backlinkBlocks: [{ id: "block-focus", parent_id: "doc-a" }],
+    },
+    {
+      generateGetBacklinkSiblingBlockArraySql: () => "SIBLING_SQL",
+      sql: async () => [
+        { id: "block-tail", parent_id: "doc-a", sort: 10, path: "/same", type: "p" },
+        { id: "block-focus", parent_id: "doc-a", sort: 10, path: "/same", type: "p" },
+        { id: "block-intro", parent_id: "doc-a", sort: 10, path: "/same", type: "p" },
+      ],
+      getChildBlocks: async () => [
+        { id: "block-focus" },
+        { id: "block-intro" },
+      ],
+      isArrayEmpty: (value) => !value || value.length === 0,
+      isStrNotBlank: (value) => value !== "",
+    },
+  );
+
+  assert.deepEqual(result, [
+    {
+      backlinkBlockId: "block-focus",
+      currentSiblingBlock: {
+        id: "block-focus",
+        parent_id: "doc-a",
+        sort: 10,
+        path: "/same",
+        type: "p",
+      },
+      previousSiblingBlock: {
+        id: "block-tail",
+        parent_id: "doc-a",
+        sort: 10,
+        path: "/same",
+        type: "p",
+      },
+      nextSiblingBlock: {
+        id: "block-intro",
+        parent_id: "doc-a",
+        sort: 10,
+        path: "/same",
+        type: "p",
+      },
+      beforeSiblingBlocks: [],
+      afterSiblingBlocks: [],
+      expandedSiblingBlocks: [],
+    },
+  ]);
+});
+
 test("getSiblingBlockGroupArray uses sibling list items when backlink block is inside a list item", async () => {
   const result = await getSiblingBlockGroupArray(
     {

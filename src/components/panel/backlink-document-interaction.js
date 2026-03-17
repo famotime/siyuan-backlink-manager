@@ -1,8 +1,3 @@
-import {
-  buildBacklinkPreviewBacklinkData,
-  isReferenceOnlyPreviewMarkdown,
-} from "../../service/backlink/backlink-preview-assembly.js";
-
 export const BACKLINK_DOCUMENT_RENDER_CONFIG = {
   background: false,
   title: false,
@@ -63,20 +58,6 @@ export function shouldHandleBacklinkDocumentClick({
   return targetRole !== "toggle";
 }
 
-function getDefaultMarkdownToBlockDOM() {
-  const luteFactory = globalThis.Lute;
-  if (!luteFactory || typeof luteFactory.New !== "function") {
-    return null;
-  }
-
-  const lute = luteFactory.New();
-  if (!lute || typeof lute.Md2BlockDOM !== "function") {
-    return null;
-  }
-
-  return (markdown = "") => lute.Md2BlockDOM(markdown);
-}
-
 function getBacklinkSourceWindowByLevel(activeBacklink, visibilityLevel = "core") {
   if (!activeBacklink) {
     return null;
@@ -93,19 +74,6 @@ function getBacklinkSourceWindowByLevel(activeBacklink, visibilityLevel = "core"
 
   return null;
 }
-
-function isReferenceOnlyBacklink(activeBacklink = null) {
-  const selfFragment = activeBacklink?.contextBundle?.fragments?.find?.(
-    (fragment) => fragment?.sourceType === "self",
-  );
-  const selfMarkdown =
-    selfFragment?.renderMarkdown ||
-    selfFragment?.text ||
-    activeBacklink?.backlinkBlock?.markdown ||
-    "";
-  return isReferenceOnlyPreviewMarkdown(selfMarkdown);
-}
-
 function getBacklinkSourceWindowRenderMode(
   sourceWindow = null,
   visibilityLevel = "core",
@@ -147,23 +115,6 @@ export function buildBacklinkDocumentRenderOptions({
     sourceWindow,
     normalizedVisibilityLevel,
   );
-  if (!useFullDocument && isReferenceOnlyBacklink(activeBacklink)) {
-    const previewBacklinkData = (
-      deps.buildBacklinkPreviewBacklinkData || buildBacklinkPreviewBacklinkData
-    )({
-      activeBacklink,
-      contextVisibilityLevel: normalizedVisibilityLevel,
-      deps: {
-        markdownToBlockDOM:
-          deps.markdownToBlockDOM || getDefaultMarkdownToBlockDOM(),
-      },
-    });
-    options.backlinkData =
-      Array.isArray(previewBacklinkData) && previewBacklinkData.length > 0
-        ? previewBacklinkData
-        : [activeBacklink];
-    return options;
-  }
   if (!useFullDocument && normalizedVisibilityLevel === "core" && sourceWindow) {
     if (sourceWindowRenderMode === "document") {
       return options;
@@ -209,25 +160,12 @@ export function buildBacklinkDocumentRenderOptions({
         sourceWindow.anchorBlockId ||
         sourceWindow.focusBlockId ||
         activeBacklink.backlinkBlock?.id,
-    };
+      };
     return options;
   }
 
   if (!useFullDocument && activeBacklink) {
-    const previewBacklinkData = (
-      deps.buildBacklinkPreviewBacklinkData || buildBacklinkPreviewBacklinkData
-    )({
-      activeBacklink,
-      contextVisibilityLevel: normalizedVisibilityLevel,
-      deps: {
-        markdownToBlockDOM:
-          deps.markdownToBlockDOM || getDefaultMarkdownToBlockDOM(),
-      },
-    });
-    options.backlinkData =
-      Array.isArray(previewBacklinkData) && previewBacklinkData.length > 0
-        ? previewBacklinkData
-        : [activeBacklink];
+    options.backlinkData = [activeBacklink];
   }
 
   return options;

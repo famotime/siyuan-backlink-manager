@@ -233,6 +233,22 @@ function getBacklinkSourceWindowByLevel(backlinkData, contextVisibilityLevel = "
   return null;
 }
 
+function getOrderedVisibleBlockIds(sourceWindow = null) {
+  if (
+    Array.isArray(sourceWindow?.orderedVisibleBlockIds) &&
+    sourceWindow.orderedVisibleBlockIds.length > 0
+  ) {
+    return sourceWindow.orderedVisibleBlockIds;
+  }
+  if (
+    Array.isArray(sourceWindow?.visibleBlockIds) &&
+    sourceWindow.visibleBlockIds.length > 0
+  ) {
+    return sourceWindow.visibleBlockIds;
+  }
+  return Array.isArray(sourceWindow?.windowBlockIds) ? sourceWindow.windowBlockIds : [];
+}
+
 function collectVisibleBlockIdsWithAncestors(
   visibleBlockIdSet,
   blockElementArray = [],
@@ -312,9 +328,7 @@ function collectVisibleBlockIdsFromExpandedListShells(
   sourceWindow = null,
   blockElementArray = [],
 ) {
-  const visibleBlockIds = Array.isArray(sourceWindow?.visibleBlockIds)
-    ? sourceWindow.visibleBlockIds
-    : [];
+  const visibleBlockIds = getOrderedVisibleBlockIds(sourceWindow);
   const windowBlockIdSet = new Set(
     Array.isArray(sourceWindow?.windowBlockIds) ? sourceWindow.windowBlockIds : [],
   );
@@ -446,16 +460,13 @@ export function hideBlocksOutsideBacklinkSourceWindow(
   const getBlockElementArray = () =>
     protyleWysiwygElement.querySelectorAll("[data-node-id]");
   let blockElementArray = getBlockElementArray();
-  const visibleBlockIds =
-    Array.isArray(sourceWindow?.visibleBlockIds) &&
-    sourceWindow.visibleBlockIds.length > 0
-      ? sourceWindow.visibleBlockIds
-      : windowBlockIds;
+  const explicitVisibleBlockIds =
+    Array.isArray(sourceWindow?.visibleBlockIds) && sourceWindow.visibleBlockIds.length > 0;
+  const visibleBlockIds = getOrderedVisibleBlockIds(sourceWindow);
   const descendantSourceBlockIds =
     Array.isArray(sourceWindow?.includeDescendantBlockIds)
       ? sourceWindow.includeDescendantBlockIds
-      : Array.isArray(sourceWindow?.visibleBlockIds) &&
-          sourceWindow.visibleBlockIds.length > 0
+      : explicitVisibleBlockIds
         ? []
         : visibleBlockIds;
   const seedVisibleBlockIdSet = collectVisibleBlockIdsWithAncestors(

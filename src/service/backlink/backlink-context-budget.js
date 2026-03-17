@@ -37,10 +37,12 @@ function compareBudgetFragments(a, b) {
 
 export function applyBacklinkContextBudget(bundle, budget = {}) {
   const normalizedBudget = normalizeBacklinkContextBudget(budget);
-  const visibleFragments = Array.isArray(bundle?.visibleFragments)
-    ? [...bundle.visibleFragments]
+  const explanationFragments = Array.isArray(bundle?.explanationFragments)
+    ? [...bundle.explanationFragments]
+    : Array.isArray(bundle?.visibleFragments)
+      ? [...bundle.visibleFragments]
     : [];
-  const prioritizedFragments = visibleFragments.sort(compareBudgetFragments);
+  const prioritizedFragments = explanationFragments.sort(compareBudgetFragments);
   const keptFragments = [];
   let omittedFragmentCount = 0;
   let visibleCharacterCount = 0;
@@ -73,6 +75,7 @@ export function applyBacklinkContextBudget(bundle, budget = {}) {
   }
 
   keptFragments.sort((a, b) => (a?.order || 0) - (b?.order || 0));
+  bundle.explanationFragments = keptFragments;
   bundle.visibleFragments = keptFragments;
   bundle.budgetSummary = {
     ...normalizedBudget,

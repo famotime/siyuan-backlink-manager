@@ -249,6 +249,7 @@ function buildDocumentBlockContext(orderedDocumentBlocks = []) {
   const indexById = new Map();
   const blockById = new Map();
   const documentOrderById = new Map();
+  const childBlockIdsByParentId = new Map();
 
   orderedDocumentBlocks.forEach((block, index) => {
     if (!block?.id) {
@@ -261,6 +262,13 @@ function buildDocumentBlockContext(orderedDocumentBlocks = []) {
       block.id,
       Number.isFinite(explicitDocumentOrder) ? explicitDocumentOrder : index,
     );
+    const parentId = block.parent_id || "";
+    let childBlockIds = childBlockIdsByParentId.get(parentId);
+    if (!childBlockIds) {
+      childBlockIds = [];
+      childBlockIdsByParentId.set(parentId, childBlockIds);
+    }
+    childBlockIds.push(block.id);
   });
 
   return {
@@ -268,6 +276,7 @@ function buildDocumentBlockContext(orderedDocumentBlocks = []) {
     indexById,
     blockById,
     documentOrderById,
+    childBlockIdsByParentId,
   };
 }
 
@@ -498,7 +507,6 @@ function buildSourceWindowContextPlan({
 
 function buildSourceWindowFromContextPlan({
   contextPlan = null,
-  visibleBlockIds = [],
   renderMode = "",
   defaultExpandMode = "document_local_full",
 } = {}) {
@@ -524,11 +532,9 @@ function buildSourceWindowFromContextPlan({
     contextPlan,
     defaultExpandMode,
   };
-
-  const dedupedVisibleBlockIds = dedupeBlockIdArray(visibleBlockIds);
-  if (dedupedVisibleBlockIds.length > 0) {
-    sourceWindow.visibleBlockIds = dedupedVisibleBlockIds;
-  }
+  sourceWindow.visibleBlockIds = dedupeBlockIdArray(
+    sourceWindow.orderedVisibleBlockIds,
+  );
   if (renderMode) {
     sourceWindow.renderMode = renderMode;
   }
@@ -558,6 +564,21 @@ export function getBacklinkSourceWindowByLevel(
   }
 
   return null;
+}
+
+export function getBacklinkDataSourceDocumentOrder(backlinkData = null) {
+  if (Number.isFinite(backlinkData?.sourceDocumentOrder)) {
+    return backlinkData.sourceDocumentOrder;
+  }
+
+  const sourceWindowIdentity = getBacklinkSourceWindowIdentity(
+    getBacklinkSourceWindowByLevel(backlinkData, "core"),
+  );
+  if (Number.isFinite(sourceWindowIdentity?.sourceDocumentOrder)) {
+    return sourceWindowIdentity.sourceDocumentOrder;
+  }
+
+  return Number.POSITIVE_INFINITY;
 }
 
 export function getBacklinkSourceWindowIdentity(sourceWindow = null) {
@@ -632,11 +653,19 @@ export function hasBacklinkSourceWindowExplicitVisibleBlockIds(sourceWindow = nu
   if (collapsedBlockIds.length > 0) {
     return true;
   }
-
-  return (
-    Array.isArray(sourceWindow?.visibleBlockIds) &&
-    sourceWindow.visibleBlockIds.length > 0
+  const visibleBlockIds = dedupeBlockIdArray(
+    Array.isArray(sourceWindow?.visibleBlockIds) ? sourceWindow.visibleBlockIds : [],
   );
+  const windowBlockIds = dedupeBlockIdArray(
+    Array.isArray(sourceWindow?.windowBlockIds) ? sourceWindow.windowBlockIds : [],
+  );
+  if (visibleBlockIds.length <= 0) {
+    return false;
+  }
+  if (visibleBlockIds.length !== windowBlockIds.length) {
+    return true;
+  }
+  return visibleBlockIds.some((blockId, index) => blockId !== windowBlockIds[index]);
 }
 
 export function getBacklinkSourceWindowCandidateBlockIds({
@@ -738,6 +767,13 @@ function resolveTopLevelStructuralContainerBlockId(
 }
 
 function getDirectChildBlocks(parentBlockId = "", context) {
+  const directChildBlockIds = context?.childBlockIdsByParentId?.get(parentBlockId);
+  if (Array.isArray(directChildBlockIds)) {
+    return directChildBlockIds
+      .map((blockId) => context?.blockById?.get(blockId))
+      .filter(Boolean);
+  }
+
   const startIndex = context.indexById.get(parentBlockId);
   if (startIndex === undefined) {
     return [];
@@ -759,6 +795,45 @@ function getDirectChildBlocks(parentBlockId = "", context) {
   }
 
   return childBlocks;
+}
+
+function getSiblingBlockIdByOffset(blockId = "", offset = 0, context) {
+  if (!blockId || offset === 0) {
+    return blockId || "";
+  }
+
+  const block = context?.blockById?.get(blockId);
+  if (!block) {
+    return "";
+  }
+
+  const siblingBlockIds = context?.childBlockIdsByParentId?.get(block.parent_id || "") || [];
+  const siblingIndex = siblingBlockIds.indexOf(blockId);
+  if (siblingIndex < 0) {
+    return "";
+  }
+
+  return siblingBlockIds[siblingIndex + offset] || "";
+}
+
+function findNearestSiblingBlockIdByPredicate(
+  blockId = "",
+  direction = "previous",
+  predicate = () => true,
+  context,
+) {
+  const step = direction === "next" ? 1 : -1;
+  let candidateBlockId = getSiblingBlockIdByOffset(blockId, step, context);
+
+  while (candidateBlockId) {
+    const candidateBlock = context?.blockById?.get(candidateBlockId);
+    if (predicate(candidateBlock)) {
+      return candidateBlockId;
+    }
+    candidateBlockId = getSiblingBlockIdByOffset(candidateBlockId, step, context);
+  }
+
+  return "";
 }
 
 function resolveReadableListItemShellBlockIds(listItemBlockId = "", context) {
@@ -834,9 +909,7 @@ function buildSourceWindowFromRange({
 
   const orderedVisibleBlockIds = orderBlockIdsByWindowOrder(
     windowBlockIds,
-    Array.isArray(visibleBlockIds) && visibleBlockIds.length > 0
-      ? visibleBlockIds
-      : windowBlockIds,
+    windowBlockIds,
   );
   const contextPlan = buildSourceWindowContextPlan({
     rootId: sourceWindow.rootId,
@@ -851,7 +924,6 @@ function buildSourceWindowFromRange({
   });
   return buildSourceWindowFromContextPlan({
     contextPlan,
-    visibleBlockIds,
     renderMode,
   });
 }
@@ -907,15 +979,32 @@ function buildNearbyBacklinkSourceWindow(backlinkBlockNode, context) {
     startBlockId = backlinkBlockNode.previousSiblingBlockId || anchorBlockId;
     endBlockId = backlinkBlockNode.nextSiblingBlockId || anchorBlockId;
   } else {
-    const prevIndex = anchorStartIndex - 1;
-    const nextIndex = anchorStartIndex + 1;
-    startBlockId = prevIndex >= 0 ? context.orderedDocumentBlocks[prevIndex]?.id : null;
-    endBlockId = nextIndex < context.orderedDocumentBlocks.length ? context.orderedDocumentBlocks[nextIndex]?.id : null;
+    const focusBlock = context.blockById.get(anchorBlockId);
+    if (focusBlock?.type === "h") {
+      startBlockId = findNearestSiblingBlockIdByPredicate(
+        anchorBlockId,
+        "previous",
+        (candidateBlock) => candidateBlock?.type && candidateBlock.type !== "h",
+        context,
+      );
+      endBlockId = findNearestSiblingBlockIdByPredicate(
+        anchorBlockId,
+        "next",
+        (candidateBlock) => candidateBlock?.type && candidateBlock.type !== "h",
+        context,
+      );
+    } else {
+      startBlockId = getSiblingBlockIdByOffset(anchorBlockId, -1, context);
+      endBlockId = getSiblingBlockIdByOffset(anchorBlockId, 1, context);
+    }
   }
 
   const renderStartBlockId = resolveFirstDescendantBlockId(startBlockId, context);
-  const startIndex = context.indexById.get(startBlockId) ?? anchorStartIndex;
-  const visibleBlockIds = isListItemContext
+  const startIndex =
+    context.indexById.get(startBlockId) ??
+    context.indexById.get(anchorBlockId) ??
+    anchorStartIndex;
+  const boundaryBlockIds = isListItemContext
     ? dedupeBlockIdArray([
         ...resolveReadableListItemShellBlockIds(startBlockId, context),
         anchorBlockId,
@@ -923,12 +1012,12 @@ function buildNearbyBacklinkSourceWindow(backlinkBlockNode, context) {
         ...resolveReadableListItemShellBlockIds(endBlockId, context),
       ])
     : dedupeBlockIdArray([
-        startBlockId,
+        startBlockId || anchorBlockId,
         backlinkBlockNode.block.id,
-        endBlockId,
+        endBlockId || anchorBlockId,
       ]);
   const listContextWindowEnd = getMaxIndexedBlockEntry(
-    visibleBlockIds,
+    boundaryBlockIds,
     context,
     anchorStartIndex,
     anchorBlockId,
@@ -951,7 +1040,6 @@ function buildNearbyBacklinkSourceWindow(backlinkBlockNode, context) {
     endIndex,
     startBlockId: sourceWindowStartBlockId,
     endBlockId: sourceWindowEndBlockId,
-    visibleBlockIds,
     renderMode: "scroll",
   });
 }
@@ -1014,6 +1102,20 @@ function buildExtendedBacklinkSourceWindow(backlinkBlockNode, context) {
       ),
     );
   } else {
+    const firstHeadingIndex = findFirstHeadingIndex(context.orderedDocumentBlocks);
+    if (firstHeadingIndex >= 0) {
+      safeStartIndex = 0;
+      safeEndIndex = Math.max(0, firstHeadingIndex - 1);
+      return buildSourceWindowFromRange({
+        backlinkBlockNode,
+        context,
+        anchorBlockId,
+        startIndex: safeStartIndex,
+        endIndex: safeEndIndex,
+        renderMode: "scroll",
+      });
+    }
+
     const topLevelContainerBlockId = resolveTopLevelStructuralContainerBlockId(
       focusBlockId,
       backlinkBlockNode.block.root_id,
@@ -1025,11 +1127,7 @@ function buildExtendedBacklinkSourceWindow(backlinkBlockNode, context) {
       safeEndIndex = findBlockSubtreeEndIndex(safeStartIndex, context);
     } else {
       safeStartIndex = 0;
-      const firstHeadingIndex = findFirstHeadingIndex(context.orderedDocumentBlocks);
-      safeEndIndex =
-        firstHeadingIndex > 0
-          ? firstHeadingIndex - 1
-          : context.orderedDocumentBlocks.length - 1;
+      safeEndIndex = context.orderedDocumentBlocks.length - 1;
     }
   }
 

@@ -219,7 +219,6 @@ export function hideOtherListItemElement(
 import {
   getBacklinkSourceWindowByLevel,
   getBacklinkSourceWindowBodyRange,
-  hasBacklinkSourceWindowExplicitVisibleBlockIds,
   getBacklinkSourceWindowOrderedVisibleBlockIds,
 } from "../../service/backlink/backlink-source-window.js";
 function getSourceWindowWindowBlockIds(sourceWindow = null) {
@@ -437,15 +436,7 @@ export function hideBlocksOutsideBacklinkSourceWindow(
   const getBlockElementArray = () =>
     protyleWysiwygElement.querySelectorAll("[data-node-id]");
   let blockElementArray = getBlockElementArray();
-  const explicitVisibleBlockIds =
-    hasBacklinkSourceWindowExplicitVisibleBlockIds(sourceWindow);
-  const visibleBlockIds = getBacklinkSourceWindowOrderedVisibleBlockIds(sourceWindow);
-  const descendantSourceBlockIds =
-    Array.isArray(sourceWindow?.includeDescendantBlockIds)
-      ? sourceWindow.includeDescendantBlockIds
-      : explicitVisibleBlockIds
-        ? []
-        : visibleBlockIds;
+  const visibleBlockIds = getSourceWindowWindowBlockIds(sourceWindow);
   const seedVisibleBlockIdSet = collectVisibleBlockIdsWithAncestors(
     new Set(visibleBlockIds),
     blockElementArray,
@@ -458,17 +449,13 @@ export function hideBlocksOutsideBacklinkSourceWindow(
   );
   blockElementArray = getBlockElementArray();
   const visibleBlockIdSet = collectVisibleBlockIdsWithAncestors(
-    collectVisibleBlockIdsWithDescendants(
-      new Set([
-        ...seedVisibleBlockIdSet,
-        ...collectVisibleBlockIdsFromExpandedListShells(
-          sourceWindow,
-          blockElementArray,
-        ),
-      ]),
-      blockElementArray,
-      descendantSourceBlockIds,
-    ),
+    new Set([
+      ...seedVisibleBlockIdSet,
+      ...collectVisibleBlockIdsFromExpandedListShells(
+        sourceWindow,
+        blockElementArray,
+      ),
+    ]),
     blockElementArray,
     protyleWysiwygElement,
   );

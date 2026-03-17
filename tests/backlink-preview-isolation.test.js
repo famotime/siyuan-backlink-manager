@@ -49,10 +49,8 @@ test("production panel consumers read source window semantics through getters in
   assert.doesNotMatch(interactionModule, /sourceWindow\.(rootId|anchorBlockId|focusBlockId|startBlockId|endBlockId)\b/);
 
   assert.match(domModule, /getBacklinkSourceWindowBodyRange/);
-  assert.match(domModule, /getBacklinkSourceWindowOrderedVisibleBlockIds/);
-  assert.match(domModule, /hasBacklinkSourceWindowExplicitVisibleBlockIds/);
   assert.doesNotMatch(domModule, /sourceWindow\.(windowBlockIds|visibleBlockIds|orderedVisibleBlockIds|collapsedBlockIds)\b/);
 
-  assert.match(navigationModule, /getBacklinkSourceWindowIdentity/);
+  assert.match(navigationModule, /getBacklinkDataSourceDocumentOrder/);
   assert.doesNotMatch(navigationModule, /sourceWindows\?\.(core|nearby|extended)\?\.(rootId|anchorBlockId|focusBlockId)\b/);
 });

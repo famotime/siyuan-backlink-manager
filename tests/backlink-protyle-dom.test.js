@@ -313,11 +313,17 @@ test("hideBlocksOutsideBacklinkSourceWindow unfolds folded ancestor list items f
 });
 
 test("hideBlocksOutsideBacklinkSourceWindow keeps descendant blocks visible when a list item container is in the window", () => {
-  const makeBlock = (id) => ({
+  const makeBlock = (id, dataType = "") => ({
     id,
     parentElement: null,
     getAttribute(name) {
-      return name === "data-node-id" ? id : null;
+      if (name === "data-node-id") {
+        return id;
+      }
+      if (name === "data-type") {
+        return dataType;
+      }
+      return null;
     },
     querySelectorAll() {
       return [];
@@ -334,9 +340,9 @@ test("hideBlocksOutsideBacklinkSourceWindow keeps descendant blocks visible when
     },
   });
 
-  const itemBlock = makeBlock("item-a");
-  const textBlock = makeBlock("block-a");
-  const otherBlock = makeBlock("block-b");
+  const itemBlock = makeBlock("item-a", "NodeListItem");
+  const textBlock = makeBlock("block-a", "NodeParagraph");
+  const otherBlock = makeBlock("block-b", "NodeParagraph");
   itemBlock.querySelectorAll = () => [textBlock];
   textBlock.parentElement = itemBlock;
 
@@ -368,7 +374,7 @@ test("hideBlocksOutsideBacklinkSourceWindow keeps descendant blocks visible when
   assert.deepEqual(otherBlock.classList.added, ["fn__none"]);
 });
 
-test("hideBlocksOutsideBacklinkSourceWindow respects explicit visibleBlockIds without expanding every descendant of a shell block", () => {
+test("hideBlocksOutsideBacklinkSourceWindow keeps the full continuous window visible even when legacy visibleBlockIds are narrower", () => {
   const makeBlock = (id) => ({
     id,
     parentElement: null,
@@ -427,12 +433,12 @@ test("hideBlocksOutsideBacklinkSourceWindow respects explicit visibleBlockIds wi
 
   assert.deepEqual(itemShell.classList.removed, ["fn__none"]);
   assert.deepEqual(focusBlock.classList.removed, ["fn__none"]);
-  assert.deepEqual(nestedList.classList.added, ["fn__none"]);
-  assert.deepEqual(nestedItem.classList.added, ["fn__none"]);
-  assert.deepEqual(nestedText.classList.added, ["fn__none"]);
+  assert.deepEqual(nestedList.classList.removed, ["fn__none"]);
+  assert.deepEqual(nestedItem.classList.removed, ["fn__none"]);
+  assert.deepEqual(nestedText.classList.removed, ["fn__none"]);
 });
 
-test("hideBlocksOutsideBacklinkSourceWindow prefers orderedVisibleBlockIds when provided", () => {
+test("hideBlocksOutsideBacklinkSourceWindow keeps all blocks in the bodyRange visible even when orderedVisibleBlockIds are narrower", () => {
   const makeBlock = (id) => ({
     id,
     parentElement: null,
@@ -483,11 +489,11 @@ test("hideBlocksOutsideBacklinkSourceWindow prefers orderedVisibleBlockIds when 
   );
 
   assert.deepEqual(blockA.classList.removed, ["fn__none"]);
-  assert.deepEqual(blockB.classList.added, ["fn__none"]);
+  assert.deepEqual(blockB.classList.removed, ["fn__none"]);
   assert.deepEqual(blockC.classList.removed, ["fn__none"]);
 });
 
-test("hideBlocksOutsideBacklinkSourceWindow reads bodyRange and orderedVisibleBlockIds from contextPlan", () => {
+test("hideBlocksOutsideBacklinkSourceWindow reads the full bodyRange from contextPlan without hiding middle blocks", () => {
   const makeBlock = (id) => ({
     id,
     parentElement: null,
@@ -541,11 +547,11 @@ test("hideBlocksOutsideBacklinkSourceWindow reads bodyRange and orderedVisibleBl
   );
 
   assert.deepEqual(blockA.classList.removed, ["fn__none"]);
-  assert.deepEqual(blockB.classList.added, ["fn__none"]);
+  assert.deepEqual(blockB.classList.removed, ["fn__none"]);
   assert.deepEqual(blockC.classList.removed, ["fn__none"]);
 });
 
-test("hideBlocksOutsideBacklinkSourceWindow treats contextPlan collapsedBlockIds as explicit visibility evidence", () => {
+test("hideBlocksOutsideBacklinkSourceWindow does not hide continuous window blocks even when collapsedBlockIds are present in legacy data", () => {
   const makeBlock = (id) => ({
     id,
     parentElement: null,
@@ -615,9 +621,9 @@ test("hideBlocksOutsideBacklinkSourceWindow treats contextPlan collapsedBlockIds
 
   assert.deepEqual(itemShell.classList.removed, ["fn__none"]);
   assert.deepEqual(focusBlock.classList.removed, ["fn__none"]);
-  assert.deepEqual(nestedList.classList.added, ["fn__none"]);
-  assert.deepEqual(nestedItem.classList.added, ["fn__none"]);
-  assert.deepEqual(nestedText.classList.added, ["fn__none"]);
+  assert.deepEqual(nestedList.classList.removed, ["fn__none"]);
+  assert.deepEqual(nestedItem.classList.removed, ["fn__none"]);
+  assert.deepEqual(nestedText.classList.removed, ["fn__none"]);
 });
 
 test("hideBlocksOutsideBacklinkSourceWindow keeps descendant child lists visible when a visible list item shell is unfolded", () => {

@@ -7,6 +7,7 @@ import {
   buildBacklinkContextBundle,
   dedupeBacklinkContextFragments,
   getBacklinkContextExplanationFragments,
+  getBacklinkContextMatchMeta,
   hydrateBacklinkContextBundles,
   matchBacklinkContextBundle,
 } from "../src/service/backlink/backlink-context.js";
@@ -428,4 +429,24 @@ test("getBacklinkContextExplanationFragments prefers explanationFragments and fa
     }).map((fragment) => fragment.id),
     ["vis-1"],
   );
+});
+
+test("getBacklinkContextMatchMeta returns explanation-layer match metadata", () => {
+  assert.deepEqual(
+    getBacklinkContextMatchMeta({
+      primaryMatchSourceType: "parent",
+      matchSummaryList: ["父级：命中说明"],
+    }),
+    {
+      primaryMatchSourceType: "parent",
+      matchSourceLabel: "父级",
+      matchSummaryText: "父级：命中说明",
+    },
+  );
+
+  assert.deepEqual(getBacklinkContextMatchMeta(null), {
+    primaryMatchSourceType: "",
+    matchSourceLabel: "",
+    matchSummaryText: "",
+  });
 });

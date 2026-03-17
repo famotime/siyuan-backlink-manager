@@ -1,4 +1,4 @@
-import { getBacklinkContextSourceRule } from "../../service/backlink/backlink-context-rules.js";
+import { getBacklinkContextMatchMeta } from "../../service/backlink/backlink-context.js";
 import { getBacklinkContextLevelLabel } from "./backlink-panel-header.js";
 
 const BACKLINK_CONTEXT_LEVEL_ORDER = ["core", "nearby", "extended", "full"];
@@ -6,17 +6,7 @@ const BACKLINK_DOCUMENT_TITLE_TOOLTIP =
   "左键在主窗口打开文档，右键在右侧打开文档，Ctrl+左键跟随当前焦点打开文档";
 
 function getBacklinkMatchMeta(backlinkData = null) {
-  const primaryMatchSourceType =
-    backlinkData?.contextBundle?.primaryMatchSourceType || "";
-  const matchSourceLabel = primaryMatchSourceType
-    ? getBacklinkContextSourceRule(primaryMatchSourceType).label
-    : "";
-  const matchSummaryText =
-    backlinkData?.contextBundle?.matchSummaryList?.[0] || "";
-  return {
-    matchSourceLabel,
-    matchSummaryText,
-  };
+  return getBacklinkContextMatchMeta(backlinkData?.contextBundle || null);
 }
 
 function normalizeBacklinkContextControlState(contextControlState = {}) {

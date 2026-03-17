@@ -69,6 +69,14 @@ test("buildBacklinkSourceWindow uses the nearest heading section around the back
       "item-title",
     ],
     defaultExpandMode: "document_local_full",
+    visibleBlockIds: [
+      "heading-prev",
+      "item-expand",
+      "item-nearby",
+      "item-brand",
+      "block-brand",
+      "item-title",
+    ],
     orderedVisibleBlockIds: [
       "heading-prev",
       "item-expand",
@@ -529,6 +537,41 @@ test("buildBacklinkSourceWindow uses the document preface before the first headi
   assert.equal(sourceWindow.endBlockId, "intro-b");
 });
 
+test("buildBacklinkSourceWindow uses the full document preface before the first heading even when the focus is inside a list", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "intro-a", type: "p", parent_id: "doc-a" },
+    { id: "list-root", type: "l", parent_id: "doc-a" },
+    { id: "item-focus", type: "i", parent_id: "list-root" },
+    { id: "block-focus", type: "p", parent_id: "item-focus" },
+    { id: "item-tail", type: "i", parent_id: "list-root" },
+    { id: "heading-h2", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "body-a", type: "p", parent_id: "doc-a" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "block-focus",
+        root_id: "doc-a",
+        parent_id: "item-focus",
+        type: "p",
+      },
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "extended",
+  });
+
+  assert.deepEqual(sourceWindow.windowBlockIds, [
+    "intro-a",
+    "list-root",
+    "item-focus",
+    "block-focus",
+    "item-tail",
+  ]);
+  assert.equal(sourceWindow.startBlockId, "intro-a");
+  assert.equal(sourceWindow.endBlockId, "item-tail");
+});
+
 test("buildBacklinkSourceWindow keeps core mode on the original paragraph block", () => {
   const orderedBlocks = createDocumentBlocks([
     { id: "heading-skills", type: "h", subtype: "h2", parent_id: "doc-a" },
@@ -559,6 +602,7 @@ test("buildBacklinkSourceWindow keeps core mode on the original paragraph block"
     focusBlockId: "block-official",
     sourceDocumentOrder: 2,
     windowBlockIds: ["block-official"],
+    visibleBlockIds: ["block-official"],
     orderedVisibleBlockIds: ["block-official"],
     contextPlan: {
       identity: {
@@ -636,6 +680,39 @@ test("buildBacklinkSourceWindow keeps nearby mode on the surrounding original pa
   });
 });
 
+test("buildBacklinkSourceWindow prefers same-parent siblings for ordinary nearby mode", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "list-root", type: "l", parent_id: "doc-a" },
+    { id: "item-a", type: "i", parent_id: "list-root" },
+    { id: "block-a", type: "p", parent_id: "item-a" },
+    { id: "block-focus", type: "p", parent_id: "doc-a" },
+    { id: "block-next", type: "p", parent_id: "doc-a" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "block-focus",
+        root_id: "doc-a",
+        parent_id: "doc-a",
+        type: "p",
+      },
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "nearby",
+  });
+
+  assert.deepEqual(sourceWindow.windowBlockIds, [
+    "list-root",
+    "item-a",
+    "block-a",
+    "block-focus",
+    "block-next",
+  ]);
+  assert.equal(sourceWindow.startBlockId, "list-root");
+  assert.equal(sourceWindow.endBlockId, "block-next");
+});
+
 test("buildBacklinkSourceWindow keeps nearby mode on the adjacent blocks for ordinary backlinks without expanding their heading sections", () => {
   const orderedBlocks = createDocumentBlocks([
     { id: "heading-alpha", type: "h", subtype: "h2", parent_id: "doc-a" },
@@ -701,6 +778,34 @@ test("buildBacklinkSourceWindow keeps nearby mode on the paragraph before and af
     "block-after-heading",
   ]);
   assert.equal(sourceWindow.startBlockId, "block-before-heading");
+  assert.equal(sourceWindow.endBlockId, "block-after-heading");
+});
+
+test("buildBacklinkSourceWindow nearby mode for heading backlinks does not pull in the previous heading when no paragraph exists", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "heading-prev", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "heading-focus", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "block-after-heading", type: "p", parent_id: "doc-a" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "heading-focus",
+        root_id: "doc-a",
+        parent_id: "doc-a",
+        type: "h",
+      },
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "nearby",
+  });
+
+  assert.deepEqual(sourceWindow.windowBlockIds, [
+    "heading-focus",
+    "block-after-heading",
+  ]);
+  assert.equal(sourceWindow.startBlockId, "heading-focus");
   assert.equal(sourceWindow.endBlockId, "block-after-heading");
 });
 
@@ -814,6 +919,7 @@ test("buildBacklinkSourceWindow keeps nearby mode on sibling list items and adds
       "item-brand",
       "block-brand",
       "item-title",
+      "list-title",
       "item-logo",
       "block-logo",
     ],
@@ -822,6 +928,7 @@ test("buildBacklinkSourceWindow keeps nearby mode on sibling list items and adds
       "item-brand",
       "block-brand",
       "item-title",
+      "list-title",
       "item-logo",
       "block-logo",
     ],
@@ -850,14 +957,16 @@ test("buildBacklinkSourceWindow keeps nearby mode on sibling list items and adds
         "item-brand",
         "block-brand",
         "item-title",
+        "list-title",
         "item-logo",
         "block-logo",
       ],
-      collapsedBlockIds: ["list-title"],
+      collapsedBlockIds: [],
       structuralShellBlockIds: [
         "item-nearby",
         "item-brand",
         "item-title",
+        "list-title",
         "item-logo",
       ],
     },
@@ -1103,6 +1212,7 @@ test("buildBacklinkSourceWindow keeps nearby list mode on shells and direct read
     "item-brand",
     "block-brand",
     "item-title",
+    "list-title",
     "item-logo",
     "block-logo",
   ]);
@@ -1112,6 +1222,7 @@ test("buildBacklinkSourceWindow keeps nearby list mode on shells and direct read
     "item-brand",
     "block-brand",
     "item-title",
+    "list-title",
     "item-logo",
     "block-logo",
   ]);
@@ -1125,9 +1236,7 @@ test("buildBacklinkSourceWindow keeps nearby list mode on shells and direct read
     "item-logo",
     "block-logo",
   ]);
-  assert.deepEqual(sourceWindow.contextPlan?.collapsedBlockIds, [
-    "list-title",
-  ]);
+  assert.deepEqual(sourceWindow.contextPlan?.collapsedBlockIds, []);
 });
 
 test("buildBacklinkSourceWindow keeps nearby list mode from descending past the first direct child item shell", () => {
@@ -1167,6 +1276,7 @@ test("buildBacklinkSourceWindow keeps nearby list mode from descending past the 
     "item-brand",
     "block-brand",
     "item-title",
+    "list-title",
     "item-logo",
   ]);
   assert.deepEqual(sourceWindow.windowBlockIds, [
@@ -1178,9 +1288,7 @@ test("buildBacklinkSourceWindow keeps nearby list mode from descending past the 
     "list-title",
     "item-logo",
   ]);
-  assert.deepEqual(sourceWindow.contextPlan?.collapsedBlockIds, [
-    "list-title",
-  ]);
+  assert.deepEqual(sourceWindow.contextPlan?.collapsedBlockIds, []);
 });
 
 test("attachBacklinkSourceWindows adds heading-bounded source windows to extended backlinks", () => {

@@ -49,6 +49,21 @@ export function getBacklinkContextExplanationFragments(bundle = null) {
   return [];
 }
 
+export function getBacklinkContextMatchMeta(bundle = null, deps = {}) {
+  const getSourceRule =
+    typeof deps.getBacklinkContextSourceRule === "function"
+      ? deps.getBacklinkContextSourceRule
+      : getBacklinkContextSourceRule;
+  const primaryMatchSourceType = bundle?.primaryMatchSourceType || "";
+  return {
+    primaryMatchSourceType,
+    matchSourceLabel: primaryMatchSourceType
+      ? getSourceRule(primaryMatchSourceType).label
+      : "",
+    matchSummaryText: bundle?.matchSummaryList?.[0] || "",
+  };
+}
+
 function buildMetaInfoFieldSearchText(text = "", deps = {}) {
   return (deps.removeMarkdownRefBlockStyle
     ? deps.removeMarkdownRefBlockStyle(text)

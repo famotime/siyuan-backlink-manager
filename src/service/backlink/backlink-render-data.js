@@ -4,6 +4,7 @@ import {
   matchBacklinkContextBundle,
 } from "./backlink-context.js";
 import { getBacklinkContextSourceRule } from "./backlink-context-rules.js";
+import { getBacklinkSourceWindowByLevel } from "./backlink-source-window.js";
 
 export function formatBacklinkDocApiKeyword(keyword = "") {
   if (!keyword) {
@@ -82,10 +83,9 @@ export function buildBacklinkContextBudgetHint({
     return "";
   }
 
-  const sourceWindows = activeBacklink?.sourceWindows;
-  const hasSourceWindow =
-    (sourceWindows && sourceWindows[contextVisibilityLevel]) ||
-    (contextVisibilityLevel === "extended" && activeBacklink?.sourceWindow);
+  const hasSourceWindow = Boolean(
+    getBacklinkSourceWindowByLevel(activeBacklink, contextVisibilityLevel),
+  );
   if (activeBacklink?.backlinkBlock?.id && !hasSourceWindow) {
     return "原文上下文不可用，当前显示为降级结果";
   }

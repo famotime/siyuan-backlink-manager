@@ -152,6 +152,28 @@ test("buildBacklinkContextBudgetHint reports source window fallback as an explic
   assert.equal(result, "原文上下文不可用，当前显示为降级结果");
 });
 
+test("buildBacklinkContextBudgetHint accepts extended source windows without requiring legacy sourceWindow fields", () => {
+  const result = buildBacklinkContextBudgetHint({
+    contextVisibilityLevel: "extended",
+    activeBacklink: {
+      backlinkBlock: {
+        id: "block-a",
+      },
+      sourceWindows: {
+        extended: {
+          contextPlan: {
+            bodyRange: {
+              windowBlockIds: ["block-a"],
+            },
+          },
+        },
+      },
+    },
+  });
+
+  assert.equal(result, "");
+});
+
 test("getBatchBacklinkDoc deduplicates backlink dom results without reordering api backlink order", async () => {
   const backlinkBlockNodeArray = [
     {

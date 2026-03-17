@@ -373,7 +373,6 @@ export async function getBacklinkPanelData(
     const startTime = performance.now(); // 记录开始时间
     let rootId = queryParams.rootId;
     let focusBlockId = queryParams.focusBlockId;
-    focusBlockId = null;
     let queryCurDocDefBlockRange = queryParams.queryCurDocDefBlockRange;
 
     let cacheResult = CacheManager.ins.getBacklinkPanelBaseData(rootId);

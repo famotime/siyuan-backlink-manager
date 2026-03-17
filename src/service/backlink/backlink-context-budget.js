@@ -1,3 +1,5 @@
+import { getBacklinkContextExplanationFragments } from "./backlink-context.js";
+
 const DEFAULT_BACKLINK_CONTEXT_BUDGET = {
   maxVisibleFragments: 6,
   maxVisibleChars: 240,
@@ -37,11 +39,7 @@ function compareBudgetFragments(a, b) {
 
 export function applyBacklinkContextBudget(bundle, budget = {}) {
   const normalizedBudget = normalizeBacklinkContextBudget(budget);
-  const explanationFragments = Array.isArray(bundle?.explanationFragments)
-    ? [...bundle.explanationFragments]
-    : Array.isArray(bundle?.visibleFragments)
-      ? [...bundle.visibleFragments]
-    : [];
+  const explanationFragments = [...getBacklinkContextExplanationFragments(bundle)];
   const prioritizedFragments = explanationFragments.sort(compareBudgetFragments);
   const keptFragments = [];
   let omittedFragmentCount = 0;

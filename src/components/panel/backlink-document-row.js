@@ -26,6 +26,8 @@ function normalizeBacklinkContextControlState(contextControlState = {}) {
     contextVisibilityLevel,
     levelLabel: getBacklinkContextLevelLabel(contextVisibilityLevel),
     budgetHint: contextControlState.budgetHint || "",
+    previousDisabled: contextControlState.previousDisabled === true,
+    nextDisabled: contextControlState.nextDisabled === true,
   };
 }
 
@@ -52,14 +54,16 @@ function buildBacklinkContextControlRowHtml(contextControlState = {}) {
   const normalizedState = normalizeBacklinkContextControlState(
     contextControlState,
   );
+  const previousDisabledAttr = normalizedState.previousDisabled ? " disabled" : "";
+  const nextDisabledAttr = normalizedState.nextDisabled ? " disabled" : "";
 
   return `
 <div class="backlink-context-control-row" data-context-level="${normalizedState.levelLabel}">
-<button type="button" class="block__icon ariaLabel backlink-context-step-button previous" aria-label="切换到上一个上下文层级">
+<button type="button" class="block__icon ariaLabel backlink-context-step-button previous" aria-label="切换到上一个上下文层级"${previousDisabledAttr}>
 <svg><use xlink:href="#iconLeft"></use></svg>
 </button>
 <div class="backlink-context-state-group">${buildBacklinkContextStateGroupHtml(normalizedState.contextVisibilityLevel)}</div>
-<button type="button" class="block__icon ariaLabel backlink-context-step-button next" aria-label="切换到下一个上下文层级">
+<button type="button" class="block__icon ariaLabel backlink-context-step-button next" aria-label="切换到下一个上下文层级"${nextDisabledAttr}>
 <svg><use xlink:href="#iconRight"></use></svg>
 </button>
 <span class="b3-list-item__meta backlink-context-budget-hint">${normalizedState.budgetHint}</span>
@@ -126,9 +130,19 @@ function updateBacklinkContextControlRow(
   }
   if (previousButtonElement) {
     previousButtonElement.setAttribute("aria-label", "切换到上一个上下文层级");
+    if (normalizedState.previousDisabled) {
+      previousButtonElement.setAttribute("disabled", true);
+    } else {
+      previousButtonElement.removeAttribute?.("disabled");
+    }
   }
   if (nextButtonElement) {
     nextButtonElement.setAttribute("aria-label", "切换到下一个上下文层级");
+    if (normalizedState.nextDisabled) {
+      nextButtonElement.setAttribute("disabled", true);
+    } else {
+      nextButtonElement.removeAttribute?.("disabled");
+    }
   }
   if (stateGroupElement) {
     stateGroupElement.innerHTML = buildBacklinkContextStateGroupHtml(

@@ -1,4 +1,5 @@
 import { removeMarkdownRefBlockStyle } from "./backlink-markdown.js";
+import { getBacklinkContextExplanationFragments } from "./backlink-context.js";
 import { getBacklinkContextVisibilityLevelOrder } from "./backlink-context-rules.js";
 
 const BACKLINK_PREVIEW_SOURCE_ORDER = {
@@ -233,9 +234,7 @@ export function selectBacklinkPreviewFragments({
           getBacklinkContextVisibilityLevelOrder(visibilityLevel)
         );
       })
-    : Array.isArray(contextBundle?.visibleFragments)
-      ? contextBundle.visibleFragments
-      : [];
+    : getBacklinkContextExplanationFragments(contextBundle);
 
   const selectedFragments = candidateFragments
     .filter((fragment) => {

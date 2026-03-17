@@ -4,6 +4,14 @@ import assert from "node:assert/strict";
 import {
   attachBacklinkSourceWindows,
   buildBacklinkSourceWindow,
+  getBacklinkSourceWindowBodyRange,
+  getBacklinkSourceWindowCandidateBlockIds,
+  getBacklinkSourceWindowCollapsedBlockIds,
+  getBacklinkSourceWindowContextPlan,
+  getBacklinkSourceWindowIdentity,
+  getBacklinkSourceWindowOrderedVisibleBlockIds,
+  getBacklinkSourceWindowByLevel,
+  hasBacklinkSourceWindowExplicitVisibleBlockIds,
   loadOrderedBacklinkSourceWindowBlocks,
 } from "../src/service/backlink/backlink-source-window.js";
 import { groupBacklinksByDocument } from "../src/components/panel/backlink-document-navigation.js";
@@ -69,8 +77,287 @@ test("buildBacklinkSourceWindow uses the nearest heading section around the back
       "block-brand",
       "item-title",
     ],
+    contextPlan: {
+      identity: {
+        rootId: "doc-a",
+        anchorBlockId: "item-brand",
+        focusBlockId: "block-brand",
+        sourceDocumentOrder: 5,
+      },
+      bodyRange: {
+        startBlockId: "heading-prev",
+        endBlockId: "item-title",
+        windowBlockIds: [
+          "heading-prev",
+          "item-expand",
+          "item-nearby",
+          "item-brand",
+          "block-brand",
+          "item-title",
+        ],
+      },
+      orderedVisibleBlockIds: [
+        "heading-prev",
+        "item-expand",
+        "item-nearby",
+        "item-brand",
+        "block-brand",
+        "item-title",
+      ],
+      collapsedBlockIds: [],
+      structuralShellBlockIds: [
+        "heading-prev",
+        "item-expand",
+        "item-nearby",
+        "item-brand",
+        "item-title",
+      ],
+    },
     renderMode: "scroll",
   });
+});
+
+test("source window getters prefer contextPlan and fall back to legacy fields", () => {
+  assert.deepEqual(
+    getBacklinkSourceWindowContextPlan({
+      contextPlan: {
+        identity: {
+          rootId: "doc-a",
+          anchorBlockId: "anchor-a",
+          focusBlockId: "focus-a",
+          sourceDocumentOrder: 7,
+        },
+        bodyRange: {
+          startBlockId: "a",
+          endBlockId: "b",
+          windowBlockIds: ["a", "b"],
+        },
+        orderedVisibleBlockIds: ["a"],
+        collapsedBlockIds: ["b"],
+        structuralShellBlockIds: [],
+      },
+    }),
+    {
+      identity: {
+        rootId: "doc-a",
+        anchorBlockId: "anchor-a",
+        focusBlockId: "focus-a",
+        sourceDocumentOrder: 7,
+      },
+      bodyRange: {
+        startBlockId: "a",
+        endBlockId: "b",
+        windowBlockIds: ["a", "b"],
+      },
+      orderedVisibleBlockIds: ["a"],
+      collapsedBlockIds: ["b"],
+      structuralShellBlockIds: [],
+    },
+  );
+
+  assert.deepEqual(
+    getBacklinkSourceWindowIdentity({
+      contextPlan: {
+        identity: {
+          rootId: "doc-a",
+          anchorBlockId: "anchor-a",
+          focusBlockId: "focus-a",
+          sourceDocumentOrder: 7,
+        },
+      },
+      rootId: "legacy-doc",
+      anchorBlockId: "legacy-anchor",
+      focusBlockId: "legacy-focus",
+      sourceDocumentOrder: 1,
+    }),
+    {
+      rootId: "doc-a",
+      anchorBlockId: "anchor-a",
+      focusBlockId: "focus-a",
+      sourceDocumentOrder: 7,
+    },
+  );
+
+  assert.deepEqual(
+    getBacklinkSourceWindowIdentity({
+      rootId: "legacy-doc",
+      anchorBlockId: "legacy-anchor",
+      focusBlockId: "legacy-focus",
+      sourceDocumentOrder: 1,
+    }),
+    {
+      rootId: "legacy-doc",
+      anchorBlockId: "legacy-anchor",
+      focusBlockId: "legacy-focus",
+      sourceDocumentOrder: 1,
+    },
+  );
+
+  assert.deepEqual(
+    getBacklinkSourceWindowIdentity({
+      contextPlan: {
+        identity: {
+          anchorBlockId: "anchor-a",
+        },
+      },
+      rootId: "legacy-doc",
+      focusBlockId: "legacy-focus",
+      sourceDocumentOrder: 1,
+    }),
+    {
+      rootId: "legacy-doc",
+      anchorBlockId: "anchor-a",
+      focusBlockId: "legacy-focus",
+      sourceDocumentOrder: 1,
+    },
+  );
+
+  assert.deepEqual(
+    getBacklinkSourceWindowBodyRange({
+      contextPlan: {
+        bodyRange: {
+          startBlockId: "body-start",
+          endBlockId: "body-end",
+          windowBlockIds: ["body-start", "body-end"],
+        },
+      },
+      startBlockId: "legacy-start",
+      endBlockId: "legacy-end",
+      windowBlockIds: ["legacy-start", "legacy-end"],
+    }),
+    {
+      startBlockId: "body-start",
+      endBlockId: "body-end",
+      windowBlockIds: ["body-start", "body-end"],
+    },
+  );
+
+  assert.deepEqual(
+    getBacklinkSourceWindowBodyRange({
+      startBlockId: "legacy-start",
+      endBlockId: "legacy-end",
+      windowBlockIds: ["legacy-start", "legacy-end"],
+    }),
+    {
+      startBlockId: "legacy-start",
+      endBlockId: "legacy-end",
+      windowBlockIds: ["legacy-start", "legacy-end"],
+    },
+  );
+
+  assert.deepEqual(
+    getBacklinkSourceWindowBodyRange({
+      contextPlan: {
+        bodyRange: {
+          startBlockId: "body-start",
+        },
+      },
+      startBlockId: "legacy-start",
+      endBlockId: "legacy-end",
+      windowBlockIds: ["legacy-start", "legacy-end"],
+    }),
+    {
+      startBlockId: "body-start",
+      endBlockId: "legacy-end",
+      windowBlockIds: ["legacy-start", "legacy-end"],
+    },
+  );
+
+  assert.deepEqual(
+    getBacklinkSourceWindowOrderedVisibleBlockIds({
+      contextPlan: {
+        orderedVisibleBlockIds: ["plan-a", "plan-b"],
+      },
+      orderedVisibleBlockIds: ["legacy-a"],
+      visibleBlockIds: ["legacy-b"],
+      windowBlockIds: ["legacy-c"],
+    }),
+    ["plan-a", "plan-b"],
+  );
+
+  assert.deepEqual(
+    getBacklinkSourceWindowOrderedVisibleBlockIds({
+      visibleBlockIds: ["legacy-visible"],
+      windowBlockIds: ["legacy-window"],
+    }),
+    ["legacy-visible"],
+  );
+
+  assert.deepEqual(
+    getBacklinkSourceWindowCollapsedBlockIds({
+      contextPlan: {
+        collapsedBlockIds: ["plan-collapsed"],
+      },
+      collapsedBlockIds: ["legacy-collapsed"],
+    }),
+    ["plan-collapsed"],
+  );
+
+  assert.deepEqual(
+    getBacklinkSourceWindowCollapsedBlockIds({
+      collapsedBlockIds: ["legacy-collapsed"],
+    }),
+    ["legacy-collapsed"],
+  );
+
+  assert.equal(
+    hasBacklinkSourceWindowExplicitVisibleBlockIds({
+      contextPlan: {
+        orderedVisibleBlockIds: ["item-shell", "block-focus"],
+        collapsedBlockIds: ["list-nested", "item-nested", "block-nested"],
+      },
+    }),
+    true,
+  );
+
+  assert.equal(
+    hasBacklinkSourceWindowExplicitVisibleBlockIds({
+      contextPlan: {
+        orderedVisibleBlockIds: ["block-a", "block-b"],
+        collapsedBlockIds: [],
+      },
+    }),
+    false,
+  );
+
+  const backlinkData = {
+    sourceWindows: {
+      nearby: {
+        contextPlan: {
+          identity: {
+            anchorBlockId: "item-a",
+            focusBlockId: "block-a",
+          },
+          bodyRange: {
+            startBlockId: "item-prev",
+            endBlockId: "item-next",
+            windowBlockIds: ["item-prev", "item-a", "block-a", "item-next"],
+          },
+        },
+      },
+    },
+    sourceWindow: {
+      anchorBlockId: "legacy-extended",
+    },
+  };
+
+  assert.deepEqual(
+    getBacklinkSourceWindowByLevel(backlinkData, "nearby"),
+    backlinkData.sourceWindows.nearby,
+  );
+  assert.deepEqual(
+    getBacklinkSourceWindowByLevel(backlinkData, "extended"),
+    backlinkData.sourceWindow,
+  );
+  assert.equal(getBacklinkSourceWindowByLevel(backlinkData, "core"), null);
+
+  assert.deepEqual(
+    getBacklinkSourceWindowCandidateBlockIds({
+      backlinkBlockId: "backlink-a",
+      sourceWindow: backlinkData.sourceWindows.nearby,
+    }),
+    ["backlink-a", "item-a", "block-a", "item-prev", "item-next"],
+  );
 });
 
 test("buildBacklinkSourceWindow keeps the list item shell as the anchor for extended mode when the backlink is inside a list item", () => {
@@ -273,6 +560,22 @@ test("buildBacklinkSourceWindow keeps core mode on the original paragraph block"
     sourceDocumentOrder: 2,
     windowBlockIds: ["block-official"],
     orderedVisibleBlockIds: ["block-official"],
+    contextPlan: {
+      identity: {
+        rootId: "doc-a",
+        anchorBlockId: "block-official",
+        focusBlockId: "block-official",
+        sourceDocumentOrder: 2,
+      },
+      bodyRange: {
+        startBlockId: "block-official",
+        endBlockId: "block-official",
+        windowBlockIds: ["block-official"],
+      },
+      orderedVisibleBlockIds: ["block-official"],
+      collapsedBlockIds: [],
+      structuralShellBlockIds: [],
+    },
     defaultExpandMode: "document_local_full",
     renderMode: "scroll",
   });
@@ -313,6 +616,22 @@ test("buildBacklinkSourceWindow keeps nearby mode on the surrounding original pa
     defaultExpandMode: "document_local_full",
     visibleBlockIds: ["block-toolkit", "block-example", "block-after"],
     orderedVisibleBlockIds: ["block-toolkit", "block-example", "block-after"],
+    contextPlan: {
+      identity: {
+        rootId: "doc-a",
+        anchorBlockId: "block-example",
+        focusBlockId: "block-example",
+        sourceDocumentOrder: 3,
+      },
+      bodyRange: {
+        startBlockId: "block-toolkit",
+        endBlockId: "block-after",
+        windowBlockIds: ["block-toolkit", "block-example", "block-after"],
+      },
+      orderedVisibleBlockIds: ["block-toolkit", "block-example", "block-after"],
+      collapsedBlockIds: [],
+      structuralShellBlockIds: [],
+    },
     renderMode: "scroll",
   });
 });
@@ -426,6 +745,18 @@ test("buildBacklinkSourceWindow extends heading backlinks from the previous para
     "heading-nested",
     "block-nested",
   ]);
+  assert.deepEqual(sourceWindow.contextPlan?.collapsedBlockIds, []);
+  assert.deepEqual(sourceWindow.contextPlan?.identity, {
+    rootId: "doc-a",
+    anchorBlockId: "heading-focus",
+    focusBlockId: "heading-focus",
+    sourceDocumentOrder: 2,
+  });
+  assert.deepEqual(sourceWindow.contextPlan?.structuralShellBlockIds, [
+    "heading-prev",
+    "heading-focus",
+    "heading-nested",
+  ]);
   assert.equal(sourceWindow.startBlockId, "heading-prev");
   assert.equal(sourceWindow.endBlockId, "block-nested");
 });
@@ -465,7 +796,7 @@ test("buildBacklinkSourceWindow keeps nearby mode on sibling list items and adds
     rootId: "doc-a",
     anchorBlockId: "item-brand",
     startBlockId: "item-nearby",
-    endBlockId: "item-title",
+    endBlockId: "block-logo",
     focusBlockId: "block-brand",
     sourceDocumentOrder: 6,
     windowBlockIds: [
@@ -494,6 +825,42 @@ test("buildBacklinkSourceWindow keeps nearby mode on sibling list items and adds
       "item-logo",
       "block-logo",
     ],
+    contextPlan: {
+      identity: {
+        rootId: "doc-a",
+        anchorBlockId: "item-brand",
+        focusBlockId: "block-brand",
+        sourceDocumentOrder: 6,
+      },
+      bodyRange: {
+        startBlockId: "item-nearby",
+        endBlockId: "block-logo",
+        windowBlockIds: [
+          "item-nearby",
+          "item-brand",
+          "block-brand",
+          "item-title",
+          "list-title",
+          "item-logo",
+          "block-logo",
+        ],
+      },
+      orderedVisibleBlockIds: [
+        "item-nearby",
+        "item-brand",
+        "block-brand",
+        "item-title",
+        "item-logo",
+        "block-logo",
+      ],
+      collapsedBlockIds: ["list-title"],
+      structuralShellBlockIds: [
+        "item-nearby",
+        "item-brand",
+        "item-title",
+        "item-logo",
+      ],
+    },
     renderMode: "scroll",
   });
 });
@@ -529,7 +896,7 @@ test("buildBacklinkSourceWindow keeps nearby list mode on the anchor shell when 
     "block-title",
   ]);
   assert.equal(sourceWindow.startBlockId, "item-brand");
-  assert.equal(sourceWindow.endBlockId, "item-title");
+  assert.equal(sourceWindow.endBlockId, "block-title");
   assert.deepEqual(sourceWindow.visibleBlockIds, [
     "item-brand",
     "block-brand",
@@ -570,7 +937,7 @@ test("buildBacklinkSourceWindow keeps nearby list mode on the anchor shell when 
     "block-brand",
   ]);
   assert.equal(sourceWindow.startBlockId, "item-nearby");
-  assert.equal(sourceWindow.endBlockId, "item-brand");
+  assert.equal(sourceWindow.endBlockId, "block-brand");
   assert.deepEqual(sourceWindow.visibleBlockIds, [
     "item-nearby",
     "block-nearby",
@@ -606,7 +973,7 @@ test("buildBacklinkSourceWindow keeps nearby list mode on the anchor shell when 
     "block-brand",
   ]);
   assert.equal(sourceWindow.startBlockId, "item-brand");
-  assert.equal(sourceWindow.endBlockId, "item-brand");
+  assert.equal(sourceWindow.endBlockId, "block-brand");
   assert.deepEqual(sourceWindow.visibleBlockIds, [
     "item-brand",
     "block-brand",
@@ -643,7 +1010,7 @@ test("buildBacklinkSourceWindow uses the previous sibling text block as the near
 
   assert.equal(sourceWindow.anchorBlockId, "item-brand");
   assert.equal(sourceWindow.startBlockId, "item-nearby");
-  assert.equal(sourceWindow.endBlockId, "item-title");
+  assert.equal(sourceWindow.endBlockId, "block-title");
   assert.deepEqual(sourceWindow.windowBlockIds, [
     "item-nearby",
     "block-nearby",
@@ -679,11 +1046,26 @@ test("buildBacklinkSourceWindow keeps list core mode focused on the list shell a
   assert.deepEqual(sourceWindow.windowBlockIds, [
     "item-brand",
     "block-brand",
-    "list-children",
-    "item-child",
-    "block-child",
   ]);
   assert.deepEqual(sourceWindow.visibleBlockIds, ["item-brand", "block-brand"]);
+  assert.deepEqual(sourceWindow.contextPlan?.bodyRange?.windowBlockIds, [
+    "item-brand",
+    "block-brand",
+  ]);
+  assert.deepEqual(sourceWindow.contextPlan?.identity, {
+    rootId: "doc-a",
+    anchorBlockId: "item-brand",
+    focusBlockId: "block-brand",
+    sourceDocumentOrder: 1,
+  });
+  assert.deepEqual(sourceWindow.contextPlan?.orderedVisibleBlockIds, [
+    "item-brand",
+    "block-brand",
+  ]);
+  assert.deepEqual(sourceWindow.contextPlan?.collapsedBlockIds, []);
+  assert.deepEqual(sourceWindow.contextPlan?.structuralShellBlockIds, [
+    "item-brand",
+  ]);
 });
 
 test("buildBacklinkSourceWindow keeps nearby list mode on shells and direct readable children instead of entire neighbor subtrees", () => {
@@ -732,6 +1114,72 @@ test("buildBacklinkSourceWindow keeps nearby list mode on shells and direct read
     "item-title",
     "item-logo",
     "block-logo",
+  ]);
+  assert.deepEqual(sourceWindow.windowBlockIds, [
+    "item-nearby",
+    "block-nearby",
+    "item-brand",
+    "block-brand",
+    "item-title",
+    "list-title",
+    "item-logo",
+    "block-logo",
+  ]);
+  assert.deepEqual(sourceWindow.contextPlan?.collapsedBlockIds, [
+    "list-title",
+  ]);
+});
+
+test("buildBacklinkSourceWindow keeps nearby list mode from descending past the first direct child item shell", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "item-nearby", type: "i", parent_id: "list-root" },
+    { id: "block-nearby", type: "p", parent_id: "item-nearby" },
+    { id: "item-brand", type: "i", parent_id: "list-root" },
+    { id: "block-brand", type: "p", parent_id: "item-brand" },
+    { id: "item-title", type: "i", parent_id: "list-root" },
+    { id: "list-title", type: "l", parent_id: "item-title" },
+    { id: "item-logo", type: "i", parent_id: "list-title" },
+    { id: "list-logo", type: "l", parent_id: "item-logo" },
+    { id: "item-mark", type: "i", parent_id: "list-logo" },
+    { id: "block-mark", type: "p", parent_id: "item-mark" },
+    { id: "item-tail", type: "i", parent_id: "list-title" },
+    { id: "block-tail", type: "p", parent_id: "item-tail" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "block-brand",
+        root_id: "doc-a",
+        parent_id: "item-brand",
+        type: "p",
+      },
+      previousSiblingBlockId: "item-nearby",
+      nextSiblingBlockId: "item-title",
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "nearby",
+  });
+
+  assert.deepEqual(sourceWindow.visibleBlockIds, [
+    "item-nearby",
+    "block-nearby",
+    "item-brand",
+    "block-brand",
+    "item-title",
+    "item-logo",
+  ]);
+  assert.deepEqual(sourceWindow.windowBlockIds, [
+    "item-nearby",
+    "block-nearby",
+    "item-brand",
+    "block-brand",
+    "item-title",
+    "list-title",
+    "item-logo",
+  ]);
+  assert.deepEqual(sourceWindow.contextPlan?.collapsedBlockIds, [
+    "list-title",
   ]);
 });
 

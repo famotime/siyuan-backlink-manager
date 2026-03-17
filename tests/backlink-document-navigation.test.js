@@ -282,3 +282,52 @@ test("sorts heading backlinks by sourceDocumentOrder instead of heading metadata
   );
   assert.equal(groups[0].activeBacklink.backlinkBlock.id, "heading-early");
 });
+
+test("uses contextPlan identity sourceDocumentOrder when the legacy root field is absent", () => {
+  const backlinkDocumentArray = [{ id: "doc-a", content: "Alpha" }];
+  const backlinkDataArray = [
+    {
+      backlinkBlock: { id: "a-3", root_id: "doc-a", content: "Alpha ref 3", box: "box-a" },
+      sourceWindows: {
+        core: {
+          contextPlan: {
+            identity: {
+              sourceDocumentOrder: 30,
+            },
+          },
+        },
+      },
+    },
+    {
+      backlinkBlock: { id: "a-1", root_id: "doc-a", content: "Alpha ref 1", box: "box-a" },
+      sourceWindows: {
+        core: {
+          contextPlan: {
+            identity: {
+              sourceDocumentOrder: 10,
+            },
+          },
+        },
+      },
+    },
+    {
+      backlinkBlock: { id: "a-2", root_id: "doc-a", content: "Alpha ref 2", box: "box-a" },
+      sourceWindows: {
+        core: {
+          contextPlan: {
+            identity: {
+              sourceDocumentOrder: 20,
+            },
+          },
+        },
+      },
+    },
+  ];
+
+  const groups = groupBacklinksByDocument(backlinkDocumentArray, backlinkDataArray);
+
+  assert.deepEqual(
+    groups[0].backlinks.map((backlink) => backlink.backlinkBlock.id),
+    ["a-1", "a-2", "a-3"],
+  );
+});

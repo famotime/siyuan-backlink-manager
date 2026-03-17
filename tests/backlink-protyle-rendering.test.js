@@ -409,6 +409,166 @@ test("applyCreatedBacklinkProtyleState still applies nearby source window hiding
   ]);
 });
 
+test("applyCreatedBacklinkProtyleState applies source window hiding when only contextPlan bodyRange is available", () => {
+  const calls = [];
+
+  applyCreatedBacklinkProtyleState({
+    backlinkData: {
+      backlinkBlock: {
+        id: "block-a",
+        root_id: "doc-a",
+      },
+      sourceWindows: {
+        nearby: {
+          focusBlockId: "block-a",
+          anchorBlockId: "block-a",
+          contextPlan: {
+            bodyRange: {
+              startBlockId: "block-a",
+              endBlockId: "block-b",
+              windowBlockIds: ["block-a", "block-b"],
+            },
+          },
+        },
+      },
+    },
+    documentLiElement: { id: "li-a" },
+    protyle: {
+      protyle: {
+        contentElement: {
+          querySelector(selector) {
+            return selector === "[data-node-id='block-a']" ? {} : null;
+          },
+          addEventListener(type) {
+            calls.push(type);
+          },
+        },
+      },
+    },
+    contextVisibilityLevel: "nearby",
+    deps: {
+      emitLoadedProtyleStatic: () => calls.push("emit"),
+      getBacklinkDocumentRenderState: () => ({ isFolded: false }),
+      backlinkDocumentViewState: {},
+      expandBacklinkDocument: () => calls.push("expand-document"),
+      collapseBacklinkDocument: () => calls.push("collapse-document"),
+      expandAllListItemNode: () => calls.push("expand-all-items"),
+      expandBacklinkHeadingMore: () => calls.push("expand-heading"),
+      backlinkProtyleItemFoldMap: new Map(),
+      foldListItemNodeByIdSet: () => calls.push("fold-by-id-set"),
+      hideBlocksOutsideBacklinkSourceWindow: () => calls.push("hide-window"),
+      defaultExpandedListItemLevel: 0,
+      expandListItemNodeByDepth: () => calls.push("expand-by-depth"),
+      getElementsBeforeDepth: () => [],
+      getElementsAtDepth: () => [],
+      syHasChildListNode: () => false,
+      backlinkProtyleHeadingExpandMap: new Map(),
+      hideOtherListItemElement: () => calls.push("hide-items"),
+      queryParams: { backlinkKeywordStr: "" },
+      sanitizeBacklinkKeywords: () => [],
+      splitKeywordStringToArray: () => [],
+      highlightElementTextByCss: () => calls.push("highlight"),
+      delayedTwiceRefresh: (callback) => callback(),
+    },
+  });
+
+  assert.deepEqual(calls, [
+    "emit",
+    "expand-by-depth",
+    "expand-heading",
+    "hide-window",
+    "highlight",
+    "hide-window",
+    "highlight",
+    "touchend",
+  ]);
+});
+
+test("applyCreatedBacklinkProtyleState still applies source window hiding when only contextPlan identity and bodyRange are available", () => {
+  const calls = [];
+  const protyleContentElement = {
+    querySelector(selector) {
+      if (selector === "[data-node-id='block-a']") {
+        return null;
+      }
+      if (selector === "[data-node-id='item-a']") {
+        return {};
+      }
+      return null;
+    },
+    addEventListener(type) {
+      calls.push(type);
+    },
+  };
+
+  applyCreatedBacklinkProtyleState({
+    backlinkData: {
+      backlinkBlock: {
+        id: "block-a",
+        root_id: "doc-a",
+      },
+      sourceWindows: {
+        nearby: {
+          contextPlan: {
+            identity: {
+              anchorBlockId: "item-a",
+              focusBlockId: "block-a",
+            },
+            bodyRange: {
+              startBlockId: "item-prev",
+              endBlockId: "item-next",
+              windowBlockIds: ["item-prev", "item-a", "block-a", "item-next"],
+            },
+          },
+        },
+      },
+    },
+    documentLiElement: { id: "li-a" },
+    protyle: {
+      protyle: {
+        contentElement: protyleContentElement,
+      },
+    },
+    contextVisibilityLevel: "nearby",
+    deps: {
+      emitLoadedProtyleStatic: () => calls.push("emit"),
+      getBacklinkDocumentRenderState: () => ({ isFolded: false }),
+      backlinkDocumentViewState: {},
+      expandBacklinkDocument: () => calls.push("expand-document"),
+      collapseBacklinkDocument: () => calls.push("collapse-document"),
+      expandAllListItemNode: () => calls.push("expand-all-items"),
+      expandBacklinkHeadingMore: () => calls.push("expand-heading"),
+      backlinkProtyleItemFoldMap: new Map(),
+      foldListItemNodeByIdSet: () => calls.push("fold-by-id-set"),
+      hideBlocksOutsideBacklinkSourceWindow: () => calls.push("hide-window"),
+      defaultExpandedListItemLevel: 1,
+      expandListItemNodeByDepth: (_element, depth) =>
+        calls.push(`expand-by-depth:${depth}`),
+      getElementsBeforeDepth: () => [],
+      getElementsAtDepth: () => [],
+      syHasChildListNode: () => false,
+      backlinkProtyleHeadingExpandMap: new Map(),
+      hideOtherListItemElement: () => calls.push("hide-items"),
+      queryParams: { backlinkKeywordStr: "" },
+      sanitizeBacklinkKeywords: () => [],
+      splitKeywordStringToArray: () => [],
+      highlightElementTextByCss: () => calls.push("highlight"),
+      delayedTwiceRefresh: (callback) => callback(),
+    },
+  });
+
+  assert.deepEqual(calls, [
+    "emit",
+    "expand-by-depth:2",
+    "expand-heading",
+    "hide-window",
+    "highlight",
+    "hide-window",
+    "highlight",
+    "touchend",
+  ]);
+});
+
 test("applyCreatedBacklinkProtyleState retries source window hiding after the original backlink block appears", () => {
   const calls = [];
   let backlinkBlockVisible = false;

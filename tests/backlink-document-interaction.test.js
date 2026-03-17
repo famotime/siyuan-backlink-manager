@@ -197,6 +197,108 @@ test("uses source window scrollAttr for nearby mode when original context is ava
   );
 });
 
+test("uses contextPlan bodyRange for scrollAttr when source window provides unified plan data", () => {
+  const activeBacklink = {
+    backlinkBlock: {
+      id: "backlink-1",
+      root_id: "doc-1",
+      box: "box-1",
+    },
+    sourceWindows: {
+      nearby: {
+        rootId: "doc-1",
+        startBlockId: "legacy-start",
+        endBlockId: "legacy-end",
+        focusBlockId: "backlink-1",
+        anchorBlockId: "backlink-1",
+        contextPlan: {
+          bodyRange: {
+            startBlockId: "block-prev",
+            endBlockId: "block-next",
+          },
+        },
+      },
+    },
+  };
+
+  assert.deepEqual(
+    buildBacklinkDocumentRenderOptions({
+      documentId: "doc-1",
+      activeBacklink,
+      contextVisibilityLevel: "nearby",
+    }),
+    {
+      blockId: "doc-1",
+      scrollAttr: {
+        rootId: "doc-1",
+        startId: "block-prev",
+        endId: "block-next",
+        scrollTop: 0,
+        focusId: "backlink-1",
+        zoomInId: "backlink-1",
+      },
+      render: {
+        background: false,
+        title: false,
+        gutter: true,
+        scroll: false,
+        breadcrumb: false,
+      },
+    },
+  );
+});
+
+test("uses contextPlan identity for scrollAttr when legacy source window identity fields are absent", () => {
+  const activeBacklink = {
+    backlinkBlock: {
+      id: "backlink-child",
+      root_id: "doc-1",
+      box: "box-1",
+    },
+    sourceWindows: {
+      nearby: {
+        contextPlan: {
+          identity: {
+            rootId: "doc-1",
+            anchorBlockId: "list-item-1",
+            focusBlockId: "backlink-child",
+          },
+          bodyRange: {
+            startBlockId: "block-prev",
+            endBlockId: "block-next",
+          },
+        },
+      },
+    },
+  };
+
+  assert.deepEqual(
+    buildBacklinkDocumentRenderOptions({
+      documentId: "doc-1",
+      activeBacklink,
+      contextVisibilityLevel: "nearby",
+    }),
+    {
+      blockId: "doc-1",
+      scrollAttr: {
+        rootId: "doc-1",
+        startId: "block-prev",
+        endId: "block-next",
+        scrollTop: 0,
+        focusId: "backlink-child",
+        zoomInId: "list-item-1",
+      },
+      render: {
+        background: false,
+        title: false,
+        gutter: true,
+        scroll: false,
+        breadcrumb: false,
+      },
+    },
+  );
+});
+
 test("uses source window scrollAttr for nearby mode when the source window spans sibling list items", () => {
   const activeBacklink = {
     backlinkBlock: {

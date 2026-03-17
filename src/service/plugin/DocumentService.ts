@@ -13,6 +13,8 @@ import {
     attachBacklinkPanelScrollCleanup,
     buildBacklinkPanelPageProps,
     destroyBacklinkPanelHost,
+    getBacklinkPanelPageFocusBlockId,
+    updateBacklinkPanelPageProps,
 } from "./backlink-panel-host.js";
 import { shouldIgnoreDocumentBottomBacklinkForProtyle } from "./document-protyle-guard.js";
 
@@ -76,11 +78,11 @@ async function handleSwitchProtyleOrLoadedProtyleStatic(e) {
         return;
     }
     let rootId = e.detail.protyle.block.rootID;
-    // let focusBlockId = e.detail.protyle.block.id;
+    let focusBlockId = getBacklinkPanelPageFocusBlockId(e.detail.protyle);
     if (!rootId) {
         return;
     }
-    await refreshBacklinkPanelToBottom(docuemntContentElement, rootId, null);
+    await refreshBacklinkPanelToBottom(docuemntContentElement, rootId, focusBlockId);
 
 }
 
@@ -178,6 +180,15 @@ async function addBacklinkPanelToBottom(docuemntContentElement: HTMLElement, roo
     if (backlinkPanelBottomElement) {
         let panelRootId = backlinkPanelBottomElement.getAttribute("data-root-id");
         if (panelRootId == rootId) {
+            let panelId = backlinkPanelBottomElement.getAttribute("misuzu-backlink-panel-id");
+            let pageSvelte = backlinkPanelPageSvelteMap.get(panelId);
+            updateBacklinkPanelPageProps({
+                panelInstance: pageSvelte,
+                rootId: rootId,
+                focusBlockId: focusBlockId,
+                currentTab: null,
+                panelBacklinkViewExpand: SettingService.ins.SettingConfig.docBottomBacklinkPanelViewExpand,
+            });
             return;
         } else {
             destroyPanel(docuemntContentElement);

@@ -12,6 +12,31 @@ export function buildBacklinkPanelPageProps({
   };
 }
 
+export function getBacklinkPanelPageFocusBlockId(protyle = null) {
+  return protyle?.block?.id || null;
+}
+
+export function updateBacklinkPanelPageProps({
+  panelInstance,
+  rootId,
+  focusBlockId = null,
+  currentTab = null,
+  panelBacklinkViewExpand = true,
+} = {}) {
+  if (typeof panelInstance?.$set !== "function") {
+    return;
+  }
+
+  panelInstance.$set(
+    buildBacklinkPanelPageProps({
+      rootId,
+      focusBlockId,
+      currentTab,
+      panelBacklinkViewExpand,
+    }),
+  );
+}
+
 export function attachBacklinkPanelScrollCleanup({
   element,
   onCleanup,

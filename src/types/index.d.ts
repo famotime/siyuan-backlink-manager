@@ -160,6 +160,16 @@ interface IBacklinkData {
         windowBlockIds?: string[];
         visibleBlockIds?: string[];
         orderedVisibleBlockIds?: string[];
+        contextPlan?: {
+            bodyRange?: {
+                startBlockId?: string;
+                endBlockId?: string;
+                windowBlockIds?: string[];
+            };
+            orderedVisibleBlockIds?: string[];
+            collapsedBlockIds?: string[];
+            structuralShellBlockIds?: string[];
+        };
         defaultExpandMode?: string;
     };
 }

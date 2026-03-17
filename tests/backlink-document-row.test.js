@@ -20,6 +20,8 @@ test("buildBacklinkDocumentListItemHtml renders title aria text and progress tex
       nextActionText: "下一步：近邻",
       visibleSourceSummary: "已显示：反链块",
       budgetHint: "部分上下文已裁剪，继续展开查看更多",
+      previousDisabled: true,
+      nextDisabled: false,
     },
   });
 
@@ -38,6 +40,7 @@ test("buildBacklinkDocumentListItemHtml renders title aria text and progress tex
   assert.match(html, /backlink-context-step-button/);
   assert.match(html, /backlink-context-step-button previous/);
   assert.match(html, /backlink-context-step-button next/);
+  assert.match(html, /backlink-context-step-button previous"[^>]*disabled/);
   assert.match(html, /backlink-context-state-group/);
   assert.match(
     html,
@@ -72,11 +75,17 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and 
     setAttribute(name, value) {
       this.attrs[name] = value;
     },
+    removeAttribute(name) {
+      delete this.attrs[name];
+    },
   };
   const nextContextButton = {
     attrs: {},
     setAttribute(name, value) {
       this.attrs[name] = value;
+    },
+    removeAttribute(name) {
+      delete this.attrs[name];
     },
   };
   const stateGroupElement = { innerHTML: "" };
@@ -122,6 +131,8 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and 
     nextActionText: "下一步：扩展",
     visibleSourceSummary: "已显示：父级、前相邻块",
     budgetHint: "部分上下文已裁剪，继续展开查看更多",
+    previousDisabled: false,
+    nextDisabled: false,
   });
 
   assert.equal(documentLiElement.attrs["data-backlink-block-id"], "block-a");
@@ -142,6 +153,8 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and 
     nextContextButton.attrs["aria-label"],
     "切换到下一个上下文层级",
   );
+  assert.equal(previousContextButton.attrs.disabled, undefined);
+  assert.equal(nextContextButton.attrs.disabled, undefined);
   assert.match(
     stateGroupElement.innerHTML,
     /backlink-chip backlink-chip--flat backlink-context-state active/,
@@ -150,6 +163,71 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and 
   assert.equal(budgetHintElement.textContent, "部分上下文已裁剪，继续展开查看更多");
   assert.equal(previousButton.disabled, false);
   assert.equal(nextButton.disabled, false);
+});
+
+test("updateBacklinkDocumentLiNavigation disables bounded context step buttons at the edges", () => {
+  const previousContextButton = {
+    attrs: {},
+    setAttribute(name, value) {
+      this.attrs[name] = value;
+    },
+    removeAttribute(name) {
+      delete this.attrs[name];
+    },
+  };
+  const nextContextButton = {
+    attrs: {},
+    setAttribute(name, value) {
+      this.attrs[name] = value;
+    },
+    removeAttribute(name) {
+      delete this.attrs[name];
+    },
+  };
+  const documentLiElement = {
+    setAttribute() {},
+    querySelector(selector) {
+      if (selector === ".backlink-context-step-button.previous") {
+        return previousContextButton;
+      }
+      if (selector === ".backlink-context-step-button.next") {
+        return nextContextButton;
+      }
+      return null;
+    },
+  };
+
+  const documentGroup = {
+    progressText: "1/1",
+    backlinks: [{}],
+    activeBacklink: {
+      backlinkBlock: {
+        id: "block-a",
+        content: "content",
+      },
+      contextBundle: {
+        matchSummaryList: [],
+      },
+    },
+  };
+
+  updateBacklinkDocumentLiNavigation(documentLiElement, documentGroup, {
+    contextVisibilityLevel: "core",
+    previousDisabled: true,
+    nextDisabled: false,
+  });
+
+  assert.equal(previousContextButton.attrs.disabled, true);
+  assert.equal(nextContextButton.attrs.disabled, undefined);
+
+  updateBacklinkDocumentLiNavigation(documentLiElement, documentGroup, {
+    contextVisibilityLevel: "full",
+    previousDisabled: false,
+    nextDisabled: true,
+  });
+
+  assert.equal(previousContextButton.attrs.disabled, undefined);
+  assert.equal(nextContextButton.attrs.disabled, true);
 });
 
 test("createBacklinkDocumentListItemElement wires toggle and navigation events", () => {

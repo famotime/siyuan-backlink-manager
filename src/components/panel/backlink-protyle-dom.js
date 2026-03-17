@@ -216,37 +216,14 @@ export function hideOtherListItemElement(
   }
 }
 
-function getBacklinkSourceWindowByLevel(backlinkData, contextVisibilityLevel = "core") {
-  if (!backlinkData) {
-    return null;
-  }
-
-  const sourceWindows = backlinkData.sourceWindows;
-  if (sourceWindows && sourceWindows[contextVisibilityLevel]) {
-    return sourceWindows[contextVisibilityLevel];
-  }
-
-  if (contextVisibilityLevel === "extended") {
-    return backlinkData.sourceWindow || null;
-  }
-
-  return null;
-}
-
-function getOrderedVisibleBlockIds(sourceWindow = null) {
-  if (
-    Array.isArray(sourceWindow?.orderedVisibleBlockIds) &&
-    sourceWindow.orderedVisibleBlockIds.length > 0
-  ) {
-    return sourceWindow.orderedVisibleBlockIds;
-  }
-  if (
-    Array.isArray(sourceWindow?.visibleBlockIds) &&
-    sourceWindow.visibleBlockIds.length > 0
-  ) {
-    return sourceWindow.visibleBlockIds;
-  }
-  return Array.isArray(sourceWindow?.windowBlockIds) ? sourceWindow.windowBlockIds : [];
+import {
+  getBacklinkSourceWindowByLevel,
+  getBacklinkSourceWindowBodyRange,
+  hasBacklinkSourceWindowExplicitVisibleBlockIds,
+  getBacklinkSourceWindowOrderedVisibleBlockIds,
+} from "../../service/backlink/backlink-source-window.js";
+function getSourceWindowWindowBlockIds(sourceWindow = null) {
+  return getBacklinkSourceWindowBodyRange(sourceWindow)?.windowBlockIds || [];
 }
 
 function collectVisibleBlockIdsWithAncestors(
@@ -328,9 +305,9 @@ function collectVisibleBlockIdsFromExpandedListShells(
   sourceWindow = null,
   blockElementArray = [],
 ) {
-  const visibleBlockIds = getOrderedVisibleBlockIds(sourceWindow);
+  const visibleBlockIds = getBacklinkSourceWindowOrderedVisibleBlockIds(sourceWindow);
   const windowBlockIdSet = new Set(
-    Array.isArray(sourceWindow?.windowBlockIds) ? sourceWindow.windowBlockIds : [],
+    getSourceWindowWindowBlockIds(sourceWindow),
   );
   if (visibleBlockIds.length <= 0 || windowBlockIdSet.size <= 0) {
     return new Set();
@@ -447,7 +424,7 @@ export function hideBlocksOutsideBacklinkSourceWindow(
     backlinkData,
     contextVisibilityLevel,
   );
-  const windowBlockIds = sourceWindow?.windowBlockIds;
+  const windowBlockIds = getSourceWindowWindowBlockIds(sourceWindow);
   if (!Array.isArray(windowBlockIds) || windowBlockIds.length <= 0) {
     return;
   }
@@ -461,8 +438,8 @@ export function hideBlocksOutsideBacklinkSourceWindow(
     protyleWysiwygElement.querySelectorAll("[data-node-id]");
   let blockElementArray = getBlockElementArray();
   const explicitVisibleBlockIds =
-    Array.isArray(sourceWindow?.visibleBlockIds) && sourceWindow.visibleBlockIds.length > 0;
-  const visibleBlockIds = getOrderedVisibleBlockIds(sourceWindow);
+    hasBacklinkSourceWindowExplicitVisibleBlockIds(sourceWindow);
+  const visibleBlockIds = getBacklinkSourceWindowOrderedVisibleBlockIds(sourceWindow);
   const descendantSourceBlockIds =
     Array.isArray(sourceWindow?.includeDescendantBlockIds)
       ? sourceWindow.includeDescendantBlockIds

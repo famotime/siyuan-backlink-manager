@@ -397,6 +397,32 @@ function resolveListItemAnchorBlockId(backlinkBlockNode = {}, context) {
   return "";
 }
 
+function getMaxIndexedBlockEntry(
+  blockIdArray = [],
+  context,
+  fallbackIndex = undefined,
+  fallbackBlockId = "",
+) {
+  let maxIndex = Number.isFinite(fallbackIndex) ? fallbackIndex : undefined;
+  let maxBlockId = fallbackBlockId || "";
+
+  for (const blockId of blockIdArray) {
+    const blockIndex = context?.indexById?.get(blockId);
+    if (!Number.isFinite(blockIndex)) {
+      continue;
+    }
+    if (maxIndex === undefined || blockIndex > maxIndex) {
+      maxIndex = blockIndex;
+      maxBlockId = blockId;
+    }
+  }
+
+  return {
+    index: maxIndex,
+    blockId: maxBlockId,
+  };
+}
+
 function dedupeBlockIdArray(blockIdArray = []) {
   const dedupedBlockIds = [];
   const seenBlockIds = new Set();
@@ -429,6 +455,203 @@ function orderBlockIdsByWindowOrder(windowBlockIds = [], blockIds = []) {
     }
   }
   return orderedBlockIds;
+}
+
+function buildSourceWindowContextPlan({
+  rootId = "",
+  anchorBlockId = "",
+  focusBlockId = "",
+  sourceDocumentOrder,
+  startBlockId = "",
+  endBlockId = "",
+  windowBlockIds = [],
+  orderedVisibleBlockIds = [],
+  context,
+} = {}) {
+  const collapsedBlockIdSet = new Set(windowBlockIds);
+  for (const blockId of orderedVisibleBlockIds) {
+    collapsedBlockIdSet.delete(blockId);
+  }
+
+  const structuralShellBlockIds = orderedVisibleBlockIds.filter((blockId) => {
+    const blockType = context?.blockById?.get(blockId)?.type;
+    return blockType === "h" || blockType === "i" || blockType === "l";
+  });
+
+  return {
+    identity: {
+      rootId,
+      anchorBlockId,
+      focusBlockId,
+      sourceDocumentOrder,
+    },
+    bodyRange: {
+      startBlockId,
+      endBlockId,
+      windowBlockIds,
+    },
+    orderedVisibleBlockIds,
+    collapsedBlockIds: Array.from(collapsedBlockIdSet),
+    structuralShellBlockIds,
+  };
+}
+
+function buildSourceWindowFromContextPlan({
+  contextPlan = null,
+  visibleBlockIds = [],
+  renderMode = "",
+  defaultExpandMode = "document_local_full",
+} = {}) {
+  if (!contextPlan) {
+    return null;
+  }
+
+  const identity = contextPlan.identity || {};
+  const bodyRange = contextPlan.bodyRange || {};
+  const sourceWindow = {
+    rootId: identity.rootId || "",
+    anchorBlockId: identity.anchorBlockId || "",
+    startBlockId: bodyRange.startBlockId || "",
+    endBlockId: bodyRange.endBlockId || "",
+    focusBlockId: identity.focusBlockId || "",
+    sourceDocumentOrder: identity.sourceDocumentOrder,
+    windowBlockIds: Array.isArray(bodyRange.windowBlockIds)
+      ? bodyRange.windowBlockIds
+      : [],
+    orderedVisibleBlockIds: Array.isArray(contextPlan.orderedVisibleBlockIds)
+      ? contextPlan.orderedVisibleBlockIds
+      : [],
+    contextPlan,
+    defaultExpandMode,
+  };
+
+  const dedupedVisibleBlockIds = dedupeBlockIdArray(visibleBlockIds);
+  if (dedupedVisibleBlockIds.length > 0) {
+    sourceWindow.visibleBlockIds = dedupedVisibleBlockIds;
+  }
+  if (renderMode) {
+    sourceWindow.renderMode = renderMode;
+  }
+
+  return sourceWindow;
+}
+
+export function getBacklinkSourceWindowContextPlan(sourceWindow = null) {
+  return sourceWindow?.contextPlan || null;
+}
+
+export function getBacklinkSourceWindowByLevel(
+  backlinkData = null,
+  contextVisibilityLevel = "core",
+) {
+  if (!backlinkData) {
+    return null;
+  }
+
+  const sourceWindows = backlinkData.sourceWindows;
+  if (sourceWindows && sourceWindows[contextVisibilityLevel]) {
+    return sourceWindows[contextVisibilityLevel];
+  }
+
+  if (contextVisibilityLevel === "extended") {
+    return backlinkData.sourceWindow || null;
+  }
+
+  return null;
+}
+
+export function getBacklinkSourceWindowIdentity(sourceWindow = null) {
+  const contextPlan = getBacklinkSourceWindowContextPlan(sourceWindow);
+  if (!sourceWindow) {
+    return null;
+  }
+
+  const identity = contextPlan?.identity || {};
+  return {
+    rootId: identity.rootId || sourceWindow.rootId || "",
+    anchorBlockId: identity.anchorBlockId || sourceWindow.anchorBlockId || "",
+    focusBlockId: identity.focusBlockId || sourceWindow.focusBlockId || "",
+    sourceDocumentOrder:
+      identity.sourceDocumentOrder ?? sourceWindow.sourceDocumentOrder,
+  };
+}
+
+export function getBacklinkSourceWindowBodyRange(sourceWindow = null) {
+  const contextPlan = getBacklinkSourceWindowContextPlan(sourceWindow);
+  if (!sourceWindow) {
+    return null;
+  }
+
+  const bodyRange = contextPlan?.bodyRange || {};
+  return {
+    startBlockId: bodyRange.startBlockId || sourceWindow.startBlockId || "",
+    endBlockId: bodyRange.endBlockId || sourceWindow.endBlockId || "",
+    windowBlockIds: Array.isArray(bodyRange.windowBlockIds) && bodyRange.windowBlockIds.length > 0
+      ? bodyRange.windowBlockIds
+      : Array.isArray(sourceWindow.windowBlockIds)
+      ? sourceWindow.windowBlockIds
+      : [],
+  };
+}
+
+export function getBacklinkSourceWindowOrderedVisibleBlockIds(sourceWindow = null) {
+  const contextPlan = getBacklinkSourceWindowContextPlan(sourceWindow);
+  if (
+    Array.isArray(contextPlan?.orderedVisibleBlockIds) &&
+    contextPlan.orderedVisibleBlockIds.length > 0
+  ) {
+    return contextPlan.orderedVisibleBlockIds;
+  }
+  if (
+    Array.isArray(sourceWindow?.orderedVisibleBlockIds) &&
+    sourceWindow.orderedVisibleBlockIds.length > 0
+  ) {
+    return sourceWindow.orderedVisibleBlockIds;
+  }
+  if (
+    Array.isArray(sourceWindow?.visibleBlockIds) &&
+    sourceWindow.visibleBlockIds.length > 0
+  ) {
+    return sourceWindow.visibleBlockIds;
+  }
+  return Array.isArray(sourceWindow?.windowBlockIds) ? sourceWindow.windowBlockIds : [];
+}
+
+export function getBacklinkSourceWindowCollapsedBlockIds(sourceWindow = null) {
+  const contextPlan = getBacklinkSourceWindowContextPlan(sourceWindow);
+  if (Array.isArray(contextPlan?.collapsedBlockIds)) {
+    return contextPlan.collapsedBlockIds;
+  }
+  return Array.isArray(sourceWindow?.collapsedBlockIds)
+    ? sourceWindow.collapsedBlockIds
+    : [];
+}
+
+export function hasBacklinkSourceWindowExplicitVisibleBlockIds(sourceWindow = null) {
+  const collapsedBlockIds = getBacklinkSourceWindowCollapsedBlockIds(sourceWindow);
+  if (collapsedBlockIds.length > 0) {
+    return true;
+  }
+
+  return (
+    Array.isArray(sourceWindow?.visibleBlockIds) &&
+    sourceWindow.visibleBlockIds.length > 0
+  );
+}
+
+export function getBacklinkSourceWindowCandidateBlockIds({
+  backlinkBlockId = "",
+  sourceWindow = null,
+} = {}) {
+  const sourceWindowIdentity = getBacklinkSourceWindowIdentity(sourceWindow) || {};
+  const bodyRange = getBacklinkSourceWindowBodyRange(sourceWindow);
+  return dedupeBlockIdArray([
+    backlinkBlockId,
+    sourceWindowIdentity.anchorBlockId,
+    sourceWindowIdentity.focusBlockId,
+    bodyRange?.startBlockId || "",
+    bodyRange?.endBlockId || "",
+  ]).filter(Boolean);
 }
 
 function getHeadingLevel(block = {}) {
@@ -544,32 +767,31 @@ function resolveReadableListItemShellBlockIds(listItemBlockId = "", context) {
   }
 
   const visibleBlockIds = [listItemBlockId];
-  let currentListItemId = listItemBlockId;
-  const visitedListItemIds = new Set();
+  const directChildBlocks = getDirectChildBlocks(listItemBlockId, context);
+  const readableChildBlock = directChildBlocks.find((block) => block?.type !== "l");
+  if (readableChildBlock?.id) {
+    visibleBlockIds.push(readableChildBlock.id);
+    return dedupeBlockIdArray(visibleBlockIds);
+  }
 
-  while (currentListItemId && !visitedListItemIds.has(currentListItemId)) {
-    visitedListItemIds.add(currentListItemId);
-    const directChildBlocks = getDirectChildBlocks(currentListItemId, context);
-    const readableChildBlock = directChildBlocks.find((block) => block?.type !== "l");
-    if (readableChildBlock?.id) {
-      visibleBlockIds.push(readableChildBlock.id);
-      break;
-    }
+  const childListBlock = directChildBlocks.find((block) => block?.type === "l");
+  if (!childListBlock?.id) {
+    return dedupeBlockIdArray(visibleBlockIds);
+  }
 
-    const childListBlock = directChildBlocks.find((block) => block?.type === "l");
-    if (!childListBlock?.id) {
-      break;
-    }
+  const firstChildListItem = getDirectChildBlocks(childListBlock.id, context).find(
+    (block) => block?.type === "i",
+  );
+  if (!firstChildListItem?.id) {
+    return dedupeBlockIdArray(visibleBlockIds);
+  }
 
-    const firstChildListItem = getDirectChildBlocks(childListBlock.id, context).find(
-      (block) => block?.type === "i",
-    );
-    if (!firstChildListItem?.id) {
-      break;
-    }
-
-    visibleBlockIds.push(firstChildListItem.id);
-    currentListItemId = firstChildListItem.id;
+  visibleBlockIds.push(firstChildListItem.id);
+  const firstChildReadableBlock = getDirectChildBlocks(firstChildListItem.id, context).find(
+    (block) => block?.type !== "l",
+  );
+  if (firstChildReadableBlock?.id) {
+    visibleBlockIds.push(firstChildReadableBlock.id);
   }
 
   return dedupeBlockIdArray(visibleBlockIds);
@@ -606,43 +828,55 @@ function buildSourceWindowFromRange({
   const sourceWindow = {
     rootId: backlinkBlockNode.block.root_id,
     anchorBlockId: anchorBlockId || backlinkBlockNode.block.id,
-    startBlockId: startBlockId || windowBlockIds[0],
-    endBlockId: endBlockId || windowBlockIds[windowBlockIds.length - 1],
     focusBlockId: backlinkBlockNode.block.id,
     sourceDocumentOrder: getBlockDocumentOrder(backlinkBlockNode.block.id, context),
-    windowBlockIds,
-    defaultExpandMode: "document_local_full",
   };
 
-  const dedupedVisibleBlockIds = dedupeBlockIdArray(visibleBlockIds);
-  if (dedupedVisibleBlockIds.length > 0) {
-    sourceWindow.visibleBlockIds = dedupedVisibleBlockIds;
-  }
-  sourceWindow.orderedVisibleBlockIds = orderBlockIdsByWindowOrder(
+  const orderedVisibleBlockIds = orderBlockIdsByWindowOrder(
     windowBlockIds,
-    dedupedVisibleBlockIds.length > 0 ? dedupedVisibleBlockIds : windowBlockIds,
+    Array.isArray(visibleBlockIds) && visibleBlockIds.length > 0
+      ? visibleBlockIds
+      : windowBlockIds,
   );
-  if (renderMode) {
-    sourceWindow.renderMode = renderMode;
-  }
-
-  return sourceWindow;
+  const contextPlan = buildSourceWindowContextPlan({
+    rootId: sourceWindow.rootId,
+    anchorBlockId: sourceWindow.anchorBlockId,
+    focusBlockId: sourceWindow.focusBlockId,
+    sourceDocumentOrder: sourceWindow.sourceDocumentOrder,
+    startBlockId: startBlockId || windowBlockIds[0],
+    endBlockId: endBlockId || windowBlockIds[windowBlockIds.length - 1],
+    windowBlockIds,
+    orderedVisibleBlockIds,
+    context,
+  });
+  return buildSourceWindowFromContextPlan({
+    contextPlan,
+    visibleBlockIds,
+    renderMode,
+  });
 }
 
 function buildCoreBacklinkSourceWindow(backlinkBlockNode, context) {
   const listItemAnchorBlockId = resolveListItemAnchorBlockId(backlinkBlockNode, context);
   if (listItemAnchorBlockId) {
     const startIndex = context.indexById.get(listItemAnchorBlockId);
+    const visibleBlockIds =
+      backlinkBlockNode.block.id === listItemAnchorBlockId
+        ? [listItemAnchorBlockId]
+        : [listItemAnchorBlockId, backlinkBlockNode.block.id];
+    const { index: endIndex } = getMaxIndexedBlockEntry(
+      visibleBlockIds,
+      context,
+      startIndex,
+      listItemAnchorBlockId,
+    );
     return buildSourceWindowFromRange({
       backlinkBlockNode,
       context,
       anchorBlockId: listItemAnchorBlockId,
       startIndex,
-      endIndex: findBlockSubtreeEndIndex(startIndex, context),
-      visibleBlockIds:
-        backlinkBlockNode.block.id === listItemAnchorBlockId
-          ? [listItemAnchorBlockId]
-          : [listItemAnchorBlockId, backlinkBlockNode.block.id],
+      endIndex,
+      visibleBlockIds,
       renderMode: "scroll",
     });
   }
@@ -681,12 +915,32 @@ function buildNearbyBacklinkSourceWindow(backlinkBlockNode, context) {
 
   const renderStartBlockId = resolveFirstDescendantBlockId(startBlockId, context);
   const startIndex = context.indexById.get(startBlockId) ?? anchorStartIndex;
-  const endIndex = getBlockRangeEndIndex(endBlockId, context) ?? getBlockRangeEndIndex(anchorBlockId, context);
+  const visibleBlockIds = isListItemContext
+    ? dedupeBlockIdArray([
+        ...resolveReadableListItemShellBlockIds(startBlockId, context),
+        anchorBlockId,
+        backlinkBlockNode.block.id,
+        ...resolveReadableListItemShellBlockIds(endBlockId, context),
+      ])
+    : dedupeBlockIdArray([
+        startBlockId,
+        backlinkBlockNode.block.id,
+        endBlockId,
+      ]);
+  const listContextWindowEnd = getMaxIndexedBlockEntry(
+    visibleBlockIds,
+    context,
+    anchorStartIndex,
+    anchorBlockId,
+  );
+  const endIndex = isListItemContext
+    ? listContextWindowEnd.index
+    : getBlockRangeEndIndex(endBlockId, context) ?? getBlockRangeEndIndex(anchorBlockId, context);
   const sourceWindowStartBlockId = isListItemContext
     ? startBlockId
     : renderStartBlockId;
   const sourceWindowEndBlockId = isListItemContext
-    ? endBlockId
+    ? listContextWindowEnd.blockId
     : undefined;
 
   return buildSourceWindowFromRange({
@@ -697,18 +951,7 @@ function buildNearbyBacklinkSourceWindow(backlinkBlockNode, context) {
     endIndex,
     startBlockId: sourceWindowStartBlockId,
     endBlockId: sourceWindowEndBlockId,
-    visibleBlockIds: isListItemContext
-      ? dedupeBlockIdArray([
-          ...resolveReadableListItemShellBlockIds(startBlockId, context),
-          anchorBlockId,
-          backlinkBlockNode.block.id,
-          ...resolveReadableListItemShellBlockIds(endBlockId, context),
-        ])
-      : dedupeBlockIdArray([
-          startBlockId,
-          backlinkBlockNode.block.id,
-          endBlockId,
-        ]),
+    visibleBlockIds,
     renderMode: "scroll",
   });
 }

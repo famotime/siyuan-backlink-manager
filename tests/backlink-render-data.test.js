@@ -138,6 +138,20 @@ test("buildBacklinkContextBudgetHint stays hidden when not truncated or already 
   );
 });
 
+test("buildBacklinkContextBudgetHint reports source window fallback as an explicit degraded state", () => {
+  const result = buildBacklinkContextBudgetHint({
+    contextVisibilityLevel: "nearby",
+    activeBacklink: {
+      backlinkBlock: {
+        id: "block-a",
+      },
+      sourceWindows: {},
+    },
+  });
+
+  assert.equal(result, "原文上下文不可用，当前显示为降级结果");
+});
+
 test("getBatchBacklinkDoc deduplicates backlink dom results without reordering api backlink order", async () => {
   const backlinkBlockNodeArray = [
     {

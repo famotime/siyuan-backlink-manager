@@ -110,6 +110,8 @@ test("buildBacklinkContextControlState summarizes the current level and the next
       nextActionText: "下一步：扩展",
       visibleSourceSummary: "已显示：父级、前相邻块",
       budgetHint: "部分上下文已裁剪，继续展开查看更多",
+      previousDisabled: false,
+      nextDisabled: false,
     },
   );
 });
@@ -134,6 +136,98 @@ test("buildBacklinkContextControlState hides the next action once full mode is r
       nextActionText: "",
       visibleSourceSummary: "已进入全文模式",
       budgetHint: "",
+      previousDisabled: false,
+      nextDisabled: true,
+    },
+  );
+});
+
+test("buildBacklinkContextControlState marks boundary navigation availability", () => {
+  assert.deepEqual(
+    buildBacklinkContextControlState({
+      contextVisibilityLevel: "core",
+      activeBacklink: null,
+    }),
+    {
+      contextVisibilityLevel: "core",
+      levelLabel: "核心",
+      nextLevelLabel: "近邻",
+      nextActionText: "下一步：近邻",
+      visibleSourceSummary: "",
+      budgetHint: "",
+      previousDisabled: true,
+      nextDisabled: false,
+    },
+  );
+
+  assert.deepEqual(
+    buildBacklinkContextControlState({
+      contextVisibilityLevel: "full",
+      activeBacklink: null,
+    }),
+    {
+      contextVisibilityLevel: "full",
+      levelLabel: "全文",
+      nextLevelLabel: "全文",
+      nextActionText: "",
+      visibleSourceSummary: "已进入全文模式",
+      budgetHint: "",
+      previousDisabled: false,
+      nextDisabled: true,
+    },
+  );
+});
+
+test("buildBacklinkContextControlState exposes an explicit degraded hint when source window is unavailable", () => {
+  assert.deepEqual(
+    buildBacklinkContextControlState({
+      contextVisibilityLevel: "extended",
+      activeBacklink: {
+        backlinkBlock: {
+          id: "block-a",
+        },
+        sourceWindows: {},
+        contextBundle: {
+          visibleFragments: [],
+        },
+      },
+    }),
+    {
+      contextVisibilityLevel: "extended",
+      levelLabel: "扩展",
+      nextLevelLabel: "全文",
+      nextActionText: "下一步：全文",
+      visibleSourceSummary: "",
+      budgetHint: "原文上下文不可用，当前显示为降级结果",
+      previousDisabled: false,
+      nextDisabled: false,
+    },
+  );
+});
+
+test("buildBacklinkContextControlState hides the degraded hint in full mode", () => {
+  assert.deepEqual(
+    buildBacklinkContextControlState({
+      contextVisibilityLevel: "full",
+      activeBacklink: {
+        backlinkBlock: {
+          id: "block-a",
+        },
+        sourceWindows: {},
+        contextBundle: {
+          visibleFragments: [],
+        },
+      },
+    }),
+    {
+      contextVisibilityLevel: "full",
+      levelLabel: "全文",
+      nextLevelLabel: "全文",
+      nextActionText: "",
+      visibleSourceSummary: "已进入全文模式",
+      budgetHint: "",
+      previousDisabled: false,
+      nextDisabled: true,
     },
   );
 });

@@ -5,6 +5,8 @@ import {
   attachBacklinkPanelScrollCleanup,
   buildBacklinkPanelPageProps,
   destroyBacklinkPanelHost,
+  getBacklinkPanelPageFocusBlockId,
+  updateBacklinkPanelPageProps,
 } from "../src/service/plugin/backlink-panel-host.js";
 
 test("buildBacklinkPanelPageProps preserves panel mount inputs", () => {
@@ -64,4 +66,40 @@ test("destroyBacklinkPanelHost tears down panel instances and event handlers", (
   });
 
   assert.deepEqual(calls, ["detach-scroll", "destroy-panel"]);
+});
+
+test("getBacklinkPanelPageFocusBlockId reads the current protyle block id", () => {
+  assert.equal(
+    getBacklinkPanelPageFocusBlockId({
+      block: {
+        id: "block-1",
+      },
+    }),
+    "block-1",
+  );
+  assert.equal(getBacklinkPanelPageFocusBlockId(null), null);
+});
+
+test("updateBacklinkPanelPageProps pushes the latest focus props into the panel instance", () => {
+  const calls = [];
+  updateBacklinkPanelPageProps({
+    panelInstance: {
+      $set(props) {
+        calls.push(props);
+      },
+    },
+    rootId: "doc-1",
+    focusBlockId: "block-1",
+    currentTab: { id: "tab-1" },
+    panelBacklinkViewExpand: false,
+  });
+
+  assert.deepEqual(calls, [
+    {
+      rootId: "doc-1",
+      focusBlockId: "block-1",
+      currentTab: { id: "tab-1" },
+      panelBacklinkViewExpand: false,
+    },
+  ]);
 });

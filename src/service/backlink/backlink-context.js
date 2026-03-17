@@ -39,6 +39,51 @@ export function dedupeBacklinkContextFragments(fragments = []) {
   return uniqueFragments;
 }
 
+export function getBacklinkContextExplanationFragments(bundle = null) {
+  if (Array.isArray(bundle?.explanationFragments)) {
+    return bundle.explanationFragments;
+  }
+  if (Array.isArray(bundle?.visibleFragments)) {
+    return bundle.visibleFragments;
+  }
+  return [];
+}
+
+function buildMetaInfoFieldSearchText(text = "", deps = {}) {
+  return (deps.removeMarkdownRefBlockStyle
+    ? deps.removeMarkdownRefBlockStyle(text)
+    : text
+  ).toLowerCase();
+}
+
+function createBacklinkContextMetaInfo(backlinkBlockNode, deps) {
+  const documentTitleText = deps.getQueryStrByBlock(backlinkBlockNode.documentBlock);
+  const metaInfo = {
+    matchedFieldKeys: [],
+    matchSummaryList: [],
+  };
+
+  if (!documentTitleText) {
+    return metaInfo;
+  }
+
+  metaInfo.documentTitle = {
+    key: "documentTitle",
+    text: documentTitleText,
+    renderMarkdown:
+      backlinkBlockNode.documentBlock?.markdown ||
+      backlinkBlockNode.documentBlock?.content ||
+      "",
+    searchText: buildMetaInfoFieldSearchText(documentTitleText, deps),
+    visibilityRole: "meta",
+    searchable: true,
+    matched: false,
+    matchTypes: [],
+    matchKeywords: [],
+  };
+  return metaInfo;
+}
+
 function createContextFragment({
   backlinkBlockNode,
   sourceType,
@@ -163,20 +208,6 @@ export function buildBacklinkContextBundle(backlinkBlockNode, deps) {
     fragments,
     createMarkdownFragment({
       backlinkBlockNode,
-      sourceType: "document",
-      order: order++,
-      text: deps.getQueryStrByBlock(backlinkBlockNode.documentBlock),
-      renderMarkdown:
-        backlinkBlockNode.documentBlock?.markdown ||
-        backlinkBlockNode.documentBlock?.content ||
-        "",
-      deps,
-    }),
-  );
-  pushFragment(
-    fragments,
-    createMarkdownFragment({
-      backlinkBlockNode,
       sourceType: "parent",
       order: order++,
       text: backlinkBlockNode.parentMarkdown,
@@ -255,6 +286,7 @@ export function buildBacklinkContextBundle(backlinkBlockNode, deps) {
     fragments: dedupedFragments,
     explanationFragments: dedupedFragments.filter((fragment) => fragment.defaultVisible),
     visibleFragments: dedupedFragments.filter((fragment) => fragment.defaultVisible),
+    metaInfo: createBacklinkContextMetaInfo(backlinkBlockNode, deps),
     matchedFragments: [],
     includeCurDocDefBlockIds,
     includeRelatedDefBlockIds,
@@ -303,6 +335,20 @@ function resetBundleMatches(bundle) {
   bundle.matchedFragments = [];
   bundle.matchSummaryList = [];
   bundle.primaryMatchSourceType = undefined;
+  if (!bundle.metaInfo) {
+    bundle.metaInfo = {
+      matchedFieldKeys: [],
+      matchSummaryList: [],
+    };
+  }
+  bundle.metaInfo.matchedFieldKeys = [];
+  bundle.metaInfo.matchSummaryList = [];
+  bundle.metaInfo.primaryMatchKey = undefined;
+  if (bundle.metaInfo.documentTitle) {
+    bundle.metaInfo.documentTitle.matched = false;
+    bundle.metaInfo.documentTitle.matchTypes = [];
+    bundle.metaInfo.documentTitle.matchKeywords = [];
+  }
 
   for (const fragment of bundle.fragments || []) {
     fragment.matched = false;
@@ -327,6 +373,11 @@ function buildMatchSummary(fragment) {
   const label = getBacklinkContextSourceRule(fragment.sourceType).label;
   const useAnchor = fragment.matchTypes.includes("anchor") && fragment.anchorText;
   const text = useAnchor ? fragment.anchorText : fragment.displayText;
+  const compactText = normalizeMatchSummaryText(text).slice(0, 48);
+  return compactText ? `${label}：${compactText}` : label;
+}
+
+function buildMetaInfoMatchSummary(label, text = "") {
   const compactText = normalizeMatchSummaryText(text).slice(0, 48);
   return compactText ? `${label}：${compactText}` : label;
 }
@@ -383,6 +434,28 @@ export function matchBacklinkContextBundle(bundle, { keywordObj, matchKeywords }
     }
   }
 
+  const documentTitleMeta = bundle.metaInfo?.documentTitle;
+  if (documentTitleMeta?.searchable) {
+    const documentTitleMatched = matchKeywords(
+      documentTitleMeta.searchText || "",
+      includeText,
+      excludeText,
+    );
+    if (requireText && documentTitleMatched) {
+      matchText = true;
+      documentTitleMeta.matchTypes.push("text");
+      documentTitleMeta.matchKeywords.push(...includeText);
+    }
+    if (documentTitleMeta.matchTypes.length > 0) {
+      documentTitleMeta.matched = true;
+      bundle.metaInfo.matchedFieldKeys.push(documentTitleMeta.key);
+      bundle.metaInfo.primaryMatchKey = bundle.metaInfo.primaryMatchKey || documentTitleMeta.key;
+      bundle.metaInfo.matchSummaryList.push(
+        buildMetaInfoMatchSummary("文档", documentTitleMeta.text),
+      );
+    }
+  }
+
   if (bundle.matchedFragments.length > 0) {
     bundle.matchedFragments.sort((a, b) => {
       const priorityA = getBacklinkContextSourceRule(a.sourceType).matchPriority;
@@ -396,6 +469,13 @@ export function matchBacklinkContextBundle(bundle, { keywordObj, matchKeywords }
     bundle.matchSummaryList = bundle.matchedFragments
       .slice(0, 3)
       .map(buildMatchSummary);
+    if (bundle.matchSummaryList.length < 3 && bundle.metaInfo.matchSummaryList.length > 0) {
+      bundle.matchSummaryList.push(
+        ...bundle.metaInfo.matchSummaryList.slice(0, 3 - bundle.matchSummaryList.length),
+      );
+    }
+  } else if (bundle.metaInfo.matchSummaryList.length > 0) {
+    bundle.matchSummaryList = bundle.metaInfo.matchSummaryList.slice(0, 3);
   }
 
   return { matchText, matchAnchor, bundle };

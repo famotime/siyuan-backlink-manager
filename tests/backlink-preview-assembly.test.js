@@ -8,6 +8,7 @@ import {
 
 function createActiveBacklink({
   contextVisibilityLevel = "nearby",
+  explanationFragments = undefined,
   visibleFragments = [],
   previewSequence = undefined,
 } = {}) {
@@ -21,6 +22,7 @@ function createActiveBacklink({
       box: "box-a",
     },
     contextBundle: {
+      explanationFragments,
       visibleFragments,
       contextVisibilityLevel,
       previewSequence,
@@ -98,6 +100,27 @@ test("selectBacklinkPreviewFragments adds parent and child context in extended m
       "child_list",
       "expanded",
     ],
+  );
+});
+
+test("selectBacklinkPreviewFragments prefers explanationFragments over legacy visibleFragments", () => {
+  const fragments = selectBacklinkPreviewFragments({
+    contextVisibilityLevel: "nearby",
+    contextBundle: {
+      explanationFragments: [
+        { sourceType: "self", text: "self", visibilityLevel: "core" },
+        { sourceType: "parent", text: "parent", visibilityLevel: "nearby" },
+      ],
+      visibleFragments: [
+        { sourceType: "self", text: "self", visibilityLevel: "core" },
+        { sourceType: "sibling_prev", text: "prev", visibilityLevel: "nearby" },
+      ],
+    },
+  });
+
+  assert.deepEqual(
+    fragments.map((fragment) => fragment.sourceType),
+    ["self"],
   );
 });
 

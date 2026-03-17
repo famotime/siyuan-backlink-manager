@@ -1,3 +1,8 @@
+import {
+  getBacklinkSourceWindowByLevel,
+  getBacklinkSourceWindowCandidateBlockIds,
+} from "../../service/backlink/backlink-source-window.js";
+
 export function syncBacklinkDocumentProtyleState(editor, deps) {
   const {
     backlinkDocumentFoldMap,
@@ -145,26 +150,6 @@ export function renderBacklinkDocumentGroup({
   return editor;
 }
 
-function getBacklinkSourceWindowByLevel(
-  backlinkData,
-  contextVisibilityLevel = "core",
-) {
-  if (!backlinkData) {
-    return null;
-  }
-
-  const sourceWindows = backlinkData.sourceWindows;
-  if (sourceWindows && sourceWindows[contextVisibilityLevel]) {
-    return sourceWindows[contextVisibilityLevel];
-  }
-
-  if (contextVisibilityLevel === "extended") {
-    return backlinkData.sourceWindow || null;
-  }
-
-  return null;
-}
-
 function canApplySourceWindowFiltering({
   backlinkData,
   backlinkBlockId = "",
@@ -179,13 +164,10 @@ function canApplySourceWindowFiltering({
     backlinkData,
     contextVisibilityLevel,
   );
-  const candidateBlockIds = [
+  const candidateBlockIds = getBacklinkSourceWindowCandidateBlockIds({
     backlinkBlockId,
-    sourceWindow?.anchorBlockId,
-    sourceWindow?.focusBlockId,
-    sourceWindow?.startBlockId,
-    sourceWindow?.endBlockId,
-  ].filter(Boolean);
+    sourceWindow,
+  });
 
   for (const blockId of candidateBlockIds) {
     if (protyleContentElement.querySelector(`[data-node-id='${blockId}']`)) {

@@ -6,6 +6,7 @@ import {
   applyBacklinkContextVisibilityToNodes,
   buildBacklinkContextBundle,
   dedupeBacklinkContextFragments,
+  getBacklinkContextExplanationFragments,
   hydrateBacklinkContextBundles,
   matchBacklinkContextBundle,
 } from "../src/service/backlink/backlink-context.js";
@@ -78,17 +79,19 @@ test("buildBacklinkContextBundle materializes ordered fragments and default visi
 
   assert.deepEqual(
     bundle.fragments.map((fragment) => fragment.sourceType),
-    ["self", "document", "parent", "child_headline", "sibling_prev", "sibling_next", "expanded"],
+    ["self", "parent", "child_headline", "sibling_prev", "sibling_next", "expanded"],
   );
   assert.deepEqual(
     bundle.visibleFragments.map((fragment) => fragment.sourceType),
-    ["self", "document"],
+    ["self"],
   );
+  assert.equal(bundle.metaInfo.documentTitle.text, "document title");
+  assert.equal(bundle.metaInfo.documentTitle.visibilityRole, "meta");
   assert.equal(bundle.fragments[0].budgetPriority, 1);
   assert.equal(bundle.fragments[0].renderMarkdown, "- 当前列表项");
-  assert.equal(bundle.fragments[2].budgetPriority, 3);
-  assert.equal(bundle.fragments[2].renderMarkdown, "## parent ((def-parent 'parent-anchor'))");
-  assert.equal(bundle.fragments[6].renderMarkdown, "- expanded sibling");
+  assert.equal(bundle.fragments[1].budgetPriority, 3);
+  assert.equal(bundle.fragments[1].renderMarkdown, "## parent ((def-parent 'parent-anchor'))");
+  assert.equal(bundle.fragments[5].renderMarkdown, "- expanded sibling");
   assert.equal(bundle.previewSequence, undefined);
   assert.ok(bundle.includeCurDocDefBlockIds.has("def-current"));
   assert.ok(bundle.includeRelatedDefBlockIds.has("def-parent"));
@@ -113,6 +116,15 @@ test("backlink context source rules cover every supported source with unified ru
     filterable: true,
     budgetPriority: 1,
     matchPriority: 1,
+  });
+  assert.deepEqual(getBacklinkContextSourceRule("document"), {
+    label: "文档",
+    visibilityLevel: "core",
+    defaultVisible: false,
+    searchable: false,
+    filterable: false,
+    budgetPriority: 2,
+    matchPriority: 5,
   });
   assert.equal(getBacklinkContextSourceRule("expanded").visibilityLevel, "extended");
   assert.equal(getBacklinkContextSourceRule("expanded").searchable, false);
@@ -150,8 +162,12 @@ test("hydrateBacklinkContextBundles attaches context fragments and bundle to bac
 
   hydrateBacklinkContextBundles(backlinkBlockNodeArray, createBundleDeps());
 
-  assert.equal(backlinkBlockNodeArray[0].contextFragments.length, 3);
-  assert.equal(backlinkBlockNodeArray[0].contextBundle.fragments.length, 3);
+  assert.equal(backlinkBlockNodeArray[0].contextFragments.length, 2);
+  assert.equal(backlinkBlockNodeArray[0].contextBundle.fragments.length, 2);
+  assert.equal(
+    backlinkBlockNodeArray[0].contextBundle.metaInfo.documentTitle.text,
+    "document title",
+  );
   assert.ok(backlinkBlockNodeArray[0].contextBundle.includeRelatedDefBlockIds.has("def-list"));
 });
 
@@ -244,6 +260,51 @@ test("matchBacklinkContextBundle strips markdown markers from match summaries", 
   assert.match(bundle.matchSummaryList[0], /父级：1\. Skills 是什么？ 二、Skills：让 Claude 真正 target-hit/);
 });
 
+test("matchBacklinkContextBundle records document title hits in metaInfo instead of body fragments", () => {
+  const bundle = buildBacklinkContextBundle(
+    {
+      block: {
+        id: "block-a",
+        root_id: "doc-a",
+        markdown: "self hit",
+      },
+      documentBlock: {
+        id: "doc-a",
+        root_id: "doc-a",
+        markdown: "Doc target-title",
+      },
+      parentMarkdown: "",
+      headlineChildMarkdown: "",
+      previousSiblingMarkdown: "",
+      nextSiblingMarkdown: "",
+      includeCurBlockDefBlockIds: new Set(),
+      includeDirectDefBlockIds: new Set(),
+      includeRelatedDefBlockIds: new Set(),
+      parentListItemTreeNode: null,
+    },
+    createBundleDeps(),
+  );
+
+  const result = matchBacklinkContextBundle(bundle, {
+    keywordObj: {
+      includeText: ["target-title"],
+      excludeText: [],
+      includeAnchor: [],
+      excludeAnchor: [],
+    },
+    matchKeywords: (content, includeText, excludeText) =>
+      includeText.every((keyword) => content.includes(keyword)) &&
+      excludeText.every((keyword) => !content.includes(keyword)),
+  });
+
+  assert.equal(result.matchText, true);
+  assert.equal(bundle.matchedFragments.length, 0);
+  assert.equal(bundle.primaryMatchSourceType, undefined);
+  assert.equal(bundle.metaInfo.documentTitle.matched, true);
+  assert.deepEqual(bundle.metaInfo.matchedFieldKeys, ["documentTitle"]);
+  assert.deepEqual(bundle.matchSummaryList, ["文档：Doc target-title"]);
+});
+
 test("applyBacklinkContextVisibility exposes fragments by visibility level", () => {
   const bundle = buildBacklinkContextBundle(
     {
@@ -279,13 +340,13 @@ test("applyBacklinkContextVisibility exposes fragments by visibility level", () 
   applyBacklinkContextVisibility(bundle, "core");
   assert.deepEqual(
     bundle.visibleFragments.map((fragment) => fragment.sourceType),
-    ["self", "document"],
+    ["self"],
   );
 
   applyBacklinkContextVisibility(bundle, "nearby");
   assert.deepEqual(
     bundle.visibleFragments.map((fragment) => fragment.sourceType),
-    ["self", "document", "parent", "child_headline", "sibling_prev", "sibling_next"],
+    ["self", "parent", "child_headline", "sibling_prev", "sibling_next"],
   );
 
   applyBacklinkContextVisibility(bundle, "extended");
@@ -349,5 +410,22 @@ test("dedupeBacklinkContextFragments removes duplicate fragments from the same s
   assert.deepEqual(
     fragments.map((fragment) => fragment.id),
     ["doc:1", "parent:1"],
+  );
+});
+
+test("getBacklinkContextExplanationFragments prefers explanationFragments and falls back to visibleFragments", () => {
+  assert.deepEqual(
+    getBacklinkContextExplanationFragments({
+      explanationFragments: [{ id: "exp-1" }],
+      visibleFragments: [{ id: "vis-1" }],
+    }).map((fragment) => fragment.id),
+    ["exp-1"],
+  );
+
+  assert.deepEqual(
+    getBacklinkContextExplanationFragments({
+      visibleFragments: [{ id: "vis-1" }],
+    }).map((fragment) => fragment.id),
+    ["vis-1"],
   );
 });

@@ -11,8 +11,8 @@ export const BACKLINK_CONTEXT_SOURCE_RULES = {
   document: {
     label: "文档",
     visibilityLevel: "core",
-    defaultVisible: true,
-    searchable: true,
+    defaultVisible: false,
+    searchable: false,
     filterable: false,
     budgetPriority: 2,
     matchPriority: 5,

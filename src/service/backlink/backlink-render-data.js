@@ -1,4 +1,8 @@
-import { buildBacklinkContextBundle, matchBacklinkContextBundle } from "./backlink-context.js";
+import {
+  buildBacklinkContextBundle,
+  getBacklinkContextExplanationFragments,
+  matchBacklinkContextBundle,
+} from "./backlink-context.js";
 import { getBacklinkContextSourceRule } from "./backlink-context-rules.js";
 
 export function formatBacklinkDocApiKeyword(keyword = "") {
@@ -45,11 +49,7 @@ export function buildBacklinkVisibleSourceSummary({
     return "已进入全文模式";
   }
 
-  const visibleFragments = Array.isArray(contextBundle?.explanationFragments)
-    ? contextBundle.explanationFragments
-    : Array.isArray(contextBundle?.visibleFragments)
-      ? contextBundle.visibleFragments
-    : [];
+  const visibleFragments = getBacklinkContextExplanationFragments(contextBundle);
   const levelLabels = [];
   const seenSourceTypes = new Set();
 
@@ -76,9 +76,18 @@ export function buildBacklinkVisibleSourceSummary({
 export function buildBacklinkContextBudgetHint({
   contextVisibilityLevel = "core",
   contextBundle = null,
+  activeBacklink = null,
 } = {}) {
   if (contextVisibilityLevel === "full") {
     return "";
+  }
+
+  const sourceWindows = activeBacklink?.sourceWindows;
+  const hasSourceWindow =
+    (sourceWindows && sourceWindows[contextVisibilityLevel]) ||
+    (contextVisibilityLevel === "extended" && activeBacklink?.sourceWindow);
+  if (activeBacklink?.backlinkBlock?.id && !hasSourceWindow) {
+    return "原文上下文不可用，当前显示为降级结果";
   }
 
   const budgetSummary = contextBundle?.budgetSummary;

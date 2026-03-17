@@ -89,6 +89,10 @@ import {
 } from "./backlink-document-view-state.js";
 import { sanitizeBacklinkKeywords } from "./backlink-panel-formatting.js";
 import { mergeTurnPageBacklinkPanelRenderData } from "./backlink-panel-render-data.js";
+import {
+  buildBacklinkPanelInitStrategy,
+  resolveBacklinkPanelFocusRefresh,
+} from "./backlink-panel-focus-refresh.js";
 import { resolveBacklinkPanelRefreshRootId } from "./backlink-panel-refresh.js";
 
 export function createBacklinkPanelController(state) {
@@ -206,9 +210,17 @@ export function createBacklinkPanelController(state) {
     };
 
     const handleProtyleFocus = (event) => {
-      updateFocusedWndCache(
-        getBacklinkDocumentWndElementFromProtyle(event?.detail?.protyle),
-      );
+      const protyle = event?.detail?.protyle;
+      updateFocusedWndCache(getBacklinkDocumentWndElementFromProtyle(protyle));
+      const focusRefresh = resolveBacklinkPanelFocusRefresh({
+        rootId: state.rootId,
+        focusBlockId: state.focusBlockId,
+        protyle,
+      });
+      if (focusRefresh.shouldRefresh) {
+        state.focusBlockId = focusRefresh.nextFocusBlockId;
+        initBaseData();
+      }
     };
 
     documentRef.addEventListener("focusin", handleFocusIn, true);
@@ -613,8 +625,16 @@ export function createBacklinkPanelController(state) {
     if (!state.rootId) {
       return;
     }
+    const initStrategy = buildBacklinkPanelInitStrategy({
+      previousRootId: state.previousRootId,
+      rootId: state.rootId,
+      hasQueryParams: Boolean(state.queryParams),
+    });
+
     clearBacklinkProtyleList();
-    state.backlinkDocumentActiveIndexMap.clear();
+    if (initStrategy.resetDocumentActiveIndexes) {
+      state.backlinkDocumentActiveIndexMap.clear();
+    }
 
     state.previousRootId = state.rootId;
     state.previousFocusBlockId = state.focusBlockId;
@@ -639,18 +659,23 @@ export function createBacklinkPanelController(state) {
     const defaultPanelCriteria =
       await BacklinkFilterPanelAttributeService.ins.getPanelCriteria(state.rootId);
 
-    state.queryParams = defaultPanelCriteria.queryParams;
-    state.panelFilterViewExpand =
-      defaultPanelCriteria.backlinkPanelFilterViewExpand;
-    state.queryParams.pageNum = 1;
+    if (!initStrategy.reuseExistingQueryParams) {
+      state.queryParams = defaultPanelCriteria.queryParams;
+      state.panelFilterViewExpand =
+        defaultPanelCriteria.backlinkPanelFilterViewExpand;
+      state.queryParams.pageNum = 1;
+    } else {
+      state.queryParams = state.queryParams;
+      state.panelFilterViewExpand = state.panelFilterViewExpand;
+    }
 
     state.savedQueryParamMap =
       await BacklinkFilterPanelAttributeService.ins.getPanelSavedCriteriaMap(
         state.rootId,
       );
 
-    if (settingConfig.defaultSelectedViewBlock) {
-      const selectBlockId = state.previousRootId;
+    if (settingConfig.defaultSelectedViewBlock && initStrategy.applyDefaultSelectedViewBlock) {
+      const selectBlockId = state.rootId;
       let viewBlockExistBacklink = false;
       state.backlinkFilterPanelBaseData.curDocDefBlockArray.forEach((item) => {
         if (item.id === selectBlockId) {

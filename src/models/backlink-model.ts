@@ -78,12 +78,32 @@ export interface IBacklinkContextSourceRule {
     matchPriority: number;
 }
 
+export interface IBacklinkContextMetaInfoField {
+    key: string;
+    text: string;
+    renderMarkdown?: string;
+    searchText: string;
+    visibilityRole: "meta";
+    searchable: boolean;
+    matched: boolean;
+    matchTypes: string[];
+    matchKeywords: string[];
+}
+
+export interface IBacklinkContextMetaInfo {
+    documentTitle?: IBacklinkContextMetaInfoField;
+    matchedFieldKeys: string[];
+    matchSummaryList: string[];
+    primaryMatchKey?: string;
+}
+
 export interface IBacklinkContextBundle {
     backlinkBlockId: string;
     rootId: string;
     fragments: IBacklinkContextFragment[];
     explanationFragments: IBacklinkContextFragment[];
     visibleFragments: IBacklinkContextFragment[];
+    metaInfo: IBacklinkContextMetaInfo;
     matchedFragments: IBacklinkContextFragment[];
     includeCurDocDefBlockIds: Set<string>;
     includeRelatedDefBlockIds: Set<string>;
@@ -111,6 +131,16 @@ export interface IBacklinkSourceWindow {
     windowBlockIds: string[];
     visibleBlockIds?: string[];
     orderedVisibleBlockIds?: string[];
+    contextPlan?: {
+        bodyRange: {
+            startBlockId: string;
+            endBlockId: string;
+            windowBlockIds: string[];
+        };
+        orderedVisibleBlockIds: string[];
+        collapsedBlockIds: string[];
+        structuralShellBlockIds: string[];
+    };
     defaultExpandMode: string;
 }
 

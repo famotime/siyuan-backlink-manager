@@ -1,3 +1,9 @@
+import {
+  getBacklinkSourceWindowBodyRange,
+  getBacklinkSourceWindowByLevel,
+  getBacklinkSourceWindowIdentity,
+} from "../../service/backlink/backlink-source-window.js";
+
 export const BACKLINK_DOCUMENT_RENDER_CONFIG = {
   background: false,
   title: false,
@@ -58,22 +64,6 @@ export function shouldHandleBacklinkDocumentClick({
   return targetRole !== "toggle";
 }
 
-function getBacklinkSourceWindowByLevel(activeBacklink, visibilityLevel = "core") {
-  if (!activeBacklink) {
-    return null;
-  }
-
-  const sourceWindows = activeBacklink.sourceWindows;
-  if (sourceWindows && sourceWindows[visibilityLevel]) {
-    return sourceWindows[visibilityLevel];
-  }
-
-  if (visibilityLevel === "extended") {
-    return activeBacklink.sourceWindow || null;
-  }
-
-  return null;
-}
 function getBacklinkSourceWindowRenderMode(
   sourceWindow = null,
   visibilityLevel = "core",
@@ -116,32 +106,34 @@ export function buildBacklinkDocumentRenderOptions({
     normalizedVisibilityLevel,
   );
   if (!useFullDocument && normalizedVisibilityLevel === "core" && sourceWindow) {
+    const sourceWindowIdentity = getBacklinkSourceWindowIdentity(sourceWindow) || {};
     if (sourceWindowRenderMode === "document") {
       return options;
     }
 
     const shouldRenderListItemSourceWindow =
-      sourceWindow.anchorBlockId &&
-      sourceWindow.focusBlockId &&
-      sourceWindow.anchorBlockId !== sourceWindow.focusBlockId;
+      sourceWindowIdentity.anchorBlockId &&
+      sourceWindowIdentity.focusBlockId &&
+      sourceWindowIdentity.anchorBlockId !== sourceWindowIdentity.focusBlockId;
+    const bodyRange = getBacklinkSourceWindowBodyRange(sourceWindow);
     if (shouldRenderListItemSourceWindow) {
       options.scrollAttr = {
-        rootId: sourceWindow.rootId || documentId,
-        startId: sourceWindow.startBlockId,
-        endId: sourceWindow.endBlockId,
+        rootId: sourceWindowIdentity.rootId || documentId,
+        startId: bodyRange?.startBlockId || "",
+        endId: bodyRange?.endBlockId || "",
         scrollTop: 0,
-        focusId: sourceWindow.focusBlockId || activeBacklink.backlinkBlock?.id,
+        focusId: sourceWindowIdentity.focusBlockId || activeBacklink.backlinkBlock?.id,
         zoomInId:
-          sourceWindow.anchorBlockId ||
-          sourceWindow.focusBlockId ||
+          sourceWindowIdentity.anchorBlockId ||
+          sourceWindowIdentity.focusBlockId ||
           activeBacklink.backlinkBlock?.id,
       };
       return options;
     }
 
     options.blockId =
-      sourceWindow.anchorBlockId ||
-      sourceWindow.focusBlockId ||
+      sourceWindowIdentity.anchorBlockId ||
+      sourceWindowIdentity.focusBlockId ||
       activeBacklink?.backlinkBlock?.id ||
       documentId;
     return options;
@@ -150,15 +142,17 @@ export function buildBacklinkDocumentRenderOptions({
     return options;
   }
   if (!useFullDocument && sourceWindow) {
+    const sourceWindowIdentity = getBacklinkSourceWindowIdentity(sourceWindow) || {};
+    const bodyRange = getBacklinkSourceWindowBodyRange(sourceWindow);
     options.scrollAttr = {
-      rootId: sourceWindow.rootId || documentId,
-      startId: sourceWindow.startBlockId,
-      endId: sourceWindow.endBlockId,
+      rootId: sourceWindowIdentity.rootId || documentId,
+      startId: bodyRange?.startBlockId || "",
+      endId: bodyRange?.endBlockId || "",
       scrollTop: 0,
-      focusId: sourceWindow.focusBlockId || activeBacklink.backlinkBlock?.id,
+      focusId: sourceWindowIdentity.focusBlockId || activeBacklink.backlinkBlock?.id,
       zoomInId:
-        sourceWindow.anchorBlockId ||
-        sourceWindow.focusBlockId ||
+        sourceWindowIdentity.anchorBlockId ||
+        sourceWindowIdentity.focusBlockId ||
         activeBacklink.backlinkBlock?.id,
       };
     return options;

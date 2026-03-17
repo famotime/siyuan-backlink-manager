@@ -487,6 +487,139 @@ test("hideBlocksOutsideBacklinkSourceWindow prefers orderedVisibleBlockIds when 
   assert.deepEqual(blockC.classList.removed, ["fn__none"]);
 });
 
+test("hideBlocksOutsideBacklinkSourceWindow reads bodyRange and orderedVisibleBlockIds from contextPlan", () => {
+  const makeBlock = (id) => ({
+    id,
+    parentElement: null,
+    getAttribute(name) {
+      return name === "data-node-id" ? id : null;
+    },
+    querySelectorAll() {
+      return [];
+    },
+    classList: {
+      added: [],
+      removed: [],
+      add(name) {
+        this.added.push(name);
+      },
+      remove(name) {
+        this.removed.push(name);
+      },
+    },
+  });
+
+  const blockA = makeBlock("block-a");
+  const blockB = makeBlock("block-b");
+  const blockC = makeBlock("block-c");
+  const protyleWysiwygElement = {
+    querySelectorAll() {
+      return [blockA, blockB, blockC];
+    },
+  };
+  const protyleContentElement = {
+    querySelector() {
+      return protyleWysiwygElement;
+    },
+  };
+
+  hideBlocksOutsideBacklinkSourceWindow(
+    {
+      sourceWindows: {
+        nearby: {
+          contextPlan: {
+            bodyRange: {
+              windowBlockIds: ["block-a", "block-b", "block-c"],
+            },
+            orderedVisibleBlockIds: ["block-a", "block-c"],
+          },
+        },
+      },
+    },
+    protyleContentElement,
+    "nearby",
+  );
+
+  assert.deepEqual(blockA.classList.removed, ["fn__none"]);
+  assert.deepEqual(blockB.classList.added, ["fn__none"]);
+  assert.deepEqual(blockC.classList.removed, ["fn__none"]);
+});
+
+test("hideBlocksOutsideBacklinkSourceWindow treats contextPlan collapsedBlockIds as explicit visibility evidence", () => {
+  const makeBlock = (id) => ({
+    id,
+    parentElement: null,
+    getAttribute(name) {
+      return name === "data-node-id" ? id : null;
+    },
+    querySelectorAll() {
+      return [];
+    },
+    classList: {
+      added: [],
+      removed: [],
+      add(name) {
+        this.added.push(name);
+      },
+      remove(name) {
+        this.removed.push(name);
+      },
+    },
+  });
+
+  const itemShell = makeBlock("item-shell");
+  const focusBlock = makeBlock("block-focus");
+  const nestedList = makeBlock("list-nested");
+  const nestedItem = makeBlock("item-nested");
+  const nestedText = makeBlock("block-nested");
+  focusBlock.parentElement = itemShell;
+  nestedList.parentElement = itemShell;
+  nestedItem.parentElement = nestedList;
+  nestedText.parentElement = nestedItem;
+  itemShell.querySelectorAll = () => [focusBlock, nestedList, nestedItem, nestedText];
+
+  const protyleWysiwygElement = {
+    querySelectorAll() {
+      return [itemShell, focusBlock, nestedList, nestedItem, nestedText];
+    },
+  };
+  const protyleContentElement = {
+    querySelector() {
+      return protyleWysiwygElement;
+    },
+  };
+
+  hideBlocksOutsideBacklinkSourceWindow(
+    {
+      sourceWindows: {
+        core: {
+          contextPlan: {
+            bodyRange: {
+              windowBlockIds: [
+                "item-shell",
+                "block-focus",
+                "list-nested",
+                "item-nested",
+                "block-nested",
+              ],
+            },
+            orderedVisibleBlockIds: ["item-shell", "block-focus"],
+            collapsedBlockIds: ["list-nested", "item-nested", "block-nested"],
+          },
+        },
+      },
+    },
+    protyleContentElement,
+    "core",
+  );
+
+  assert.deepEqual(itemShell.classList.removed, ["fn__none"]);
+  assert.deepEqual(focusBlock.classList.removed, ["fn__none"]);
+  assert.deepEqual(nestedList.classList.added, ["fn__none"]);
+  assert.deepEqual(nestedItem.classList.added, ["fn__none"]);
+  assert.deepEqual(nestedText.classList.added, ["fn__none"]);
+});
+
 test("hideBlocksOutsideBacklinkSourceWindow keeps descendant child lists visible when a visible list item shell is unfolded", () => {
   const makeBlock = (id, dataType = "", folded = false) => ({
     id,

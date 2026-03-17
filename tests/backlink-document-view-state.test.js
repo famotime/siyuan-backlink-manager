@@ -33,15 +33,11 @@ test("advancing document visibility level stops at full", () => {
   assert.equal(state.documentShowFullMap.get("doc-a"), true);
 });
 
-test("cycling document visibility level loops in both directions", () => {
+test("cycling document visibility level stays bounded in both directions", () => {
   const state = createBacklinkDocumentViewState();
 
   assert.equal(
     cycleBacklinkDocumentVisibilityLevel(state, "doc-a", "previous"),
-    "full",
-  );
-  assert.equal(
-    cycleBacklinkDocumentVisibilityLevel(state, "doc-a", "next"),
     "core",
   );
   assert.equal(
@@ -58,7 +54,11 @@ test("cycling document visibility level loops in both directions", () => {
   );
   assert.equal(
     cycleBacklinkDocumentVisibilityLevel(state, "doc-a", "next"),
-    "core",
+    "full",
+  );
+  assert.equal(
+    cycleBacklinkDocumentVisibilityLevel(state, "doc-a", "previous"),
+    "extended",
   );
 });
 

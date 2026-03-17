@@ -1,3 +1,5 @@
+import { getBacklinkSourceWindowIdentity } from "../../service/backlink/backlink-source-window.js";
+
 function normalizeActiveIndex(index, totalCount) {
   if (!Number.isInteger(index) || totalCount <= 0) {
     return 0;
@@ -22,6 +24,13 @@ function getBacklinkSourceDocumentOrder(backlinkData = null) {
   const sourceWindowOrder = backlinkData?.sourceWindows?.core?.sourceDocumentOrder;
   if (Number.isFinite(sourceWindowOrder)) {
     return sourceWindowOrder;
+  }
+
+  const sourceWindowIdentity = getBacklinkSourceWindowIdentity(
+    backlinkData?.sourceWindows?.core || null,
+  );
+  if (Number.isFinite(sourceWindowIdentity?.sourceDocumentOrder)) {
+    return sourceWindowIdentity.sourceDocumentOrder;
   }
 
   return Number.POSITIVE_INFINITY;

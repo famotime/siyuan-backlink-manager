@@ -290,28 +290,6 @@ function getBlockDocumentOrder(blockId = "", context) {
   return Number.isFinite(fallbackOrder) ? fallbackOrder : undefined;
 }
 
-function findNearestHeadingStartIndex(focusIndex, orderedDocumentBlocks = []) {
-  for (let currentIndex = focusIndex; currentIndex >= 0; currentIndex -= 1) {
-    if (orderedDocumentBlocks[currentIndex]?.type === "h") {
-      return currentIndex;
-    }
-  }
-  return 0;
-}
-
-function findNearestHeadingEndIndex(focusIndex, orderedDocumentBlocks = []) {
-  for (
-    let currentIndex = focusIndex + 1;
-    currentIndex < orderedDocumentBlocks.length;
-    currentIndex += 1
-  ) {
-    if (orderedDocumentBlocks[currentIndex]?.type === "h") {
-      return currentIndex - 1;
-    }
-  }
-  return orderedDocumentBlocks.length - 1;
-}
-
 function isDescendantBlock(block = null, ancestorBlockId = "", blockById = new Map()) {
   if (!block?.id || !ancestorBlockId || block.id === ancestorBlockId) {
     return false;
@@ -854,6 +832,7 @@ function resolveReadableListItemShellBlockIds(listItemBlockId = "", context) {
     return dedupeBlockIdArray(visibleBlockIds);
   }
 
+  visibleBlockIds.push(childListBlock.id);
   const firstChildListItem = getDirectChildBlocks(childListBlock.id, context).find(
     (block) => block?.type === "i",
   );
@@ -907,10 +886,9 @@ function buildSourceWindowFromRange({
     sourceDocumentOrder: getBlockDocumentOrder(backlinkBlockNode.block.id, context),
   };
 
-  const orderedVisibleBlockIds = orderBlockIdsByWindowOrder(
-    windowBlockIds,
-    windowBlockIds,
-  );
+  const orderedVisibleBlockIds = visibleBlockIds.length > 0
+    ? orderBlockIdsByWindowOrder(windowBlockIds, visibleBlockIds)
+    : windowBlockIds;
   const contextPlan = buildSourceWindowContextPlan({
     rootId: sourceWindow.rootId,
     anchorBlockId: sourceWindow.anchorBlockId,
@@ -932,16 +910,19 @@ function buildCoreBacklinkSourceWindow(backlinkBlockNode, context) {
   const listItemAnchorBlockId = resolveListItemAnchorBlockId(backlinkBlockNode, context);
   if (listItemAnchorBlockId) {
     const startIndex = context.indexById.get(listItemAnchorBlockId);
+    const subtreeEndIndex = findBlockSubtreeEndIndex(startIndex, context);
+    const shellBlockIds = resolveReadableListItemShellBlockIds(listItemAnchorBlockId, context);
     const visibleBlockIds =
       backlinkBlockNode.block.id === listItemAnchorBlockId
-        ? [listItemAnchorBlockId]
-        : [listItemAnchorBlockId, backlinkBlockNode.block.id];
-    const { index: endIndex } = getMaxIndexedBlockEntry(
+        ? shellBlockIds
+        : dedupeBlockIdArray([...shellBlockIds, backlinkBlockNode.block.id]);
+    const { index: visibleEndIndex } = getMaxIndexedBlockEntry(
       visibleBlockIds,
       context,
       startIndex,
       listItemAnchorBlockId,
     );
+    const endIndex = Math.max(visibleEndIndex, subtreeEndIndex);
     return buildSourceWindowFromRange({
       backlinkBlockNode,
       context,
@@ -1040,6 +1021,7 @@ function buildNearbyBacklinkSourceWindow(backlinkBlockNode, context) {
     endIndex,
     startBlockId: sourceWindowStartBlockId,
     endBlockId: sourceWindowEndBlockId,
+    visibleBlockIds: boundaryBlockIds,
     renderMode: "scroll",
   });
 }

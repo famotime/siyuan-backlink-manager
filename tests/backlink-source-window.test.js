@@ -1130,7 +1130,7 @@ test("buildBacklinkSourceWindow uses the previous sibling text block as the near
   ]);
 });
 
-test("buildBacklinkSourceWindow keeps list core mode focused on the list shell and focus child instead of the full subtree", () => {
+test("buildBacklinkSourceWindow keeps list core mode focused on the list shell and focus child with subtree collapsed", () => {
   const orderedBlocks = createDocumentBlocks([
     { id: "item-brand", type: "i", parent_id: "list-root" },
     { id: "block-brand", type: "p", parent_id: "item-brand" },
@@ -1155,11 +1155,17 @@ test("buildBacklinkSourceWindow keeps list core mode focused on the list shell a
   assert.deepEqual(sourceWindow.windowBlockIds, [
     "item-brand",
     "block-brand",
+    "list-children",
+    "item-child",
+    "block-child",
   ]);
   assert.deepEqual(sourceWindow.visibleBlockIds, ["item-brand", "block-brand"]);
   assert.deepEqual(sourceWindow.contextPlan?.bodyRange?.windowBlockIds, [
     "item-brand",
     "block-brand",
+    "list-children",
+    "item-child",
+    "block-child",
   ]);
   assert.deepEqual(sourceWindow.contextPlan?.identity, {
     rootId: "doc-a",
@@ -1171,7 +1177,11 @@ test("buildBacklinkSourceWindow keeps list core mode focused on the list shell a
     "item-brand",
     "block-brand",
   ]);
-  assert.deepEqual(sourceWindow.contextPlan?.collapsedBlockIds, []);
+  assert.deepEqual(sourceWindow.contextPlan?.collapsedBlockIds, [
+    "list-children",
+    "item-child",
+    "block-child",
+  ]);
   assert.deepEqual(sourceWindow.contextPlan?.structuralShellBlockIds, [
     "item-brand",
   ]);
@@ -1996,4 +2006,230 @@ test("loadOrderedBacklinkSourceWindowBlocks uses document kramdown order when ch
   ]);
   assert.equal(sourceWindow.startBlockId, "heading-main");
   assert.equal(sourceWindow.endBlockId, "block-next");
+});
+
+// ── Verification samples from the rules document ──
+
+test("verification sample 1: backlink on ordinary paragraph shows only that block in core", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "heading-a", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "block-before", type: "p", parent_id: "doc-a" },
+    { id: "block-focus", type: "p", parent_id: "doc-a" },
+    { id: "block-after", type: "p", parent_id: "doc-a" },
+    { id: "heading-b", type: "h", subtype: "h2", parent_id: "doc-a" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: { id: "block-focus", root_id: "doc-a", parent_id: "doc-a", type: "p" },
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "core",
+  });
+
+  assert.deepEqual(sourceWindow.windowBlockIds, ["block-focus"]);
+  assert.deepEqual(sourceWindow.orderedVisibleBlockIds, ["block-focus"]);
+  assert.deepEqual(sourceWindow.contextPlan?.collapsedBlockIds, []);
+});
+
+test("verification sample 2: backlink on paragraph at document start shows that block in core", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "block-focus", type: "p", parent_id: "doc-a" },
+    { id: "block-after", type: "p", parent_id: "doc-a" },
+    { id: "heading-a", type: "h", subtype: "h2", parent_id: "doc-a" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: { id: "block-focus", root_id: "doc-a", parent_id: "doc-a", type: "p" },
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "core",
+  });
+
+  assert.deepEqual(sourceWindow.windowBlockIds, ["block-focus"]);
+  assert.deepEqual(sourceWindow.orderedVisibleBlockIds, ["block-focus"]);
+});
+
+test("verification sample 3: backlink on list item title shows shell with subtree collapsed in core", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "list-root", type: "l", parent_id: "doc-a" },
+    { id: "item-prev", type: "i", parent_id: "list-root" },
+    { id: "block-prev", type: "p", parent_id: "item-prev" },
+    { id: "item-focus", type: "i", parent_id: "list-root" },
+    { id: "block-focus-text", type: "p", parent_id: "item-focus" },
+    { id: "list-children", type: "l", parent_id: "item-focus" },
+    { id: "item-child", type: "i", parent_id: "list-children" },
+    { id: "block-child", type: "p", parent_id: "item-child" },
+    { id: "item-next", type: "i", parent_id: "list-root" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: { id: "item-focus", root_id: "doc-a", parent_id: "list-root", type: "i" },
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "core",
+  });
+
+  assert.equal(sourceWindow.anchorBlockId, "item-focus");
+  assert.deepEqual(sourceWindow.orderedVisibleBlockIds, [
+    "item-focus",
+    "block-focus-text",
+  ]);
+  assert.ok(
+    sourceWindow.contextPlan?.collapsedBlockIds.length > 0,
+    "list children should be collapsed",
+  );
+  assert.ok(
+    sourceWindow.contextPlan?.collapsedBlockIds.includes("item-child"),
+    "deep child items should be collapsed",
+  );
+});
+
+test("verification sample 4: backlink on list item child block shows shell + focus with rest collapsed in core", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "list-root", type: "l", parent_id: "doc-a" },
+    { id: "item-brand", type: "i", parent_id: "list-root" },
+    { id: "block-title", type: "p", parent_id: "item-brand" },
+    { id: "block-focus", type: "p", parent_id: "item-brand" },
+    { id: "list-children", type: "l", parent_id: "item-brand" },
+    { id: "item-child", type: "i", parent_id: "list-children" },
+    { id: "block-child", type: "p", parent_id: "item-child" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: { id: "block-focus", root_id: "doc-a", parent_id: "item-brand", type: "p" },
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "core",
+  });
+
+  assert.equal(sourceWindow.anchorBlockId, "item-brand");
+  assert.ok(sourceWindow.orderedVisibleBlockIds.includes("item-brand"), "shell visible");
+  assert.ok(sourceWindow.orderedVisibleBlockIds.includes("block-focus"), "focus visible");
+  assert.ok(
+    sourceWindow.contextPlan?.collapsedBlockIds.includes("list-children"),
+    "nested list collapsed",
+  );
+  assert.ok(
+    sourceWindow.contextPlan?.collapsedBlockIds.includes("item-child"),
+    "nested item collapsed",
+  );
+});
+
+test("verification sample 5: backlink on heading shows only the heading in core", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "heading-prev", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "block-before", type: "p", parent_id: "doc-a" },
+    { id: "heading-focus", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "block-after", type: "p", parent_id: "doc-a" },
+    { id: "heading-next", type: "h", subtype: "h2", parent_id: "doc-a" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: { id: "heading-focus", root_id: "doc-a", parent_id: "doc-a", type: "h" },
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "core",
+  });
+
+  assert.deepEqual(sourceWindow.windowBlockIds, ["heading-focus"]);
+  assert.deepEqual(sourceWindow.orderedVisibleBlockIds, ["heading-focus"]);
+});
+
+test("verification sample 6: multi-level headings respect same-or-higher boundary in extended", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "heading-h2", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "block-intro", type: "p", parent_id: "doc-a" },
+    { id: "heading-h3-a", type: "h", subtype: "h3", parent_id: "doc-a" },
+    { id: "block-focus", type: "p", parent_id: "doc-a" },
+    { id: "heading-h4", type: "h", subtype: "h4", parent_id: "doc-a" },
+    { id: "block-deep", type: "p", parent_id: "doc-a" },
+    { id: "heading-h3-b", type: "h", subtype: "h3", parent_id: "doc-a" },
+    { id: "block-other", type: "p", parent_id: "doc-a" },
+    { id: "heading-h2-next", type: "h", subtype: "h2", parent_id: "doc-a" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: { id: "block-focus", root_id: "doc-a", parent_id: "doc-a", type: "p" },
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "extended",
+  });
+
+  assert.equal(sourceWindow.startBlockId, "heading-h3-a");
+  assert.equal(sourceWindow.endBlockId, "block-deep");
+  assert.ok(
+    !sourceWindow.windowBlockIds.includes("heading-h3-b"),
+    "same-level heading should not be included",
+  );
+  assert.ok(
+    sourceWindow.windowBlockIds.includes("heading-h4"),
+    "lower-level heading should be included in the section",
+  );
+});
+
+test("verification sample 7: continuous text range never hides middle blocks", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "heading-h2", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "block-a", type: "p", parent_id: "doc-a" },
+    { id: "block-b", type: "p", parent_id: "doc-a" },
+    { id: "block-focus", type: "p", parent_id: "doc-a" },
+    { id: "block-c", type: "p", parent_id: "doc-a" },
+    { id: "heading-h2-next", type: "h", subtype: "h2", parent_id: "doc-a" },
+  ]);
+
+  const coreWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: { id: "block-focus", root_id: "doc-a", parent_id: "doc-a", type: "p" },
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "core",
+  });
+  assert.deepEqual(coreWindow.windowBlockIds, ["block-focus"]);
+  assert.deepEqual(coreWindow.contextPlan?.collapsedBlockIds, []);
+
+  const extendedWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: { id: "block-focus", root_id: "doc-a", parent_id: "doc-a", type: "p" },
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "extended",
+  });
+  assert.deepEqual(extendedWindow.contextPlan?.collapsedBlockIds, []);
+  assert.deepEqual(extendedWindow.windowBlockIds, [
+    "heading-h2",
+    "block-a",
+    "block-b",
+    "block-focus",
+    "block-c",
+  ]);
+});
+
+test("verification sample 8: text display order matches original document order", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "heading-h2", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "block-a", type: "p", parent_id: "doc-a" },
+    { id: "block-focus", type: "p", parent_id: "doc-a" },
+    { id: "block-b", type: "p", parent_id: "doc-a" },
+  ]);
+
+  const extendedWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: { id: "block-focus", root_id: "doc-a", parent_id: "doc-a", type: "p" },
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "extended",
+  });
+
+  const orderedDocIds = orderedBlocks.map((b) => b.id);
+  const visibleInDocOrder = extendedWindow.orderedVisibleBlockIds.every((id, i, arr) => {
+    if (i === 0) return true;
+    return orderedDocIds.indexOf(id) > orderedDocIds.indexOf(arr[i - 1]);
+  });
+  assert.ok(visibleInDocOrder, "visible block order must match document order");
 });

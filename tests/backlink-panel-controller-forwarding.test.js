@@ -5,7 +5,7 @@ import { resolveBacklinkPanelRefreshRootId } from "../src/components/panel/backl
 
 test("backlink panel controller forwards contextVisibilityLevel into protyle post-processing", () => {
   const source = fs.readFileSync(
-    new URL("../src/components/panel/backlink-panel-controller.js", import.meta.url),
+    new URL("../src/components/panel/backlink-panel-controller-composition.js", import.meta.url),
     "utf8",
   );
 

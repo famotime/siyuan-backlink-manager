@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 
 test("backlink panel controller uses the focus refresh strategy instead of unconditionally clearing document indexes", () => {
   const source = readFileSync(
-    new URL("../src/components/panel/backlink-panel-controller.js", import.meta.url),
+    new URL("../src/components/panel/backlink-panel-controller-init.js", import.meta.url),
     "utf8",
   );
 
@@ -15,7 +15,7 @@ test("backlink panel controller uses the focus refresh strategy instead of uncon
 
 test("backlink panel controller reuses existing query params on same-root focus refreshes", () => {
   const source = readFileSync(
-    new URL("../src/components/panel/backlink-panel-controller.js", import.meta.url),
+    new URL("../src/components/panel/backlink-panel-controller-init.js", import.meta.url),
     "utf8",
   );
 

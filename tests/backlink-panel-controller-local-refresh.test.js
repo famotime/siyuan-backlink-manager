@@ -66,6 +66,63 @@ test("backlink panel controller delegates filter display refresh and render-data
   assert.match(source, /panelDataCoordinator\.pageTurning\(pageNumParam\);/);
 });
 
+test("backlink panel controller delegates init/base-data orchestration to an extracted init coordinator", () => {
+  const source = readFileSync(
+    new URL("../src/components/panel/backlink-panel-controller.js", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /import\s*\{[\s\S]*createBacklinkPanelInitCoordinator[\s\S]*\}\s*from "\.\/backlink-panel-controller-init\.js";/,
+  );
+  assert.match(
+    source,
+    /const panelInitCoordinator = createBacklinkPanelInitCoordinator\(\s*\{[\s\S]*state,[\s\S]*clearBacklinkProtyleList,[\s\S]*updateRenderData,[\s\S]*\}\s*\);/,
+  );
+  assert.match(source, /return panelInitCoordinator\.initBaseData\(\);/);
+  assert.match(source, /return panelInitCoordinator\.clearCacheAndRefresh\(\);/);
+});
+
+test("backlink panel controller delegates navigation actions to an extracted navigation helper", () => {
+  const source = readFileSync(
+    new URL("../src/components/panel/backlink-panel-controller.js", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /import\s*\{[\s\S]*createBacklinkPanelNavigationActions[\s\S]*\}\s*from "\.\/backlink-panel-controller-navigation\.js";/,
+  );
+  assert.match(
+    source,
+    /const panelNavigationActions = createBacklinkPanelNavigationActions\(\s*\{[\s\S]*state,[\s\S]*refreshBacklinkDocumentGroupById,[\s\S]*\}\s*\);/,
+  );
+  assert.match(source, /return panelNavigationActions\.navigateBacklinkDocument\(event, direction\);/);
+  assert.match(
+    source,
+    /return panelNavigationActions\.stepBacklinkDocumentContext\(\s*documentLiElement,\s*direction,\s*\);/,
+  );
+});
+
+test("backlink panel controller delegates bulk expand and collapse actions to an extracted bulk helper", () => {
+  const source = readFileSync(
+    new URL("../src/components/panel/backlink-panel-controller.js", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /import\s*\{[\s\S]*createBacklinkPanelBulkActions[\s\S]*\}\s*from "\.\/backlink-panel-controller-bulk\.js";/,
+  );
+  assert.match(
+    source,
+    /const panelBulkActions = createBacklinkPanelBulkActions\(\s*\{[\s\S]*state,[\s\S]*expandBacklinkDocument,[\s\S]*collapseBacklinkDocument,[\s\S]*\}\s*\);/,
+  );
+  assert.match(source, /return panelBulkActions\.expandAllBacklinkDocument\(\);/);
+  assert.match(source, /return panelBulkActions\.collapseAllBacklinkListItemNode\(\);/);
+});
+
 test("document-group local refresh rebuilds grouped backlinks from current render data and only rerenders the target document", () => {
   const source = readFileSync(
     new URL("../src/components/panel/backlink-panel-controller-rendering.js", import.meta.url),

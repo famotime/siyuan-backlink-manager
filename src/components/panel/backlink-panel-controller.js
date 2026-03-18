@@ -40,6 +40,7 @@ import {
   getBacklinkDocumentTargetRole,
   shouldHandleBacklinkDocumentClick,
 } from "./backlink-document-interaction.js";
+import { createBacklinkPanelOpenActions } from "./backlink-panel-controller-open-actions.js";
 import {
   activateBacklinkDocumentMainArea,
   getBacklinkDocumentOpenTarget,
@@ -79,7 +80,11 @@ import {
   toggleRelatedDocumentCondition,
 } from "./backlink-panel-query-params.js";
 import { createBacklinkPanelActionHandlers } from "./backlink-panel-controller-actions.js";
+import { createBacklinkPanelBulkActions } from "./backlink-panel-controller-bulk.js";
+import { createBacklinkPanelRenderBindings } from "./backlink-panel-controller-composition.js";
 import { buildBacklinkContextControlState } from "./backlink-panel-header.js";
+import { createBacklinkPanelInitCoordinator } from "./backlink-panel-controller-init.js";
+import { createBacklinkPanelNavigationActions } from "./backlink-panel-controller-navigation.js";
 import {
   cycleBacklinkDocumentVisibilityLevel,
   getBacklinkDocumentRenderState,
@@ -159,38 +164,36 @@ export function createBacklinkPanelController(state) {
       return () => {};
     }
 
-    const updateFocusedWndCache = (wndElement) => {
-      if (!wndElement) {
-        return;
-      }
-      lastKnownFocusedWndElement = wndElement;
-    };
+    const panelOpenActions = createBacklinkPanelOpenActions({
+      state,
+      getBacklinkDocumentTargetRole,
+      shouldHandleBacklinkDocumentClick,
+      getBacklinkDocumentClickAction,
+      getBacklinkDocumentOpenArea,
+      resolveBacklinkDocumentOpenArea,
+      resolveBacklinkDocumentCtrlLeftClickOpenAreaFromCache,
+      getBacklinkDocumentPreClickOpenArea,
+      getBacklinkDocumentWndElementFromTarget,
+      getBacklinkDocumentWndElementFromProtyle,
+      openBlockTab,
+      toggleBacklinkDocument,
+      setPreClickOpenArea: (nextValue) => {
+        preClickOpenArea = nextValue;
+      },
+      getPreClickOpenArea: () => preClickOpenArea,
+      setLastKnownFocusedWndElement: (nextValue) => {
+        lastKnownFocusedWndElement = nextValue;
+      },
+      getLastKnownFocusedWndElement: () => lastKnownFocusedWndElement,
+      currentTab: state.currentTab,
+      documentRef,
+    });
 
-    const handleFocusIn = (event) => {
-      updateFocusedWndCache(
-        getBacklinkDocumentWndElementFromTarget(event.target, event),
-      );
-    };
-
-    const handleMouseDownCapture = (event) => {
-      const targetRole = getBacklinkDocumentTargetRole(event.target);
-      const isBacklinkTitleCtrlLeftClick =
-        event.button === 0 &&
-        event.ctrlKey &&
-        targetRole === "title" &&
-        state.backlinkULElement?.contains?.(event.target);
-      if (isBacklinkTitleCtrlLeftClick) {
-        return;
-      }
-
-      updateFocusedWndCache(
-        getBacklinkDocumentWndElementFromTarget(event.target, event),
-      );
-    };
-
+    const handleFocusIn = panelOpenActions.handleFocusIn;
+    const handleMouseDownCapture = panelOpenActions.handleMouseDownCapture;
     const handleProtyleFocus = (event) => {
+      panelOpenActions.handleProtyleFocus(event);
       const protyle = event?.detail?.protyle;
-      updateFocusedWndCache(getBacklinkDocumentWndElementFromProtyle(protyle));
       const focusRefresh = resolveBacklinkPanelFocusRefresh({
         rootId: state.rootId,
         focusBlockId: state.focusBlockId,
@@ -216,84 +219,41 @@ export function createBacklinkPanelController(state) {
     };
   }
 
+  const panelOpenActions = createBacklinkPanelOpenActions({
+    state,
+    getBacklinkDocumentTargetRole,
+    shouldHandleBacklinkDocumentClick,
+    getBacklinkDocumentClickAction,
+    getBacklinkDocumentOpenArea,
+    resolveBacklinkDocumentOpenArea,
+    resolveBacklinkDocumentCtrlLeftClickOpenAreaFromCache,
+    getBacklinkDocumentPreClickOpenArea,
+    getBacklinkDocumentWndElementFromTarget,
+    getBacklinkDocumentWndElementFromProtyle,
+    openBlockTab,
+    toggleBacklinkDocument,
+    setPreClickOpenArea: (nextValue) => {
+      preClickOpenArea = nextValue;
+    },
+    getPreClickOpenArea: () => preClickOpenArea,
+    setLastKnownFocusedWndElement: (nextValue) => {
+      lastKnownFocusedWndElement = nextValue;
+    },
+    getLastKnownFocusedWndElement: () => lastKnownFocusedWndElement,
+    currentTab: state.currentTab,
+    documentRef: document,
+  });
+
   function clickBacklinkDocumentLiElement(event) {
-    const target = event.currentTarget;
-    const targetRole = getBacklinkDocumentTargetRole(event.target);
-    if (!shouldHandleBacklinkDocumentClick({ targetRole })) {
-      return;
-    }
-    const action = getBacklinkDocumentClickAction({
-      ctrlKey: event.ctrlKey,
-      targetRole,
-    });
-
-    if (action === "open-block") {
-      const requestedOpenArea = getBacklinkDocumentOpenArea({
-        trigger: "click",
-        ctrlKey: event.ctrlKey,
-        targetRole,
-      });
-      const resolvedOpenArea = resolveBacklinkDocumentOpenArea(
-        requestedOpenArea,
-        preClickOpenArea,
-      );
-      openBlockTab(
-        target.getAttribute("data-node-id"),
-        target.getAttribute("data-backlink-block-id"),
-        {
-          openArea: resolvedOpenArea,
-        },
-      );
-      preClickOpenArea = "focus";
-      return;
-    }
-
-    if (action === "toggle-fold") {
-      toggleBacklinkDocument(target);
-      return;
-    }
-
+    return panelOpenActions.clickBacklinkDocumentLiElement(event);
   }
 
   function mouseDownBacklinkDocumentLiElement(event) {
-    const targetRole = getBacklinkDocumentTargetRole(event.target);
-    if (event.button !== 0 || targetRole !== "title") {
-      return;
-    }
-
-    const currentWndElement = state.currentTab?.tab?.parent?.element ||
-      state.currentTab?.parent?.element ||
-      null;
-    preClickOpenArea = event.ctrlKey
-      ? resolveBacklinkDocumentCtrlLeftClickOpenAreaFromCache({
-          currentWndElement,
-          cachedFocusedWndElement: lastKnownFocusedWndElement,
-          documentRef: document,
-        })
-      : getBacklinkDocumentPreClickOpenArea({
-          currentTab: state.currentTab,
-          documentRef: document,
-        });
+    return panelOpenActions.mouseDownBacklinkDocumentLiElement(event);
   }
 
   function contextmenuBacklinkDocumentLiElement(event) {
-    const target = event.currentTarget;
-    const targetRole = getBacklinkDocumentTargetRole(event.target);
-    const openArea = getBacklinkDocumentOpenArea({
-      trigger: "contextmenu",
-      ctrlKey: event.ctrlKey,
-      targetRole,
-    });
-    if (!openArea) {
-      return;
-    }
-    event.preventDefault();
-    openBlockTab(
-      target.getAttribute("data-node-id"),
-      target.getAttribute("data-backlink-block-id"),
-      { openArea },
-    );
-    preClickOpenArea = "focus";
+    return panelOpenActions.contextmenuBacklinkDocumentLiElement(event);
   }
 
   function expandBacklinkDocument(documentLiElement) {
@@ -325,136 +285,98 @@ export function createBacklinkPanelController(state) {
     }
   }
 
+  const panelRenderBindings = createBacklinkPanelRenderBindings({
+    state,
+    renderBacklinkDocumentGroupByHelper,
+    updateBacklinkDocumentLiNavigation,
+    getBacklinkContextControlState: (documentGroup) => {
+      const renderState = getBacklinkDocumentRenderState(
+        state.backlinkDocumentViewState,
+        documentGroup?.documentId,
+      );
+      return buildBacklinkContextControlState({
+        contextVisibilityLevel: renderState.contextVisibilityLevel,
+        activeBacklink: documentGroup?.activeBacklink || null,
+      });
+    },
+    syncBacklinkDocumentProtyleState,
+    captureBacklinkProtyleState,
+    markBacklinkDocumentFoldState,
+    removeEditor,
+    ProtyleCtor: Protyle,
+    app: EnvConfig.ins.app,
+    buildBacklinkDocumentRenderOptions,
+    getBacklinkDocumentRenderState,
+    applyCreatedBacklinkProtyleState,
+    emitLoadedProtyleStatic,
+    expandBacklinkDocument,
+    collapseBacklinkDocument,
+    expandAllListItemNode,
+    expandBacklinkHeadingMore,
+    foldListItemNodeByIdSet,
+    defaultExpandedListItemLevel:
+      SettingService.ins.SettingConfig.defaultExpandedListItemLevel,
+    expandListItemNodeByDepth,
+    getElementsBeforeDepth,
+    getElementsAtDepth,
+    syHasChildListNode,
+    hideBlocksOutsideBacklinkSourceWindow,
+    hideOtherListItemElement,
+    isSetEmpty,
+    isSetNotEmpty,
+    isArrayNotEmpty,
+    sanitizeBacklinkKeywords,
+    splitKeywordStringToArray,
+    highlightElementTextByCss,
+    delayedTwiceRefresh,
+    addEditor,
+    attachBacklinkDocumentGroupRefreshTracking: (editor, documentId) =>
+      attachBacklinkDocumentGroupRefreshTracking(editor, documentId),
+    detachDocumentGroupRefreshTracking: (documentId) =>
+      detachDocumentGroupRefreshTracking(documentId),
+    groupBacklinksByDocument,
+    batchRenderBacklinkDocumentGroups,
+    isArrayEmpty,
+    documentRef: document,
+    emptyContentText: window.siyuan.languages.emptyContent,
+    createBacklinkDocumentListItemElement,
+    mouseDownBacklinkDocumentLiElement: (event) =>
+      mouseDownBacklinkDocumentLiElement(event),
+    clickBacklinkDocumentLiElement: (event) =>
+      clickBacklinkDocumentLiElement(event),
+    contextmenuBacklinkDocumentLiElement: (event) =>
+      contextmenuBacklinkDocumentLiElement(event),
+    toggleBacklinkDocument,
+    navigateBacklinkDocument: (event, direction) =>
+      navigateBacklinkDocument(event, direction),
+    stepBacklinkDocumentContext: (documentLiElement, direction) =>
+      stepBacklinkDocumentContext(documentLiElement, direction),
+  });
+
   function renderBacklinkDocumentGroup(
     documentGroup,
     documentLiElement,
     editorElement,
   ) {
-    const documentId = documentGroup?.documentId;
-    if (documentId) {
-      detachDocumentGroupRefreshTracking(documentId);
-    }
-
-    const editor = renderBacklinkDocumentGroupByHelper({
+    return panelRenderBindings.renderBacklinkDocumentGroup(
       documentGroup,
       documentLiElement,
       editorElement,
-      backlinkDocumentEditorMap: state.backlinkDocumentEditorMap,
-      backlinkDocumentViewState: state.backlinkDocumentViewState,
-      deps: {
-        updateBacklinkDocumentLiNavigation: (documentLiElement, documentGroup) =>
-          updateBacklinkDocumentLiNavigation(
-            documentLiElement,
-            documentGroup,
-            getBacklinkContextControlState(documentGroup),
-          ),
-        syncBacklinkDocumentProtyleState: (editor) =>
-          syncBacklinkDocumentProtyleState(editor, {
-            backlinkDocumentFoldMap: state.backlinkDocumentFoldMap,
-            backlinkProtyleItemFoldMap: state.backlinkProtyleItemFoldMap,
-            backlinkProtyleHeadingExpandMap:
-              state.backlinkProtyleHeadingExpandMap,
-            captureBacklinkProtyleState,
-            markBacklinkDocumentFoldState,
-          }),
-        removeEditor,
-        ProtyleCtor: Protyle,
-        app: EnvConfig.ins.app,
-        buildBacklinkDocumentRenderOptions,
-        getBacklinkDocumentRenderState,
-        applyCreatedBacklinkProtyleState: ({
-          backlinkData,
-          documentLiElement,
-          protyle,
-          contextVisibilityLevel,
-          showFullDocument,
-        }) =>
-          applyCreatedBacklinkProtyleState({
-            backlinkData,
-            documentLiElement,
-            protyle,
-            contextVisibilityLevel,
-            showFullDocument,
-            deps: {
-              emitLoadedProtyleStatic,
-              getBacklinkDocumentRenderState,
-              backlinkDocumentViewState: state.backlinkDocumentViewState,
-              expandBacklinkDocument,
-              collapseBacklinkDocument,
-              expandAllListItemNode,
-              expandBacklinkHeadingMore,
-              backlinkProtyleItemFoldMap: state.backlinkProtyleItemFoldMap,
-              foldListItemNodeByIdSet,
-              defaultExpandedListItemLevel:
-                SettingService.ins.SettingConfig.defaultExpandedListItemLevel,
-              expandListItemNodeByDepth,
-              getElementsBeforeDepth,
-              getElementsAtDepth,
-              syHasChildListNode,
-              backlinkProtyleHeadingExpandMap:
-                state.backlinkProtyleHeadingExpandMap,
-              hideBlocksOutsideBacklinkSourceWindow,
-              hideOtherListItemElement,
-              queryParams: state.queryParams,
-              isSetEmpty,
-              isSetNotEmpty,
-              isArrayNotEmpty,
-              sanitizeBacklinkKeywords,
-              splitKeywordStringToArray,
-              highlightElementTextByCss,
-              delayedTwiceRefresh,
-            },
-          }),
-        addEditor,
-      },
-    });
-    if (documentId) {
-      attachBacklinkDocumentGroupRefreshTracking(editor, documentId);
-    }
-    return editor;
+    );
   }
 
   function batchCreateOfficialBacklinkProtyle(
     backlinkDocumentArray,
     backlinkDataArray,
   ) {
-    state.backlinkDocumentGroupArray = batchRenderBacklinkDocumentGroups({
+    return panelRenderBindings.batchCreateOfficialBacklinkProtyle(
       backlinkDocumentArray,
       backlinkDataArray,
-      backlinkDocumentActiveIndexMap: state.backlinkDocumentActiveIndexMap,
-      backlinkULElement: state.backlinkULElement,
-      deps: {
-        groupBacklinksByDocument,
-        isArrayEmpty,
-        documentRef: document,
-        emptyContentText: window.siyuan.languages.emptyContent,
-        createDocumentListItemElement: (documentGroup) =>
-          createBacklinkDocumentListItemElement({
-            documentGroup,
-            contextControlState: getBacklinkContextControlState(documentGroup),
-            parentElement: state.backlinkULElement,
-            documentRef: document,
-            onMouseDown: mouseDownBacklinkDocumentLiElement,
-            onDocumentClick: clickBacklinkDocumentLiElement,
-            onContextMenu: contextmenuBacklinkDocumentLiElement,
-            onToggle: toggleBacklinkDocument,
-            onNavigate: navigateBacklinkDocument,
-            onStepContextLevel: stepBacklinkDocumentContext,
-          }),
-        renderDocumentGroup: renderBacklinkDocumentGroup,
-      },
-    });
+    );
   }
 
   function getBacklinkContextControlState(documentGroup) {
-    const renderState = getBacklinkDocumentRenderState(
-      state.backlinkDocumentViewState,
-      documentGroup?.documentId,
-    );
-    return buildBacklinkContextControlState({
-      contextVisibilityLevel: renderState.contextVisibilityLevel,
-      activeBacklink: documentGroup?.activeBacklink || null,
-    });
+    return panelRenderBindings.getBacklinkContextControlState(documentGroup);
   }
 
   function clearBacklinkProtyleList() {
@@ -478,6 +400,19 @@ export function createBacklinkPanelController(state) {
       state.backlinkULElement.innerHTML = "";
     }
   }
+
+  const panelInitCoordinator = createBacklinkPanelInitCoordinator({
+    state,
+    SettingService,
+    BacklinkFilterPanelAttributeService,
+    buildBacklinkPanelInitStrategy,
+    getBacklinkPanelData,
+    resolveBacklinkPanelRefreshRootId,
+    CacheManager,
+    clearBacklinkProtyleList,
+    updateRenderData: async () => updateRenderData(),
+    envConfig: EnvConfig.ins,
+  });
 
   function findBacklinkDocumentRenderTargets(documentId) {
     if (!documentId || !state.backlinkULElement?.querySelectorAll) {
@@ -562,87 +497,48 @@ export function createBacklinkPanelController(state) {
     detachAllDocumentGroupRefreshTracking,
   } = documentGroupRefreshTracker;
 
+  const panelNavigationActions = createBacklinkPanelNavigationActions({
+    state,
+    getCyclicBacklinkIndex,
+    isArrayEmpty,
+    cycleBacklinkDocumentVisibilityLevel,
+    markBacklinkDocumentVisibilityLevel,
+    getBacklinkDocumentRenderState,
+    markBacklinkDocumentFullView,
+    expandBacklinkDocument,
+    refreshBacklinkDocumentGroupById,
+  });
+
   function stepBacklinkDocumentContext(documentLiElement, direction = "next") {
-    if (!documentLiElement) {
-      return;
-    }
-
-    const documentId = documentLiElement.getAttribute("data-node-id");
-    const editorElement = documentLiElement.nextElementSibling;
-    if (!documentId || !editorElement) {
-      return;
-    }
-
-    const nextVisibilityLevel =
-      direction === "previous" || direction === "next"
-        ? cycleBacklinkDocumentVisibilityLevel(
-            state.backlinkDocumentViewState,
-            documentId,
-            direction,
-          )
-        : (() => {
-            markBacklinkDocumentVisibilityLevel(
-              state.backlinkDocumentViewState,
-              documentId,
-              direction,
-            );
-            return getBacklinkDocumentRenderState(
-              state.backlinkDocumentViewState,
-              documentId,
-            ).contextVisibilityLevel;
-          })();
-    expandBacklinkDocument(documentLiElement);
-
-    const documentGroup = state.backlinkDocumentGroupArray.find(
-      (group) => group.documentId === documentId,
-    );
-    if (!documentGroup) {
-      return;
-    }
-    if (nextVisibilityLevel === "full") {
-      markBacklinkDocumentFullView(state.backlinkDocumentViewState, documentId);
-    }
-    refreshBacklinkDocumentGroupById(
-      documentId,
-      {
-        documentLiElement,
-        editorElement,
-      },
+    return panelNavigationActions.stepBacklinkDocumentContext(
+      documentLiElement,
+      direction,
     );
   }
 
+  const panelBulkActions = createBacklinkPanelBulkActions({
+    state,
+    expandBacklinkDocument,
+    collapseBacklinkDocument,
+    expandAllListItemNode,
+    collapseAllListItemNode,
+    syHasChildListNode,
+  });
+
   function expandAllBacklinkDocument() {
-    const documentLiElementArray = state.backlinkULElement?.querySelectorAll(
-      "li.list-item__document-name",
-    );
-    for (const documentLiElement of documentLiElementArray || []) {
-      expandBacklinkDocument(documentLiElement);
-    }
+    return panelBulkActions.expandAllBacklinkDocument();
   }
 
   function expandAllBacklinkListItemNode() {
-    const backlinkProtyleElementArray =
-      state.backlinkULElement?.querySelectorAll("div.protyle");
-    for (const backlinkProtyle of backlinkProtyleElementArray || []) {
-      expandAllListItemNode(backlinkProtyle);
-    }
+    return panelBulkActions.expandAllBacklinkListItemNode();
   }
 
   function collapseAllBacklinkDocument() {
-    const documentLiElementArray = state.backlinkULElement?.querySelectorAll(
-      "li.list-item__document-name",
-    );
-    for (const documentLiElement of documentLiElementArray || []) {
-      collapseBacklinkDocument(documentLiElement);
-    }
+    return panelBulkActions.collapseAllBacklinkDocument();
   }
 
   function collapseAllBacklinkListItemNode() {
-    const backlinkProtyleElementArray =
-      state.backlinkULElement?.querySelectorAll("div.protyle");
-    for (const backlinkProtyle of backlinkProtyleElementArray || []) {
-      collapseAllListItemNode(backlinkProtyle, { syHasChildListNode });
-    }
+    return panelBulkActions.collapseAllBacklinkListItemNode();
   }
 
   async function openDesktopBlockTab(params) {
@@ -684,88 +580,11 @@ export function createBacklinkPanelController(state) {
   }
 
   async function loadBacklinkPanelBaseData() {
-    if (!state.rootId) {
-      return null;
-    }
-
-    const settingConfig = SettingService.ins.SettingConfig;
-    state.hideBacklinkProtyleBreadcrumb =
-      settingConfig.hideBacklinkProtyleBreadcrumb;
-
-    state.backlinkFilterPanelBaseData = await getBacklinkPanelData({
-      rootId: state.rootId,
-      focusBlockId: state.focusBlockId,
-      queryParentDefBlock: settingConfig.queryParentDefBlock,
-      querrChildDefBlockForListItem:
-        settingConfig.querrChildDefBlockForListItem,
-      queryChildDefBlockForHeadline:
-        settingConfig.queryChildDefBlockForHeadline,
-      queryCurDocDefBlockRange: state.queryCurDocDefBlockRange,
-    });
-    state.displayHintPanelBaseDataCacheUsage = Boolean(
-      state.backlinkFilterPanelBaseData?.userCache,
-    );
-
-    return state.backlinkFilterPanelBaseData;
+    return panelInitCoordinator.loadBacklinkPanelBaseData();
   }
 
   async function initBaseData() {
-    if (!state.rootId) {
-      return;
-    }
-    const initStrategy = buildBacklinkPanelInitStrategy({
-      previousRootId: state.previousRootId,
-      rootId: state.rootId,
-      hasQueryParams: Boolean(state.queryParams),
-    });
-
-    clearBacklinkProtyleList();
-    if (initStrategy.resetDocumentActiveIndexes) {
-      state.backlinkDocumentActiveIndexMap.clear();
-    }
-
-    state.previousRootId = state.rootId;
-    state.previousFocusBlockId = state.focusBlockId;
-    const settingConfig = SettingService.ins.SettingConfig;
-    await loadBacklinkPanelBaseData();
-
-    const defaultPanelCriteria =
-      await BacklinkFilterPanelAttributeService.ins.getPanelCriteria(state.rootId);
-
-    if (!initStrategy.reuseExistingQueryParams) {
-      state.queryParams = defaultPanelCriteria.queryParams;
-      state.panelFilterViewExpand =
-        defaultPanelCriteria.backlinkPanelFilterViewExpand;
-      state.queryParams.pageNum = 1;
-    } else {
-      state.queryParams = state.queryParams;
-      state.panelFilterViewExpand = state.panelFilterViewExpand;
-    }
-
-    state.savedQueryParamMap =
-      await BacklinkFilterPanelAttributeService.ins.getPanelSavedCriteriaMap(
-        state.rootId,
-      );
-
-    if (settingConfig.defaultSelectedViewBlock && initStrategy.applyDefaultSelectedViewBlock) {
-      const selectBlockId = state.rootId;
-      let viewBlockExistBacklink = false;
-      state.backlinkFilterPanelBaseData.curDocDefBlockArray.forEach((item) => {
-        if (item.id === selectBlockId) {
-          viewBlockExistBacklink = true;
-        }
-      });
-
-      if (viewBlockExistBacklink) {
-        state.queryParams.includeRelatedDefBlockIds = new Set();
-        state.queryParams.excludeRelatedDefBlockIds = new Set();
-        state.queryParams.includeDocumentIds = new Set();
-        state.queryParams.excludeDocumentIds = new Set();
-        state.queryParams.includeRelatedDefBlockIds.add(selectBlockId);
-      }
-    }
-
-    await updateRenderData();
+    return panelInitCoordinator.initBaseData();
   }
 
   const panelDataCoordinator = createBacklinkPanelDataCoordinator({
@@ -792,51 +611,15 @@ export function createBacklinkPanelController(state) {
   }
 
   function navigateBacklinkDocument(event, direction) {
-    event.preventDefault();
-
-    const target = event.currentTarget;
-    const documentLiElement = target.closest(".list-item__document-name");
-    if (!documentLiElement) {
-      return;
-    }
-
-    const documentId = documentLiElement.getAttribute("data-node-id");
-    const editorElement = documentLiElement.nextElementSibling;
-    const documentGroup = state.backlinkDocumentGroupArray.find(
-      (group) => group.documentId === documentId,
-    );
-    if (!documentGroup || isArrayEmpty(documentGroup.backlinks)) {
-      return;
-    }
-
-    const nextIndex = getCyclicBacklinkIndex(
-      documentGroup.backlinks.length,
-      documentGroup.activeIndex,
-      direction,
-    );
-    state.backlinkDocumentActiveIndexMap.set(documentId, nextIndex);
-    refreshBacklinkDocumentGroupById(documentId);
+    return panelNavigationActions.navigateBacklinkDocument(event, direction);
   }
 
   function clearCacheAndRefresh() {
-    CacheManager.ins.deleteBacklinkPanelAllCache(state.rootId);
-    initBaseData();
+    return panelInitCoordinator.clearCacheAndRefresh();
   }
 
   function refreshBacklinkPanelToCurrentMainDocument() {
-    const nextRootId = resolveBacklinkPanelRefreshRootId({
-      currentTab: state.currentTab,
-      fallbackRootId: state.rootId,
-      fallbackLastViewedDocId: EnvConfig.ins.lastViewedDocId,
-    });
-    if (!nextRootId) {
-      return;
-    }
-
-    state.rootId = nextRootId;
-    state.focusBlockId = null;
-    CacheManager.ins.deleteBacklinkPanelAllCache(nextRootId);
-    initBaseData();
+    return panelInitCoordinator.refreshBacklinkPanelToCurrentMainDocument();
   }
 
   const panelActionHandlers = createBacklinkPanelActionHandlers({

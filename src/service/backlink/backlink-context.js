@@ -3,9 +3,20 @@ import {
   applyBacklinkContextBudget,
 } from "./backlink-context-budget.js";
 import {
+  createBacklinkContextMetaInfo,
+  getBacklinkContextMatchMeta,
+} from "./backlink-context-meta.js";
+import {
+  buildMatchSummary,
+  matchMetaInfoFields,
+  resetBacklinkContextMatches,
+} from "./backlink-context-match.js";
+import {
   getBacklinkContextSourceRule,
   getBacklinkContextVisibilityLevelOrder,
 } from "./backlink-context-rules.js";
+
+export { getBacklinkContextMatchMeta };
 
 function pushFragment(fragmentArray, fragment) {
   if (!fragment || !fragment.text) {
@@ -47,160 +58,6 @@ export function getBacklinkContextExplanationFragments(bundle = null) {
     return bundle.visibleFragments;
   }
   return [];
-}
-
-export function getBacklinkContextMatchMeta(bundle = null, deps = {}) {
-  const getSourceRule =
-    typeof deps.getBacklinkContextSourceRule === "function"
-      ? deps.getBacklinkContextSourceRule
-      : getBacklinkContextSourceRule;
-  const primaryMatchSourceType = bundle?.primaryMatchSourceType || "";
-  const headingPathText = bundle?.metaInfo?.headingPath?.text || "";
-  const listPathText = bundle?.metaInfo?.listPath?.text || "";
-  const locationSegments = [];
-  if (headingPathText) {
-    locationSegments.push(`标题：${headingPathText}`);
-  }
-  if (listPathText) {
-    locationSegments.push(`列表：${listPathText}`);
-  }
-  return {
-    primaryMatchSourceType,
-    matchSourceLabel: primaryMatchSourceType
-      ? getSourceRule(primaryMatchSourceType).label
-      : "",
-    matchSummaryText: bundle?.matchSummaryList?.[0] || "",
-    headingPathText,
-    listPathText,
-    locationPathText: locationSegments.join(" | "),
-  };
-}
-
-function buildMetaInfoFieldSearchText(text = "", deps = {}) {
-  return (deps.removeMarkdownRefBlockStyle
-    ? deps.removeMarkdownRefBlockStyle(text)
-    : text
-  ).toLowerCase();
-}
-
-function createMetaInfoField(key, text = "", deps = {}) {
-  const normalizedText = String(text || "").trim();
-  if (!normalizedText) {
-    return null;
-  }
-
-  return {
-    key,
-    text: normalizedText,
-    renderMarkdown: normalizedText,
-    searchText: buildMetaInfoFieldSearchText(normalizedText, deps),
-    visibilityRole: "meta",
-    searchable: false,
-    matched: false,
-    matchTypes: [],
-    matchKeywords: [],
-  };
-}
-
-function stripMetaInfoMarkdown(text = "") {
-  return String(text || "")
-    .replace(/\n?\{:[^}\n]+\}\s*/g, " ")
-    .replace(/\(\([^)]*\)\)/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function normalizeHeadingPathSegment(markdown = "") {
-  return stripMetaInfoMarkdown(
-    String(markdown || "").replace(/^\s{0,3}#{1,6}\s+/, ""),
-  );
-}
-
-function normalizeListPathSegment(markdown = "") {
-  return stripMetaInfoMarkdown(
-    String(markdown || "")
-      .replace(/^\s*[-*+]\s+\[[ xX]\]\s+/, "")
-      .replace(/^\s*[-*+]\s+/, "")
-      .replace(/^\s*\d+\.\s+/, ""),
-  );
-}
-
-function extractParentPathSegments(parentRenderMarkdown = "") {
-  const headingPath = [];
-  const listPath = [];
-  const segmentArray = String(parentRenderMarkdown || "")
-    .split(/\n\s*\n/)
-    .map((segment) => segment.trim())
-    .filter(Boolean);
-
-  for (const segment of segmentArray) {
-    const firstLine = segment
-      .split("\n")
-      .map((line) => line.trim())
-      .find(Boolean);
-    if (!firstLine) {
-      continue;
-    }
-
-    if (/^\s{0,3}#{1,6}\s+/.test(firstLine)) {
-      const normalizedHeading = normalizeHeadingPathSegment(firstLine);
-      if (normalizedHeading) {
-        headingPath.push(normalizedHeading);
-      }
-      continue;
-    }
-
-    if (/^\s*([-*+]\s+|\d+\.\s+)/.test(firstLine) || /^\s*[-*+]\s+\[[ xX]\]\s+/.test(firstLine)) {
-      const normalizedListItem = normalizeListPathSegment(firstLine);
-      if (normalizedListItem) {
-        listPath.push(normalizedListItem);
-      }
-    }
-  }
-
-  return {
-    headingPath,
-    listPath,
-  };
-}
-
-function createBacklinkContextMetaInfo(backlinkBlockNode, deps) {
-  const documentTitleText = deps.getQueryStrByBlock(backlinkBlockNode.documentBlock);
-  const {
-    headingPath,
-    listPath,
-  } = extractParentPathSegments(backlinkBlockNode.parentRenderMarkdown);
-  const metaInfo = {
-    matchedFieldKeys: [],
-    matchSummaryList: [],
-  };
-  if (documentTitleText) {
-    metaInfo.documentTitle = {
-      key: "documentTitle",
-      text: documentTitleText,
-      renderMarkdown:
-        backlinkBlockNode.documentBlock?.markdown ||
-        backlinkBlockNode.documentBlock?.content ||
-        "",
-      searchText: buildMetaInfoFieldSearchText(documentTitleText, deps),
-      visibilityRole: "meta",
-      searchable: true,
-      matched: false,
-      matchTypes: [],
-      matchKeywords: [],
-    };
-  }
-  metaInfo.headingPath = createMetaInfoField(
-    "headingPath",
-    headingPath.join(" / "),
-    deps,
-  );
-  metaInfo.listPath = createMetaInfoField(
-    "listPath",
-    listPath.join(" / "),
-    deps,
-  );
-  return metaInfo;
 }
 
 function createContextFragment({
@@ -450,69 +307,8 @@ export function applyBacklinkContextVisibilityToNodes(
 
 export { applyBacklinkContextBudget, applyBacklinkContextBudgetToNodes };
 
-function resetBundleMatches(bundle) {
-  bundle.matchedFragments = [];
-  bundle.matchSummaryList = [];
-  bundle.primaryMatchSourceType = undefined;
-  if (!bundle.metaInfo) {
-    bundle.metaInfo = {
-      matchedFieldKeys: [],
-      matchSummaryList: [],
-    };
-  }
-  bundle.metaInfo.matchedFieldKeys = [];
-  bundle.metaInfo.matchSummaryList = [];
-  bundle.metaInfo.primaryMatchKey = undefined;
-  if (bundle.metaInfo.documentTitle) {
-    bundle.metaInfo.documentTitle.matched = false;
-    bundle.metaInfo.documentTitle.matchTypes = [];
-    bundle.metaInfo.documentTitle.matchKeywords = [];
-  }
-  if (bundle.metaInfo.headingPath) {
-    bundle.metaInfo.headingPath.matched = false;
-    bundle.metaInfo.headingPath.matchTypes = [];
-    bundle.metaInfo.headingPath.matchKeywords = [];
-  }
-  if (bundle.metaInfo.listPath) {
-    bundle.metaInfo.listPath.matched = false;
-    bundle.metaInfo.listPath.matchTypes = [];
-    bundle.metaInfo.listPath.matchKeywords = [];
-  }
-
-  for (const fragment of bundle.fragments || []) {
-    fragment.matched = false;
-    fragment.matchTypes = [];
-    fragment.matchKeywords = [];
-  }
-}
-
-function normalizeMatchSummaryText(text = "") {
-  return String(text || "")
-    .replace(/\n?\{:[^}\n]+\}\s*/g, " ")
-    .replace(/\(\(\d{14}-\w{7}\s['"]([^'"]+)['"]\)\)/g, "$1")
-    .replace(/^\s*[-*+]\s+\[[ xX]\]\s+/gm, "")
-    .replace(/^\s*[-*+]\s+/gm, "")
-    .replace(/^\s*\d+\.\s+/gm, "")
-    .replace(/^\s{0,3}#{1,6}\s+/gm, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function buildMatchSummary(fragment) {
-  const label = getBacklinkContextSourceRule(fragment.sourceType).label;
-  const useAnchor = fragment.matchTypes.includes("anchor") && fragment.anchorText;
-  const text = useAnchor ? fragment.anchorText : fragment.displayText;
-  const compactText = normalizeMatchSummaryText(text).slice(0, 48);
-  return compactText ? `${label}：${compactText}` : label;
-}
-
-function buildMetaInfoMatchSummary(label, text = "") {
-  const compactText = normalizeMatchSummaryText(text).slice(0, 48);
-  return compactText ? `${label}：${compactText}` : label;
-}
-
 export function matchBacklinkContextBundle(bundle, { keywordObj, matchKeywords }) {
-  resetBundleMatches(bundle);
+  resetBacklinkContextMatches(bundle);
 
   const includeText = keywordObj.includeText || [];
   const excludeText = keywordObj.excludeText || [];
@@ -563,26 +359,15 @@ export function matchBacklinkContextBundle(bundle, { keywordObj, matchKeywords }
     }
   }
 
-  const documentTitleMeta = bundle.metaInfo?.documentTitle;
-  if (documentTitleMeta?.searchable) {
-    const documentTitleMatched = matchKeywords(
-      documentTitleMeta.searchText || "",
+  if (
+    matchMetaInfoFields(bundle, {
       includeText,
       excludeText,
-    );
-    if (requireText && documentTitleMatched) {
-      matchText = true;
-      documentTitleMeta.matchTypes.push("text");
-      documentTitleMeta.matchKeywords.push(...includeText);
-    }
-    if (documentTitleMeta.matchTypes.length > 0) {
-      documentTitleMeta.matched = true;
-      bundle.metaInfo.matchedFieldKeys.push(documentTitleMeta.key);
-      bundle.metaInfo.primaryMatchKey = bundle.metaInfo.primaryMatchKey || documentTitleMeta.key;
-      bundle.metaInfo.matchSummaryList.push(
-        buildMetaInfoMatchSummary("文档", documentTitleMeta.text),
-      );
-    }
+      requireText,
+      matchKeywords,
+    })
+  ) {
+    matchText = true;
   }
 
   if (bundle.matchedFragments.length > 0) {

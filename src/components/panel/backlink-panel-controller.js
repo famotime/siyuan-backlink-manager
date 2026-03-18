@@ -94,43 +94,17 @@ import {
   resolveBacklinkPanelFocusRefresh,
 } from "./backlink-panel-focus-refresh.js";
 import { resolveBacklinkPanelRefreshRootId } from "./backlink-panel-refresh.js";
+import {
+  createDocumentGroupRefreshTracker,
+  createEditorRegistry,
+} from "./backlink-panel-controller-runtime.js";
 
 export function createBacklinkPanelController(state) {
   let preClickOpenArea = "focus";
   let lastKnownFocusedWndElement = null;
   let detachDocumentInteractionTracking = null;
-  const detachDocumentGroupRefreshTrackingMap = new Map();
-  const backlinkDocumentGroupRefreshTimeoutMap = new Map();
-
-  function getEditors() {
-    if (state.currentTab) {
-      if (!Array.isArray(state.currentTab.editors)) {
-        state.currentTab.editors = [];
-      }
-      return state.currentTab.editors;
-    }
-    return state.defalutEditors;
-  }
-
-  function addEditor(editor) {
-    const editors = getEditors();
-    editors.push(editor);
-  }
-
-  function removeEditor(editor) {
-    const editors = getEditors();
-    const editorIndex = editors.indexOf(editor);
-    if (editorIndex >= 0) {
-      editors.splice(editorIndex, 1);
-    }
-  }
-
-  function clearEditors() {
-    if (state.currentTab) {
-      state.currentTab.editors = [];
-    }
-    state.defalutEditors = [];
-  }
+  const editorRegistry = createEditorRegistry(state);
+  const { getEditors, addEditor, removeEditor, clearEditors } = editorRegistry;
 
   function emitLoadedProtyleStatic(protyle) {
     EnvConfig.ins.plugin.app.plugins.forEach((item) => {
@@ -141,64 +115,6 @@ export function createBacklinkPanelController(state) {
         protyle: protyle.protyle,
       });
     });
-  }
-
-  function clearBacklinkDocumentGroupRefreshTimeout(documentId) {
-    const timeoutId = backlinkDocumentGroupRefreshTimeoutMap.get(documentId);
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-      backlinkDocumentGroupRefreshTimeoutMap.delete(documentId);
-    }
-  }
-
-  function scheduleBacklinkDocumentGroupRefresh(
-    documentId,
-    delay = 0,
-    {
-      focusBlockId = null,
-    } = {},
-  ) {
-    if (!documentId) {
-      return;
-    }
-
-    clearBacklinkDocumentGroupRefreshTimeout(documentId);
-    const timeoutId = setTimeout(() => {
-      backlinkDocumentGroupRefreshTimeoutMap.delete(documentId);
-      refreshBacklinkDocumentGroupDataById(documentId, { focusBlockId,});
-    }, delay);
-    backlinkDocumentGroupRefreshTimeoutMap.set(documentId, timeoutId);
-  }
-
-  function attachBacklinkDocumentGroupRefreshTracking(editor, documentId) {
-    if (!editor?.protyle?.contentElement || !documentId) {
-      return () => {};
-    }
-
-    detachDocumentGroupRefreshTrackingMap.get(documentId)?.();
-
-    const contentElement = editor.protyle.contentElement;
-    const handleFocusOut = () => {
-      const focusBlockId = editor?.protyle?.block?.id || state.focusBlockId;
-      scheduleBacklinkDocumentGroupRefresh(documentId, 80, { focusBlockId });
-    };
-    const handleDrop = () => {
-      const focusBlockId = editor?.protyle?.block?.id || state.focusBlockId;
-      scheduleBacklinkDocumentGroupRefresh(documentId, 0, { focusBlockId });
-    };
-
-    contentElement.addEventListener("focusout", handleFocusOut);
-    contentElement.addEventListener("drop", handleDrop);
-
-    const detach = () => {
-      clearBacklinkDocumentGroupRefreshTimeout(documentId);
-      contentElement.removeEventListener("focusout", handleFocusOut);
-      contentElement.removeEventListener("drop", handleDrop);
-      detachDocumentGroupRefreshTrackingMap.delete(documentId);
-    };
-
-    detachDocumentGroupRefreshTrackingMap.set(documentId, detach);
-    return detach;
   }
 
   function updateLastCriteria() {
@@ -413,7 +329,7 @@ export function createBacklinkPanelController(state) {
   ) {
     const documentId = documentGroup?.documentId;
     if (documentId) {
-      detachDocumentGroupRefreshTrackingMap.get(documentId)?.();
+      detachDocumentGroupRefreshTracking(documentId);
     }
 
     const editor = renderBacklinkDocumentGroupByHelper({
@@ -540,9 +456,7 @@ export function createBacklinkPanelController(state) {
 
   function clearBacklinkProtyleList() {
     const editors = getEditors();
-    for (const documentId of detachDocumentGroupRefreshTrackingMap.keys()) {
-      detachDocumentGroupRefreshTrackingMap.get(documentId)?.();
-    }
+    detachAllDocumentGroupRefreshTracking();
     if (isArrayNotEmpty(editors)) {
       editors.forEach((editor) => {
         syncBacklinkDocumentProtyleState(editor, {
@@ -662,6 +576,16 @@ export function createBacklinkPanelController(state) {
     await refreshFilterDisplayData();
     return refreshBacklinkDocumentGroupById(documentId);
   }
+
+  const documentGroupRefreshTracker = createDocumentGroupRefreshTracker({
+    state,
+    refreshBacklinkDocumentGroupDataById,
+  });
+  const {
+    attachBacklinkDocumentGroupRefreshTracking,
+    detachDocumentGroupRefreshTracking,
+    detachAllDocumentGroupRefreshTracking,
+  } = documentGroupRefreshTracker;
 
   function stepBacklinkDocumentContext(documentLiElement, direction = "next") {
     if (!documentLiElement) {
@@ -1144,6 +1068,7 @@ export function createBacklinkPanelController(state) {
     updateLastCriteria,
     initEvent,
     destroyEvent() {
+      detachAllDocumentGroupRefreshTracking();
       detachDocumentInteractionTracking?.();
       detachDocumentInteractionTracking = null;
     },

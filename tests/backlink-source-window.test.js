@@ -14,6 +14,7 @@ import {
   hasBacklinkSourceWindowExplicitVisibleBlockIds,
   loadOrderedBacklinkSourceWindowBlocks,
 } from "../src/service/backlink/backlink-source-window.js";
+import * as backlinkSourceWindowModule from "../src/service/backlink/backlink-source-window.js";
 import { groupBacklinksByDocument } from "../src/components/panel/backlink-document-navigation.js";
 
 function createDocumentBlocks(blocks = []) {
@@ -26,6 +27,64 @@ function createDocumentBlocks(blocks = []) {
     ...block,
   }));
 }
+
+test("source window module exposes decomposed internal ordering and structure helpers", () => {
+  assert.equal(
+    typeof backlinkSourceWindowModule.__internal?.ordering?.buildDocumentBlockContext,
+    "function",
+  );
+  assert.equal(
+    typeof backlinkSourceWindowModule.__internal?.structure?.resolveReadableStructuralUnit,
+    "function",
+  );
+});
+
+test("buildDocumentBlockContext indexes document order and child relationships for ordered blocks", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "heading-a", type: "h", parent_id: "doc-a" },
+    { id: "list-root", type: "l", parent_id: "doc-a" },
+    { id: "item-a", type: "i", parent_id: "list-root" },
+    { id: "block-a", type: "p", parent_id: "item-a" },
+  ]);
+
+  const context =
+    backlinkSourceWindowModule.__internal?.ordering?.buildDocumentBlockContext(
+      orderedBlocks,
+    );
+
+  assert.equal(context.indexById.get("heading-a"), 0);
+  assert.equal(context.indexById.get("block-a"), 3);
+  assert.deepEqual(context.childBlockIdsByParentId.get("doc-a"), [
+    "heading-a",
+    "list-root",
+  ]);
+  assert.deepEqual(context.childBlockIdsByParentId.get("list-root"), ["item-a"]);
+});
+
+test("resolveReadableStructuralUnit keeps list shells with the first readable descendant in document order", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "list-root", type: "l", parent_id: "doc-a" },
+    { id: "item-a", type: "i", parent_id: "list-root" },
+    { id: "block-a", type: "p", parent_id: "item-a" },
+    { id: "list-nested", type: "l", parent_id: "item-a" },
+    { id: "item-child", type: "i", parent_id: "list-nested" },
+    { id: "block-child", type: "p", parent_id: "item-child" },
+  ]);
+
+  const context =
+    backlinkSourceWindowModule.__internal?.ordering?.buildDocumentBlockContext(
+      orderedBlocks,
+    );
+  const unit =
+    backlinkSourceWindowModule.__internal?.structure?.resolveReadableStructuralUnit(
+      "list-root",
+      context,
+    );
+
+  assert.deepEqual(unit.visibleBlockIds, ["list-root", "item-a", "block-a"]);
+  assert.equal(unit.startBlockId, "list-root");
+  assert.equal(unit.endBlockId, "block-a");
+});
 
 test("buildBacklinkSourceWindow uses the nearest heading section around the backlink block in extended mode", () => {
   const orderedBlocks = createDocumentBlocks([

@@ -16,6 +16,7 @@ import {
     getBacklinkPanelPageFocusBlockId,
     updateBacklinkPanelPageProps,
 } from "./backlink-panel-host.js";
+import { mountOrUpdateDocumentBottomBacklinkHost } from "./document-backlink-host-lifecycle.js";
 import { shouldIgnoreDocumentBottomBacklinkForProtyle } from "./document-protyle-guard.js";
 
 
@@ -168,34 +169,26 @@ async function addBacklinkPanelToBottom(docuemntContentElement: HTMLElement, roo
     if (!docuemntContentElement || !rootId) {
         return;
     }
-    // let bottomDisplay = await getDocumentBottomBacklinkPanelDisplay(docuemntContentElement, rootId);
-    // // 如果该文档不需要显示，则尝试删除该元素内部可能存在的底部反链。
-    // if (!bottomDisplay) {
-    //     destroyPanel(docuemntContentElement);
-    //     return;
-    // }
-
-    let protyleWysiwygElement = docuemntContentElement.querySelector(".protyle-wysiwyg.protyle-wysiwyg--attr");
-    let backlinkPanelBottomElement = docuemntContentElement.querySelector(".backlink-panel-document-bottom__area");
-    if (backlinkPanelBottomElement) {
-        let panelRootId = backlinkPanelBottomElement.getAttribute("data-root-id");
-        if (panelRootId == rootId) {
-            let panelId = backlinkPanelBottomElement.getAttribute("misuzu-backlink-panel-id");
-            let pageSvelte = backlinkPanelPageSvelteMap.get(panelId);
-            updateBacklinkPanelPageProps({
-                panelInstance: pageSvelte,
-                rootId: rootId,
-                focusBlockId: focusBlockId,
-                currentTab: null,
-                panelBacklinkViewExpand: SettingService.ins.SettingConfig.docBottomBacklinkPanelViewExpand,
-            });
-            return;
-        } else {
-            destroyPanel(docuemntContentElement);
-        }
+    const panelBacklinkViewExpand =
+        SettingService.ins.SettingConfig.docBottomBacklinkPanelViewExpand;
+    const hostResult = mountOrUpdateDocumentBottomBacklinkHost({
+        docuemntContentElement,
+        rootId,
+        focusBlockId,
+        panelBacklinkViewExpand,
+        resolvePanelInstance: (panelId) => backlinkPanelPageSvelteMap.get(panelId),
+        updatePanelProps: updateBacklinkPanelPageProps,
+        destroyExistingHost: destroyPanel,
+        mountNewHost: createDocumentBottomBacklinkHost,
+    });
+    if (hostResult?.action === "update") {
+        return;
     }
+}
 
-    backlinkPanelBottomElement = document.createElement("div");
+function createDocumentBottomBacklinkHost(docuemntContentElement: HTMLElement, rootId: string, focusBlockId: string) {
+    const protyleWysiwygElement = docuemntContentElement.querySelector(".protyle-wysiwyg.protyle-wysiwyg--attr");
+    const backlinkPanelBottomElement = document.createElement("div");
     backlinkPanelBottomElement.classList.add(
         "backlink-panel-document-bottom__area"
     );

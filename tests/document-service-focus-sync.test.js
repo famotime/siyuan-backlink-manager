@@ -17,10 +17,10 @@ test("DocumentService forwards the current protyle focus block id into bottom pa
 
 test("DocumentService updates existing bottom panel props when the root stays the same", () => {
   const source = readFileSync(
-    new URL("../src/service/plugin/DocumentService.ts", import.meta.url),
+    new URL("../src/service/plugin/document-backlink-host-lifecycle.js", import.meta.url),
     "utf8",
   );
 
-  assert.match(source, /updateBacklinkPanelPageProps\(\{/);
-  assert.match(source, /focusBlockId: focusBlockId,/);
+  assert.match(source, /updatePanelProps\?\.\(\{/);
+  assert.match(source, /focusBlockId,/);
 });

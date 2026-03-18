@@ -12,6 +12,23 @@ test("backlink panel controller exposes a document-group local refresh entry", (
   assert.match(source, /return \{[\s\S]*refreshBacklinkDocumentGroupById,[\s\S]*\};/);
 });
 
+test("backlink panel controller delegates editor registry and refresh tracking to extracted helpers", () => {
+  const source = readFileSync(
+    new URL("../src/components/panel/backlink-panel-controller.js", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /import\s*\{[\s\S]*createDocumentGroupRefreshTracker,[\s\S]*createEditorRegistry[\s\S]*\}\s*from "\.\/backlink-panel-controller-runtime\.js";/,
+  );
+  assert.match(source, /const editorRegistry = createEditorRegistry\(state\);/);
+  assert.match(
+    source,
+    /const documentGroupRefreshTracker = createDocumentGroupRefreshTracker\(\s*\{[\s\S]*state,[\s\S]*refreshBacklinkDocumentGroupDataById,[\s\S]*\}\s*\);/,
+  );
+});
+
 test("document-group local refresh rebuilds grouped backlinks from current render data and only rerenders the target document", () => {
   const source = readFileSync(
     new URL("../src/components/panel/backlink-panel-controller.js", import.meta.url),
@@ -46,27 +63,32 @@ test("navigation and context stepping reuse the local refresh entry instead of d
 });
 
 test("rendered backlink document editors attach focusout and drop handlers for local refresh", () => {
-  const source = readFileSync(
-    new URL("../src/components/panel/backlink-panel-controller.js", import.meta.url),
+  const runtimeSource = readFileSync(
+    new URL("../src/components/panel/backlink-panel-controller-runtime.js", import.meta.url),
     "utf8",
   );
 
-  assert.match(source, /function attachBacklinkDocumentGroupRefreshTracking\(/);
-  assert.match(source, /contentElement\.addEventListener\("focusout", handleFocusOut\);/);
-  assert.match(source, /contentElement\.addEventListener\("drop", handleDrop\);/);
-  assert.match(source, /const focusBlockId = editor\?\.protyle\?\.block\?\.id \|\| state\.focusBlockId;/);
-  assert.match(source, /refreshBacklinkDocumentGroupDataById\(documentId,\s*\{\s*focusBlockId,\s*\}\);/);
+  assert.match(runtimeSource, /function attachBacklinkDocumentGroupRefreshTracking\(/);
+  assert.match(runtimeSource, /contentElement\.addEventListener\("focusout", handleFocusOut\);/);
+  assert.match(runtimeSource, /contentElement\.addEventListener\("drop", handleDrop\);/);
+  assert.match(runtimeSource, /const focusBlockId = editor\?\.protyle\?\.block\?\.id \|\| state\.focusBlockId;/);
+  assert.match(runtimeSource, /refreshBacklinkDocumentGroupDataById\(documentId,\s*\{\s*focusBlockId\s*\}\);/);
 });
 
 test("backlink document local refresh tracking is torn down before editor destruction", () => {
-  const source = readFileSync(
+  const runtimeSource = readFileSync(
+    new URL("../src/components/panel/backlink-panel-controller-runtime.js", import.meta.url),
+    "utf8",
+  );
+  const controllerSource = readFileSync(
     new URL("../src/components/panel/backlink-panel-controller.js", import.meta.url),
     "utf8",
   );
 
-  assert.match(source, /const detachDocumentGroupRefreshTrackingMap = new Map\(\);/);
-  assert.match(source, /detachDocumentGroupRefreshTrackingMap\.get\(documentId\)\?\.\(\);/);
-  assert.match(source, /detachDocumentGroupRefreshTrackingMap\.delete\(documentId\);/);
+  assert.match(runtimeSource, /const detachDocumentGroupRefreshTrackingMap = new Map\(\);/);
+  assert.match(runtimeSource, /detachDocumentGroupRefreshTrackingMap\.get\(documentId\)\?\.\(\);/);
+  assert.match(runtimeSource, /detachDocumentGroupRefreshTrackingMap\.delete\(documentId\);/);
+  assert.match(controllerSource, /detachAllDocumentGroupRefreshTracking\(\);/);
 });
 
 test("document-group data refresh recomputes render data before rerendering the target document", () => {
@@ -77,7 +99,7 @@ test("document-group data refresh recomputes render data before rerendering the 
 
   const localRefreshBlock =
     source.match(
-      /async function refreshBacklinkDocumentGroupDataById\([\s\S]*?\n  }\n\n  function stepBacklinkDocumentContext/,
+      /async function refreshBacklinkDocumentGroupDataById\([\s\S]*?return refreshBacklinkDocumentGroupById\(documentId\);\n  }/,
     )?.[0] || "";
 
   assert.match(source, /async function refreshBacklinkDocumentGroupDataById\(\s*documentId,\s*\{\s*focusBlockId = null,\s*\}\s*=\s*\{\s*\},\s*\)/);

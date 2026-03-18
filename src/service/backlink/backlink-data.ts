@@ -91,6 +91,10 @@ import {
     generateBacklinkSourceWindowBlockArraySql,
     loadOrderedBacklinkSourceWindowBlocks,
 } from "./backlink-source-window.js";
+import {
+    buildBacklinkPanelRenderDataResult,
+    buildValidBacklinkRenderNodes,
+} from "./backlink-data-pipeline.js";
 
 function shouldLogBacklinkDebug() {
     return globalThis.__BACKLINK_DEBUG__ === true;
@@ -119,34 +123,11 @@ export async function getBacklinkPanelRenderData(
 
     sanitizeBacklinkRenderQueryParams(queryParams, backlinkPanelData);
 
-    let backlinkBlockNodeArray = backlinkPanelData.backlinkBlockNodeArray;
-    let validBacklinkBlockNodeArray: IBacklinkBlockNode[] = [];
-    for (const backlinkBlockNode of backlinkBlockNodeArray) {
-        let valid = isBacklinkBlockValid(queryParams, backlinkBlockNode, {
-            isSetNotEmpty,
-            parseSearchSyntax,
-            getQueryStrByBlock,
-            getMarkdownAnchorTextArray,
-            removeMarkdownRefBlockStyle,
-            matchKeywords,
-        });
-        if (!valid) {
-            continue;
-        }
-        validBacklinkBlockNodeArray.push(backlinkBlockNode);
-    }
-    backlinkBlockNodeArraySort(
-        validBacklinkBlockNodeArray,
-        queryParams.backlinkBlockSortMethod,
-        { getDefBlockSortFun },
-    );
-    applyBacklinkContextVisibilityToNodes(
-        validBacklinkBlockNodeArray,
-        queryParams.backlinkContextVisibilityLevel || "core",
-    );
-    applyBacklinkContextBudgetToNodes(
-        validBacklinkBlockNodeArray,
-        normalizeBacklinkContextBudget({
+    const backlinkBlockNodeArray = backlinkPanelData.backlinkBlockNodeArray;
+    const validBacklinkBlockNodeArray: IBacklinkBlockNode[] = buildValidBacklinkRenderNodes({
+        backlinkBlockNodeArray,
+        queryParams,
+        contextBudget: normalizeBacklinkContextBudget({
             maxVisibleFragments:
                 SettingService.ins.SettingConfig.backlinkContextMaxVisibleFragments,
             maxVisibleChars:
@@ -156,7 +137,26 @@ export async function getBacklinkPanelRenderData(
             maxExpandedNodes:
                 SettingService.ins.SettingConfig.backlinkContextMaxExpandedNodes,
         }),
-    );
+        deps: {
+            isBacklinkBlockValid: (queryParamsArg, backlinkBlockNode) =>
+                isBacklinkBlockValid(queryParamsArg, backlinkBlockNode, {
+                    isSetNotEmpty,
+                    parseSearchSyntax,
+                    getQueryStrByBlock,
+                    getMarkdownAnchorTextArray,
+                    removeMarkdownRefBlockStyle,
+                    matchKeywords,
+                }),
+            backlinkBlockNodeArraySort: (backlinkBlockNodeArrayArg, blockSortMethod) =>
+                backlinkBlockNodeArraySort(
+                    backlinkBlockNodeArrayArg,
+                    blockSortMethod,
+                    { getDefBlockSortFun },
+                ),
+            applyBacklinkContextVisibilityToNodes,
+            applyBacklinkContextBudgetToNodes,
+        },
+    });
     let pagination = paginateBacklinkBlocksByDocument(validBacklinkBlockNodeArray, pageNum, pageSize);
     let pageBacklinkBlockArray = pagination.pageBacklinkBlockArray;
     let backlinkCacheData: IBacklinkCacheData = await getBatchBacklinkDoc({
@@ -242,19 +242,17 @@ export async function getBacklinkPanelRenderData(
     queryParams.pageNum = pagination.pageNum;
 
 
-    let backlinkPanelRenderDataResult: IBacklinkPanelRenderData = {
+    const backlinkPanelRenderDataResult: IBacklinkPanelRenderData = buildBacklinkPanelRenderDataResult({
         rootId,
-        backlinkDataArray: backlinkDataArray,
-        backlinkDocumentCount: pagination.totalDocumentCount,
-        backlinkBlockNodeArray: validBacklinkBlockNodeArray,
-        curDocDefBlockArray: filterCurDocDefBlockArray,
-        relatedDefBlockArray: filterRelatedDefBlockArray,
-        backlinkDocumentArray: filterBacklinkDocumentArray,
-        pageNum: pagination.pageNum,
+        backlinkDataArray,
+        pagination,
+        validBacklinkBlockNodeArray,
+        filterCurDocDefBlockArray,
+        filterRelatedDefBlockArray,
+        filterBacklinkDocumentArray,
         pageSize,
-        totalPage: pagination.totalPage,
         usedCache,
-    };
+    });
 
     const endTime = performance.now(); // 记录结束时间
     const executionTime = endTime - startTime; // 计算时间差
@@ -345,19 +343,17 @@ export async function getTurnPageBacklinkPanelRenderData(
         orderedBlocksByRootId,
         contextVisibilityLevel: "extended",
     });
-    let backlinkPanelRenderDataResult: IBacklinkPanelRenderData = {
+    const backlinkPanelRenderDataResult: IBacklinkPanelRenderData = buildBacklinkPanelRenderDataResult({
         rootId,
-        backlinkDataArray: backlinkDataArray,
-        backlinkDocumentCount: pagination.totalDocumentCount,
-        backlinkBlockNodeArray: null,
-        curDocDefBlockArray: null,
-        relatedDefBlockArray: null,
-        backlinkDocumentArray: null,
-        pageNum: pagination.pageNum,
+        backlinkDataArray,
+        pagination,
+        validBacklinkBlockNodeArray: null,
+        filterCurDocDefBlockArray: null,
+        filterRelatedDefBlockArray: null,
+        filterBacklinkDocumentArray: null,
         pageSize,
-        totalPage: pagination.totalPage,
         usedCache,
-    };
+    });
     const endTime = performance.now(); // 记录结束时间
     const executionTime = endTime - startTime; // 计算时间差
     logBacklinkDebug(

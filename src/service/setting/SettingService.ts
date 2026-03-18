@@ -46,7 +46,7 @@ export class SettingService {
     //     return defaultSettingConfig;
     // }
 
-    public async updateSettingCofnigValue(key: string, newValue: any) {
+    public async updateSettingConfigValue(key: string, newValue: any) {
         let oldValue = this._settingConfig[key];
         if (oldValue == newValue) {
             return;
@@ -62,7 +62,11 @@ export class SettingService {
         plugin.saveData(SettingFileName, paramJson);
     }
 
-    public async updateSettingCofnig(settingConfigParam: SettingConfig) {
+    public async updateSettingCofnigValue(key: string, newValue: any) {
+        return this.updateSettingConfigValue(key, newValue);
+    }
+
+    public async updateSettingConfig(settingConfigParam: SettingConfig) {
         let plugin = EnvConfig.ins.plugin;
         if (!plugin) {
             return;
@@ -75,6 +79,10 @@ export class SettingService {
         console.log(`反链面板 更新设置配置文件: ${paramJson}`);
         this._settingConfig = getResolvedSettingConfig(settingConfigParam);
         plugin.saveData(SettingFileName, paramJson);
+    }
+
+    public async updateSettingCofnig(settingConfigParam: SettingConfig) {
+        return this.updateSettingConfig(settingConfigParam);
     }
 
     public async createBlocksParentIdIdx() {
@@ -131,4 +139,3 @@ function getResolvedSettingConfig(settingConfig: Partial<SettingConfig> = null):
         resolveSettingConfig(settingConfig),
     );
 }
-

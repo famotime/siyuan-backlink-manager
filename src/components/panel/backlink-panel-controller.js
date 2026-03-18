@@ -93,6 +93,8 @@ import {
   buildBacklinkPanelInitStrategy,
   resolveBacklinkPanelFocusRefresh,
 } from "./backlink-panel-focus-refresh.js";
+import { createBacklinkPanelDataCoordinator } from "./backlink-panel-controller-data.js";
+import { createBacklinkPreviewRenderCoordinator } from "./backlink-panel-controller-rendering.js";
 import { resolveBacklinkPanelRefreshRootId } from "./backlink-panel-refresh.js";
 import {
   createDocumentGroupRefreshTracker,
@@ -476,22 +478,6 @@ export function createBacklinkPanelController(state) {
     }
   }
 
-  function refreshBacklinkPreview() {
-    clearBacklinkProtyleList();
-    if (!state.backlinkFilterPanelRenderData) {
-      return;
-    }
-
-    batchCreateOfficialBacklinkProtyle(
-      state.backlinkFilterPanelRenderData.backlinkDocumentArray,
-      state.backlinkFilterPanelRenderData.backlinkDataArray,
-    );
-
-    state.displayHintBacklinkBlockCacheUsage = Boolean(
-      state.backlinkFilterPanelRenderData.usedCache,
-    );
-  }
-
   function findBacklinkDocumentRenderTargets(documentId) {
     if (!documentId || !state.backlinkULElement?.querySelectorAll) {
       return { documentLiElement: null, editorElement: null };
@@ -507,6 +493,19 @@ export function createBacklinkPanelController(state) {
     };
   }
 
+  const previewRenderCoordinator = createBacklinkPreviewRenderCoordinator({
+    state,
+    clearBacklinkProtyleList,
+    batchCreateOfficialBacklinkProtyle,
+    findBacklinkDocumentRenderTargets,
+    renderBacklinkDocumentGroup,
+    groupBacklinksByDocument,
+  });
+
+  function refreshBacklinkPreview() {
+    return previewRenderCoordinator.refreshBacklinkPreview();
+  }
+
   function refreshBacklinkDocumentGroupById(
     documentId,
     {
@@ -514,38 +513,13 @@ export function createBacklinkPanelController(state) {
       editorElement = null,
     } = {},
   ) {
-    if (!documentId || !state.backlinkFilterPanelRenderData) {
-      return null;
-    }
-
-    const renderTargets = documentLiElement && editorElement
-      ? { documentLiElement, editorElement }
-      : findBacklinkDocumentRenderTargets(documentId);
-    if (!renderTargets.documentLiElement || !renderTargets.editorElement) {
-      return null;
-    }
-    const targetDocumentLiElement = renderTargets.documentLiElement;
-    const targetEditorElement = renderTargets.editorElement;
-
-    state.backlinkDocumentGroupArray = groupBacklinksByDocument(
-      state.backlinkFilterPanelRenderData.backlinkDocumentArray,
-      state.backlinkFilterPanelRenderData.backlinkDataArray,
-      state.backlinkDocumentActiveIndexMap,
+    return previewRenderCoordinator.refreshBacklinkDocumentGroupById(
+      documentId,
+      {
+        documentLiElement,
+        editorElement,
+      },
     );
-
-    const nextDocumentGroup = state.backlinkDocumentGroupArray.find(
-      (group) => group.documentId === documentId,
-    );
-    if (!nextDocumentGroup) {
-      return null;
-    }
-
-    renderBacklinkDocumentGroup(
-      nextDocumentGroup,
-      targetDocumentLiElement,
-      targetEditorElement,
-    );
-    return nextDocumentGroup;
   }
 
   async function refreshBacklinkDocumentGroupDataById(
@@ -793,89 +767,27 @@ export function createBacklinkPanelController(state) {
     await updateRenderData();
   }
 
+  const panelDataCoordinator = createBacklinkPanelDataCoordinator({
+    state,
+    defBlockArrayTypeAndKeywordFilter,
+    defBlockArraySort,
+    getBatchBlockIdIndex,
+    getBacklinkPanelRenderData,
+    getTurnPageBacklinkPanelRenderData,
+    mergeTurnPageBacklinkPanelRenderData,
+    refreshBacklinkPreview,
+  });
+
   async function refreshFilterDisplayData() {
-    if (!state.backlinkFilterPanelRenderData || !state.queryParams) {
-      return;
-    }
-
-    const curDocDefBlockArray =
-      state.backlinkFilterPanelRenderData.curDocDefBlockArray;
-    const relatedDefBlockArray =
-      state.backlinkFilterPanelRenderData.relatedDefBlockArray;
-    const backlinkDocumentArray =
-      state.backlinkFilterPanelRenderData.backlinkDocumentArray;
-
-    defBlockArrayTypeAndKeywordFilter(
-      curDocDefBlockArray,
-      null,
-      state.queryParams.filterPanelCurDocDefBlockKeywords,
-    );
-    defBlockArrayTypeAndKeywordFilter(
-      relatedDefBlockArray,
-      state.queryParams.filterPanelRelatedDefBlockType,
-      state.queryParams.filterPanelRelatedDefBlockKeywords,
-    );
-    defBlockArrayTypeAndKeywordFilter(
-      backlinkDocumentArray,
-      null,
-      state.queryParams.filterPanelBacklinkDocumentKeywords,
-    );
-
-    await defBlockArraySort(
-      curDocDefBlockArray,
-      state.queryParams.filterPanelCurDocDefBlockSortMethod,
-      { getBatchBlockIdIndex },
-    );
-    await defBlockArraySort(
-      relatedDefBlockArray,
-      state.queryParams.filterPanelRelatedDefBlockSortMethod,
-      { getBatchBlockIdIndex },
-    );
-    await defBlockArraySort(
-      backlinkDocumentArray,
-      state.queryParams.filterPanelBacklinkDocumentSortMethod,
-      { getBatchBlockIdIndex },
-    );
-
-    state.backlinkFilterPanelRenderData = state.backlinkFilterPanelRenderData;
+    return panelDataCoordinator.refreshFilterDisplayData();
   }
 
   async function updateRenderData() {
-    state.backlinkFilterPanelRenderData = await getBacklinkPanelRenderData(
-      state.backlinkFilterPanelBaseData,
-      state.queryParams,
-    );
-    if (state.backlinkFilterPanelRenderData.rootId !== state.rootId) {
-      return;
-    }
-
-    state.queryParams = state.queryParams;
-    await refreshFilterDisplayData();
-    refreshBacklinkPreview();
+    return panelDataCoordinator.updateRenderData();
   }
 
   async function pageTurning(pageNumParam) {
-    if (
-      pageNumParam < 1 ||
-      pageNumParam > state.backlinkFilterPanelRenderData.totalPage
-    ) {
-      return;
-    }
-
-    state.queryParams.pageNum = pageNumParam;
-    const pageBacklinkPanelRenderData =
-      await getTurnPageBacklinkPanelRenderData(
-        state.backlinkFilterPanelRenderData.rootId,
-        state.backlinkFilterPanelRenderData.backlinkBlockNodeArray,
-        state.queryParams,
-      );
-
-    state.backlinkFilterPanelRenderData = mergeTurnPageBacklinkPanelRenderData(
-      state.backlinkFilterPanelRenderData,
-      pageBacklinkPanelRenderData,
-    );
-    state.queryParams = state.queryParams;
-    refreshBacklinkPreview();
+    return panelDataCoordinator.pageTurning(pageNumParam);
   }
 
   function navigateBacklinkDocument(event, direction) {

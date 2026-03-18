@@ -29,9 +29,46 @@ test("backlink panel controller delegates editor registry and refresh tracking t
   );
 });
 
-test("document-group local refresh rebuilds grouped backlinks from current render data and only rerenders the target document", () => {
+test("backlink panel controller delegates preview refresh and document-group rerender to an extracted coordinator", () => {
   const source = readFileSync(
     new URL("../src/components/panel/backlink-panel-controller.js", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /import\s*\{[\s\S]*createBacklinkPreviewRenderCoordinator[\s\S]*\}\s*from "\.\/backlink-panel-controller-rendering\.js";/,
+  );
+  assert.match(
+    source,
+    /const previewRenderCoordinator = createBacklinkPreviewRenderCoordinator\(\s*\{[\s\S]*state,[\s\S]*renderBacklinkDocumentGroup,[\s\S]*groupBacklinksByDocument,[\s\S]*\}\s*\);/,
+  );
+  assert.match(source, /previewRenderCoordinator\.refreshBacklinkPreview\(\);/);
+  assert.match(source, /previewRenderCoordinator\.refreshBacklinkDocumentGroupById\(/);
+});
+
+test("backlink panel controller delegates filter display refresh and render-data updates to an extracted data coordinator", () => {
+  const source = readFileSync(
+    new URL("../src/components/panel/backlink-panel-controller.js", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /import\s*\{[\s\S]*createBacklinkPanelDataCoordinator[\s\S]*\}\s*from "\.\/backlink-panel-controller-data\.js";/,
+  );
+  assert.match(
+    source,
+    /const panelDataCoordinator = createBacklinkPanelDataCoordinator\(\s*\{[\s\S]*state,[\s\S]*refreshBacklinkPreview,[\s\S]*\}\s*\);/,
+  );
+  assert.match(source, /panelDataCoordinator\.refreshFilterDisplayData\(\);/);
+  assert.match(source, /panelDataCoordinator\.updateRenderData\(\);/);
+  assert.match(source, /panelDataCoordinator\.pageTurning\(pageNumParam\);/);
+});
+
+test("document-group local refresh rebuilds grouped backlinks from current render data and only rerenders the target document", () => {
+  const source = readFileSync(
+    new URL("../src/components/panel/backlink-panel-controller-rendering.js", import.meta.url),
     "utf8",
   );
 

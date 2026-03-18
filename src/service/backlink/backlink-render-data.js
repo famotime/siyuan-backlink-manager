@@ -3,6 +3,13 @@ import {
   getBacklinkContextExplanationFragments,
   matchBacklinkContextBundle,
 } from "./backlink-context.js";
+import {
+  extractNestedNodeDomById,
+  getBacklinkNodeSortComparator,
+  matchesBacklinkKeywords,
+  normalizeTargetBacklinkDom,
+  resolveBacklinkBlockNodeByContainer,
+} from "./backlink-render-data-dom.js";
 import { getBacklinkContextSourceRule } from "./backlink-context-rules.js";
 import { getBacklinkSourceWindowByLevel } from "./backlink-source-window.js";
 
@@ -96,110 +103,6 @@ export function buildBacklinkContextBudgetHint({
   }
 
   return "部分上下文已裁剪，继续展开查看更多";
-}
-
-function escapeRegExp(value = "") {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function extractNestedNodeDomById(dom = "", blockId = "") {
-  if (!dom || !blockId) {
-    return "";
-  }
-
-  const openTagRegExp = new RegExp(
-    `<div\\b[^>]*\\bdata-node-id=(["'])${escapeRegExp(blockId)}\\1[^>]*>`,
-    "i",
-  );
-  const openTagMatch = openTagRegExp.exec(dom);
-  if (!openTagMatch) {
-    return "";
-  }
-
-  const startIndex = openTagMatch.index;
-  const tokenRegExp = /<div\b[^>]*>|<\/div>/gi;
-  tokenRegExp.lastIndex = startIndex + openTagMatch[0].length;
-
-  let depth = 1;
-  let tokenMatch;
-  while ((tokenMatch = tokenRegExp.exec(dom))) {
-    if (/^<\/div/i.test(tokenMatch[0])) {
-      depth -= 1;
-      if (depth === 0) {
-        return dom.slice(startIndex, tokenRegExp.lastIndex);
-      }
-      continue;
-    }
-    depth += 1;
-  }
-
-  return "";
-}
-
-function normalizeTargetBacklinkDom(dom = "", blockId = "", deps = {}) {
-  const { extractTargetBacklinkDom, getBacklinkBlockId } = deps;
-  if (!dom || !blockId) {
-    return "";
-  }
-
-  const extractedDom =
-    typeof extractTargetBacklinkDom === "function"
-      ? extractTargetBacklinkDom(dom, blockId)
-      : "";
-  if (
-    extractedDom &&
-    (
-      typeof getBacklinkBlockId !== "function" ||
-      getBacklinkBlockId(extractedDom) === blockId
-    )
-  ) {
-    return extractedDom;
-  }
-
-  return extractNestedNodeDomById(dom, blockId);
-}
-
-function resolveBacklinkBlockNodeByContainer({
-  backlink,
-  backlinkBlockNodeMap,
-  backlinkBlockParentNodeMap,
-  getBacklinkBlockId,
-  extractTargetBacklinkDom,
-}) {
-  const rawBacklinkBlockId = getBacklinkBlockId(backlink.dom);
-  const directNode = backlinkBlockNodeMap.get(rawBacklinkBlockId);
-  if (directNode) {
-    return {
-      backlinkBlockId: rawBacklinkBlockId,
-      backlinkBlockNode: directNode,
-      normalizedDom: backlink.dom,
-    };
-  }
-
-  const parentCandidates = backlinkBlockParentNodeMap.get(rawBacklinkBlockId) || [];
-  for (const candidate of parentCandidates) {
-    const normalizedDom = normalizeTargetBacklinkDom(
-      backlink.dom,
-      candidate.block.id,
-      {
-        extractTargetBacklinkDom,
-        getBacklinkBlockId,
-      },
-    );
-    if (normalizedDom) {
-      return {
-        backlinkBlockId: candidate.block.id,
-        backlinkBlockNode: candidate,
-        normalizedDom,
-      };
-    }
-  }
-
-  return {
-    backlinkBlockId: rawBacklinkBlockId,
-    backlinkBlockNode: null,
-    normalizedDom: backlink.dom,
-  };
 }
 
 export function getBacklinkBlockId(dom, deps) {
@@ -501,16 +404,12 @@ export function isBacklinkBlockValid(queryParams, backlinkBlockNode, deps) {
       backlinkConcatContent = removeMarkdownRefBlockStyle(backlinkConcatContent).toLowerCase();
     }
     if (!contextBundle?.fragments?.length) {
-      const matchText = matchKeywords(
-        backlinkConcatContent,
-        keywordObj.includeText,
-        keywordObj.excludeText,
-      );
-      const matchAnchor = matchKeywords(
-        backlinkAllAnchorText,
-        keywordObj.includeAnchor,
-        keywordObj.excludeAnchor,
-      );
+      const { matchText, matchAnchor } = matchesBacklinkKeywords({
+        keywordObj,
+        searchableText: backlinkConcatContent,
+        searchableAnchorText: backlinkAllAnchorText,
+        matchKeywords,
+      });
       if (!matchText || !matchAnchor) {
         return false;
       }
@@ -545,72 +444,14 @@ export function isBacklinkBlockValid(queryParams, backlinkBlockNode, deps) {
 }
 
 export function backlinkBlockNodeArraySort(backlinkBlockArray, blockSortMethod, deps) {
-  const { getDefBlockSortFun } = deps;
   if (!backlinkBlockArray || backlinkBlockArray.length <= 0) {
     return;
   }
 
-  let backlinkBlockNodeSortFun;
-  switch (blockSortMethod) {
-    case "documentAlphabeticAsc":
-      backlinkBlockNodeSortFun = (a, b) => {
-        let result = a.documentBlock.content
-          .replace("<mark>", "")
-          .replace("</mark>", "")
-          .localeCompare(
-            b.documentBlock.content.replace("<mark>", "").replace("</mark>", ""),
-            undefined,
-            { sensitivity: "base", usage: "sort", numeric: true },
-          );
-        if (result === 0) {
-          result = a.block.content
-            .replace("<mark>", "")
-            .replace("</mark>", "")
-            .localeCompare(
-              b.block.content.replace("<mark>", "").replace("</mark>", ""),
-              undefined,
-              { sensitivity: "base", usage: "sort", numeric: true },
-            );
-        }
-        if (result === 0) {
-          result = Number(a.block.created) - Number(b.block.created);
-        }
-        return result;
-      };
-      break;
-    case "documentAlphabeticDesc":
-      backlinkBlockNodeSortFun = (a, b) => {
-        let result = b.documentBlock.content
-          .replace("<mark>", "")
-          .replace("</mark>", "")
-          .localeCompare(
-            a.documentBlock.content.replace("<mark>", "").replace("</mark>", ""),
-            undefined,
-            { sensitivity: "base", usage: "sort", numeric: true },
-          );
-        if (result === 0) {
-          result = b.block.content
-            .replace("<mark>", "")
-            .replace("</mark>", "")
-            .localeCompare(
-              a.block.content.replace("<mark>", "").replace("</mark>", ""),
-              undefined,
-              { sensitivity: "base", usage: "sort", numeric: true },
-            );
-        }
-        if (result === 0) {
-          result = Number(b.block.created) - Number(a.block.created);
-        }
-        return result;
-      };
-      break;
-    default: {
-      const blockSortFun = getDefBlockSortFun(blockSortMethod);
-      if (blockSortFun) {
-        backlinkBlockNodeSortFun = (a, b) => blockSortFun(a.block, b.block);
-      }
-    }
-  }
+  const backlinkBlockNodeSortFun = getBacklinkNodeSortComparator(
+    blockSortMethod,
+    deps,
+  );
 
   if (backlinkBlockNodeSortFun) {
     backlinkBlockArray.sort(backlinkBlockNodeSortFun);

@@ -218,6 +218,11 @@ Behavior invariants:
 | RF-004 | P1 | Explanation/meta pipeline separation | `src/service/backlink/backlink-context.js`, `src/service/backlink/backlink-render-data.js`, row/header helpers | done |
 | RF-005 | P1 | Host lifecycle ownership cleanup | plugin host services + controller integration | done |
 | RF-006 | P2 | Settings/type/naming cleanup | settings services and shared type definitions | done |
+| RF-007 | P1 | Render-data DOM helper extraction | `src/service/backlink/backlink-render-data.js`, related tests | done |
+| RF-008 | P1 | Panel data collector helper extraction | `src/service/backlink/backlink-panel-data-collectors.js`, related tests | done |
+| RF-009 | P1 | Render-data filter/sort helper extraction | `src/service/backlink/backlink-render-data.js`, related tests | done |
+| RF-010 | P1 | Panel controller preview/render coordinator extraction | `src/components/panel/backlink-panel-controller.js`, related tests | done |
+| RF-011 | P1 | Panel controller data refresh coordinator extraction | `src/components/panel/backlink-panel-controller.js`, related tests | done |
 
 ## 7. Recommended Order
 
@@ -257,3 +262,8 @@ That pair gives the best leverage with the least ambiguity: it attacks the two l
 | RF-004 | 2026-03-18 | done | `node --test tests/backlink-context-helpers.test.js tests/backlink-context-fragments.test.js` | 已拆出 `backlink-context-meta.js` 和 `backlink-context-match.js`，把 meta 生成与 match/reset 细节从主 bundle 文件中分离 |
 | RF-005 | 2026-03-18 | done | `node --test tests/document-service-host-lifecycle.test.js tests/document-service-focus-sync.test.js tests/backlink-panel-host.test.js` | 已拆出 `document-backlink-host-lifecycle.js`，把 DocumentService 的底部面板复用/挂载决策下沉到独立 host helper |
 | RF-006 | 2026-03-18 | done | `node --test tests/setting-service-api.test.js tests/setting-config-resolver.test.js` | `SettingService` 新增正确拼写的 `updateSettingConfig*` API，并保留旧 typo 方法作为兼容别名 |
+| RF-007 | 2026-03-18 | done | `node --test tests/backlink-render-data-helpers.test.js tests/backlink-render-data.test.js` | 已拆出 `backlink-render-data-dom.js`，把 DOM 提取、嵌套节点归一化和容器回填逻辑从 `backlink-render-data.js` 分离 |
+| RF-008 | 2026-03-18 | done | `node --test tests/backlink-panel-data-collector-helpers.test.js tests/backlink-panel-data-collectors.test.js` | 已拆出 `backlink-panel-data-collector-helpers.js`，把 markdown 拼接、block id 路径拼接和 related-def 跟踪逻辑从 collectors 主文件分离 |
+| RF-009 | 2026-03-18 | done | `node --test tests/backlink-render-data-helpers.test.js tests/backlink-render-data.test.js` | 在 `backlink-render-data-dom.js` 中继续抽出 `matchesBacklinkKeywords` 和 `getBacklinkNodeSortComparator`，主文件的搜索/排序路径进一步收敛为编排层 |
+| RF-010 | 2026-03-18 | done | `node --test tests/backlink-panel-controller-local-refresh.test.js tests/backlink-panel-controller-forwarding.test.js tests/backlink-panel-controller-focus-refresh.test.js` | 已拆出 `backlink-panel-controller-rendering.js`，把 preview refresh 与 document-group rerender 协调逻辑从主控制器中分离 |
+| RF-011 | 2026-03-18 | done | `node --test tests/backlink-panel-controller-local-refresh.test.js tests/backlink-panel-controller-forwarding.test.js tests/backlink-panel-controller-focus-refresh.test.js` | 已拆出 `backlink-panel-controller-data.js`，把 filter display refresh、render-data refresh 和 page turning 协调逻辑从主控制器中分离 |

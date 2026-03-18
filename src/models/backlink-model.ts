@@ -92,6 +92,8 @@ export interface IBacklinkContextMetaInfoField {
 
 export interface IBacklinkContextMetaInfo {
     documentTitle?: IBacklinkContextMetaInfoField;
+    headingPath?: IBacklinkContextMetaInfoField;
+    listPath?: IBacklinkContextMetaInfoField;
     matchedFieldKeys: string[];
     matchSummaryList: string[];
     primaryMatchKey?: string;

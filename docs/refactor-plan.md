@@ -1,158 +1,116 @@
-# 上下文状态渐进显示规则实施清单
+# 反链页签上下文规则差异分析与改进计划
 
-## 1. Project Snapshot
+## 1. Snapshot
 
-- Generated on: 2026-03-17
-- Scope: 反链页签上下文状态规划、正文渲染、说明层模型、交互重算
-- Goal: 让实现严格符合 `docs/上下文状态渐进显示规则.md`
+- Generated on: 2026-03-18
+- Scope: 反链页签 `core / nearby / extended / full` 正文范围、定位信息、DOM 过滤、渲染入口、测试基线
+- Goal: 让当前实现重新严格对齐 `docs/上下文状态渐进显示规则.md`
+- Note: 这份计划以当前仓库代码为准。旧计划里已标记 `done` 的条目，如果与当前实现或用户反馈不一致，不再视为已完成。
 
 ## 2. Hard Constraints
 
-后续实现必须同时满足以下硬约束，任何一条不满足都视为未完成：
+后续调整必须同时满足以下硬约束：
 
-1. 正文必须直接来自原文块或原文 DOM
-2. 正文必须是连续原文区间，只允许裁上下边界，不允许删除中间块
-3. 正文显示顺序必须严格等于原文顺序
-4. 正文必须原样渲染，不允许用 preview/fragment 重组结果替代
-5. `core / nearby / extended / full` 只负责决定区间边界，不负责在区间内部打洞
-6. 命中来源、摘要、路径、预算提示属于解释层，不得驱动正文排序或正文裁剪
-7. 编辑、拖拽、折叠变化后，保持当前档位不变，并按最新原文重算连续区间
+1. 正文主链只能来自原文块和原文 DOM，不能回退到 preview/fragment 重组。
+2. `bodyRange.windowBlockIds` 必须代表单一连续原文区间。
+3. `startBlockId / endBlockId` 必须与实际加载区间一致，不能跳过结构壳或标题行。
+4. `orderedVisibleBlockIds / collapsedBlockIds` 只负责结构展开策略，不能改写正文顺序，也不能让正文脱离 `bodyRange`。
+5. 标题路径、列表路径、命中来源、摘要属于定位/解释层，不计入正文范围，但必须可见。
+6. 切换档位、切换反链、编辑或拖拽后，必须保持当前档位并按最新原文重新计算。
 
-## 3. Architecture and Module Analysis
+## 3. Verified Gaps
 
-| Module | Key Files | Current Responsibility | Main Gap | Target State |
+| ID | Priority | Rule Reference | Current Code | Problem | Impact |
+| --- | --- | --- | --- | --- | --- |
+| GAP-001 | P0 | 正文必须是连续原文；大范围允许折叠占位 | `src/service/backlink/backlink-source-window.js`, `src/components/panel/backlink-protyle-dom.js` | planner 仍生成 `orderedVisibleBlockIds / collapsedBlockIds`，但渲染层没有真正消费 `collapsedBlockIds`；列表 `core/nearby` 实际显示会退化成“整个 bodyRange 全开” | 核心层和近邻层无法按规则只保留壳层、焦点块和有限邻居，用户看到的范围过大且不稳定 |
+| GAP-002 | P0 | 标题块 `nearby` 应显示“前一个段落 + 当前标题 + 后一个正文块” | `src/service/backlink/backlink-source-window.js` | 标题 `nearby` 目前只是向前/向后找“最近的非标题兄弟块”，没有区分“段落/正文块”和“结构容器块”，规则语义被简化了 | 标题行反链在列表、表格、容器邻接场景下会取错上下文，用户反馈的“标题行近邻不对”与此一致 |
+| GAP-003 | P0 | `startBlockId / endBlockId` 必须反映真实正文边界 | `src/service/backlink/backlink-source-window.js`, `src/components/panel/backlink-document-interaction.js` | 非列表 `nearby` 会把 `startBlockId` 改写为列表项的第一个子块，而不是结构壳本身；渲染层又直接拿这个值作为 `scrollAttr.startId` | 会出现标题壳、列表项壳或标题前衔接块被跳过，形成“标题内容缺失未显示”或边界内容不完整 |
+| GAP-004 | P0 | 正文区间外内容不能被偷偷带回正文 | `src/components/panel/backlink-protyle-dom.js` | `collectVisibleBlockIdsFromExpandedListShells` 会把不在 `windowBlockIds` 内的列表项内联后代重新加回可见集合 | `bodyRange` 不再是唯一事实来源，正文边界会被 DOM 展开逻辑突破，导致“显示内容不完全按规则区间” |
+| GAP-005 | P1 | 定位信息与正文范围分开计算 | `src/service/backlink/backlink-context.js`, `src/components/panel/backlink-document-row.js` | 当前 `metaInfo` 只有 `documentTitle`，UI 头部也只渲染“来源标签 + 摘要”；标题路径、列表路径没有建模也没有展示 | 用户缺少“这条反链属于哪个标题节/列表层级”的定位线索，容易误判正文是否正确 |
+| GAP-006 | P1 | 标题块 `extended` 应从“标题前一个段落所在标题节”向上扩展 | `src/service/backlink/backlink-source-window.js` | 标题 `extended` 向上扩展时仅依据 `focusIndex - 1` 所在位置反推最近标题；当标题前没有正文、只有另一个标题时，仍可能把前一节硬带入 | 标题节扩展边界在连续标题场景下不稳定，和正式规则仍有偏差 |
+| GAP-007 | P1 | 正文顺序与规则必须以真实渲染链路验证 | `tests/backlink-source-window.test.js`, `tests/backlink-protyle-dom.test.js`, `tests/backlink-document-interaction.test.js` | 现有测试大多是 planner 级合成数组，缺少 `scrollAttr + Protyle DOM + sourceWindow` 联合验证，也缺少标题路径/列表路径 UI 断言 | 旧测试可以通过，但用户仍能在真实界面看到标题缺失、边界错位、展开态不符合规则 |
+
+## 4. Module Analysis
+
+| Module | Files | Current Responsibility | Main Issue | Target State |
 | --- | --- | --- | --- | --- |
-| 规则基线 | `docs/上下文状态渐进显示规则.md` | 正式规则定义 | 新硬约束刚补入，需要代码与测试同步 | 文档、实现、测试三者一致 |
-| 区间规划 | `src/service/backlink/backlink-source-window.js` | 计算 `core/nearby/extended` 窗口和 `contextPlan` | 仍混用“连续窗口”和“稀疏可见块”语义；部分场景边界不符合规则 | 输出单一连续原文区间模型 |
-| 正文过滤 | `src/components/panel/backlink-protyle-dom.js` | 基于 `sourceWindow/contextPlan` 隐藏非正文块 | 当前支持区间内 selective visible，可能打洞 | 只隐藏区间外块，区间内连续显示 |
-| 正文渲染 | `src/components/panel/backlink-protyle-rendering.js` | 控制展开、折叠、初次渲染 | 扩展态默认全展开，与“连续区间 + 原样渲染”未完全解耦 | 渲染只消费连续区间，不再重排正文 |
-| 说明层模型 | `src/service/backlink/backlink-context.js`, `src/service/backlink/backlink-context-rules.js` | 命中来源、摘要、预算、过滤辅助 | 旧 sourceType 模型仍带有正文语义残留 | 降级为 explanation/search 辅助层 |
-| 预览兼容 | `src/service/backlink/backlink-preview-assembly.js` | 片段预览和兼容逻辑 | 容易与“原文正文主链路”冲突 | 从反链页签正文链路退出 |
-| 数据装配 | `src/service/backlink/backlink-data.ts` | 把 planner、bundle、render data 串起来 | 仍同时挂载旧模型与新模型 | 保留 planner 主链，兼容信息边缘化 |
-| 交互重算 | `src/components/panel/backlink-panel-controller.js`, `src/components/panel/backlink-document-view-state.js` | 切换层级、切换文档、刷新局部状态 | 编辑/拖拽后的局部重算闭环不完整 | 同档位重算并保持连续原文区间 |
+| planner | `src/service/backlink/backlink-source-window.js` | 生成 `bodyRange / orderedVisibleBlockIds / collapsedBlockIds` | 边界、壳层、折叠策略没有形成单一可执行契约 | 输出“连续区间 + 合法折叠策略 + 不跳壳层”的统一 planner |
+| DOM filtering | `src/components/panel/backlink-protyle-dom.js` | 根据窗口隐藏或保留 DOM 块 | 仍存在把窗口外后代重新带回来的逻辑 | 只隐藏窗口外块；结构展开不能突破 `bodyRange` |
+| render entry | `src/components/panel/backlink-document-interaction.js` | 生成 `scrollAttr` 并驱动 Protyle 加载 | 直接信任被改写过的 `startBlockId / endBlockId`，导致边界块缺失 | 渲染入口严格加载 planner 定义的真实区间 |
+| explanation/meta | `src/service/backlink/backlink-context.js`, `src/components/panel/backlink-document-row.js` | 生成来源摘要并在头部展示 | 缺少标题路径、列表路径等定位元信息 | 正文与定位信息严格分层，且头部能完整解释“这条反链属于哪里” |
+| tests | `tests/backlink-source-window.test.js`, `tests/backlink-protyle-dom.test.js`, `tests/backlink-document-interaction.test.js`, `tests/backlink-document-row.test.js` | 规则回归保护 | 真实渲染链路覆盖不足，旧断言掩盖了 integration gap | 用规则样例覆盖 planner、渲染、DOM、头部四层 |
 
-## 4. Prioritized Implementation Backlog
+## 5. Prioritized Backlog
 
-| ID | Priority | Module/Scenario | Files in Scope | Objective | Risk | Pre-Implementation Checklist | Status |
+| ID | Priority | Scope | Files | Objective | Risk | Pre-Implementation Checklist | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| RF-CTX-001 | P0 | 连续原文区间模型收口 | `src/service/backlink/backlink-source-window.js`, `tests/backlink-source-window.test.js` | 把 `sourceWindow/contextPlan` 收敛为“连续原文区间”模型；`windowBlockIds` 成为正文唯一范围事实来源 | High | - [x] 新增“区间内不打洞”测试; - [x] 新增“顺序必须等于原文顺序”测试; - [x] 审核所有返回字段的语义 | done |
-| RF-CTX-002 | P0 | `nearby` 场景边界重算 | `src/service/backlink/backlink-source-window.js`, `tests/backlink-source-window.test.js` | 分别修正普通块、标题块、列表场景的 `nearby` 连续边界；实现“同父级优先”和标题专用规则 | High | - [x] 普通块同父级优先; - [x] 标题前段落/后正文入口; - [x] 列表邻居只由边界控制，不靠中间隐藏 | done |
-| RF-CTX-003 | P0 | `extended` 场景边界重算 | `src/service/backlink/backlink-source-window.js`, `tests/backlink-source-window.test.js` | 修正所属标题节、首个标题前前言区、无标题兜底的连续边界 | High | - [x] 首个标题前普通块; - [x] 首个标题前列表块; - [x] 多级标题下同级/更高级边界; - [x] 无标题列表兜底 | done |
-| RF-CTX-004 | P0 | 正文 DOM 过滤不打洞 | `src/components/panel/backlink-protyle-dom.js`, `tests/backlink-protyle-dom.test.js` | 移除区间内 selective visible 逻辑，只保留“隐藏边界外块”能力 | High | - [x] 区间内所有原文块保持连续可见; - [x] 祖先容器仍正确保留; - [x] 不再基于 `visibleBlockIds` 删除中间块 | done |
-| RF-CTX-005 | P0 | 正文渲染链路原样化 | `src/components/panel/backlink-protyle-rendering.js`, `tests/backlink-protyle-rendering.test.js` | 让正文渲染只消费连续区间，不再依赖 preview/fragment 语义进行正文裁剪 | Medium | - [x] nearby/extended 不再以内部稀疏可见为前提; - [x] 扩展态展开行为不破坏连续性; - [x] showFullDocument 仍保留全文模式 | done |
-| RF-CTX-006 | P1 | explanation/search 与正文分层 | `src/service/backlink/backlink-context.js`, `src/service/backlink/backlink-context-rules.js`, `src/components/panel/backlink-document-row.js`, `tests/backlink-context-fragments.test.js` | 让旧 `contextBundle` 仅负责命中来源、摘要、预算、过滤辅助，不再暗示正文结构 | Medium | - [x] 命中来源文案不再冒充正文范围; - [x] summary 顺序与正文顺序隔离; - [x] 旧 sourceType 仅服务 explanation | done |
-| RF-CTX-007 | P1 | 预览链路降级退出正文主路径 | `src/service/backlink/backlink-preview-assembly.js`, 相关调用方和测试 | 明确 preview 只用于异常降级或兼容，不参与反链页签正式正文显示 | Medium | - [x] 梳理正文主链是否仍引用 preview; - [x] 异常降级场景显式标记; - [x] 相关隔离测试更新 | done |
-| RF-CTX-008 | P1 | 编辑/拖拽后的同档位重算 | `src/components/panel/backlink-panel-controller.js`, `src/components/panel/backlink-document-view-state.js`, `src/service/backlink/backlink-data.ts`, 交互测试 | 建立“保持当前档位 + 按最新原文重算连续区间”的局部刷新闭环 | Medium | - [x] 编辑后重算; - [x] 拖拽后重算; - [x] 文档组局部刷新保留必要状态 | done |
-| RF-CTX-009 | P2 | 数据装配去双轨 | `src/service/backlink/backlink-data.ts`, 相关模型与测试 | 减少 `sourceWindow` legacy root 字段和正文链路中的历史兼容分支 | Low | - [x] 正文只读 planner 主链; - [x] legacy 字段仅保底兼容; - [x] 数据结构注释更新 | done |
-| RF-CTX-010 | P2 | 文档与测试资产同步 | `docs/上下文状态渐进显示规则.md`, `docs/refactor-plan.md`, `tests/*` | 在规则、计划、测试之间建立一致的验收口径 | Low | - [ ] 文档示例更新; - [ ] 测试命名与规则术语对齐; - [ ] 删除固化旧行为的断言 | pending |
+| RF-CTX-011 | P0 | 折叠策略真正落地 | `src/service/backlink/backlink-source-window.js`, `src/components/panel/backlink-protyle-dom.js`, `src/components/panel/backlink-protyle-rendering.js`, 相关测试 | 让 `orderedVisibleBlockIds / collapsedBlockIds` 真正驱动列表 `core/nearby` 的展开范围，但绝不突破 `bodyRange` | High | - [x] 列表 `core` 只见壳层 + 焦点 + 必要标题文本; - [x] 列表 `nearby` 只见邻居壳层和允许的首层直接子项; - [x] 不再默认显示整棵子树 | done |
+| RF-CTX-012 | P0 | 标题 `nearby` 专用 planner | `src/service/backlink/backlink-source-window.js`, `tests/backlink-source-window.test.js`, `tests/backlink-document-interaction.test.js` | 不再用“最近非标题块”代替正式规则，改成“前一个段落 + 当前标题 + 后一个正文块”的显式算法 | High | - [x] 前一块为列表容器; - [x] 前一块为连续标题; - [x] 后一块为列表/表格/引述; - [x] 无前段落时不能误拉上一个标题节 | done |
+| RF-CTX-013 | P0 | 修正 `startBlockId / endBlockId` 与真实区间的一致性 | `src/service/backlink/backlink-source-window.js`, `src/components/panel/backlink-document-interaction.js`, 相关测试 | 移除会跳过壳层的边界改写，保证 `scrollAttr` 加载的区间与正文规则一致 | High | - [x] 标题前列表项不会被截掉壳层; - [x] 邻居为列表项时标题文本不丢; - [x] Protyle 首次渲染包含边界结构块 | done |
+| RF-CTX-014 | P0 | DOM 不能突破 planner 窗口 | `src/components/panel/backlink-protyle-dom.js`, `tests/backlink-protyle-dom.test.js` | 移除“可见列表壳自动把窗口外内联后代带回”这类越界逻辑 | High | - [x] 所有可见块都属于 `windowBlockIds` 或祖先容器; - [x] 展开列表壳不会额外露出窗口外正文; - [x] 正文顺序保持原文顺序 | done |
+| RF-CTX-015 | P1 | 标题节扩展规则补齐 | `src/service/backlink/backlink-source-window.js`, `tests/backlink-source-window.test.js` | 把标题 `extended` 改为严格基于“标题前一个段落所在节 + 当前标题节”，避免连续标题误扩展 | Medium | - [x] 当前标题前仅有标题时不误拉上节; - [x] 当前标题前有正文时按正文所属节向上扩; - [x] 多级标题边界保持同级或更高级切断 | done |
+| RF-CTX-016 | P1 | 增加标题路径/列表路径定位层 | `src/service/backlink/backlink-context.js`, `src/components/panel/backlink-document-row.js`, `src/models/backlink-model.ts`, 相关测试 | 在 explanation/meta 层补齐 `headingPath`、`listPath`，头部显式展示定位信息 | Medium | - [x] 文档名、标题路径、列表路径不进入正文; - [x] 头部能解释“所属标题节”; - [x] 搜索命中摘要与路径信息分层显示 | done |
+| RF-CTX-017 | P1 | 规则样例 integration 回归 | `tests/backlink-source-window.test.js`, `tests/backlink-protyle-dom.test.js`, `tests/backlink-document-interaction.test.js`, `tests/backlink-document-row.test.js` | 把用户反馈场景做成跨 planner/DOM/UI 的回归测试矩阵 | Medium | - [x] 扩展态按所属标题节显示; - [x] 标题内容不缺失; - [x] 标题行近邻正确; - [x] 内容顺序与原文一致; - [x] 中间无缺口 | done |
+| RF-CTX-018 | P2 | 清理旧计划与兼容语义 | `docs/refactor-plan.md`, `docs/反链上下文基线与术语表.md`, 相关注释 | 把“已完成但未闭环”的旧描述清理掉，避免后续判断失真 | Low | - [x] 文档状态与代码状态一致; - [x] 保留兼容说明但不再误标 done | done |
 
 Priority definition:
 
-- `P0`: 直接影响规则正确性，必须先完成
-- `P1`: 影响主链收口和交互稳定性，在 P0 后完成
-- `P2`: 清理与一致性工作，最后完成
+- `P0`: 直接影响规则正确性或用户当前可见行为
+- `P1`: 影响定位解释、边界稳定性和回归保护
+- `P2`: 文档与兼容清理
 
-## 5. Detailed Execution Checklist
+## 6. Pre-Refactor Test Matrix
 
-### Phase 1. 先锁死测试基线
+### Planner
 
-1. 在 `tests/backlink-source-window.test.js` 增加以下规则测试
-- 普通块 `nearby` 只取同父级前后块，且结果保持连续原文顺序
-- 标题块 `nearby` 取“前一个段落 + 当前标题 + 后一个正文块”
-- 列表子块 `nearby` 通过边界得到连续原文，不再依赖中间隐藏
-- 普通块位于首个标题前时，`extended` 为前言连续区间
-- 列表子块位于首个标题前时，`extended` 仍为前言连续区间，而不是仅顶层列表子树
-- 无标题列表 `extended` 使用顶层结构容器连续区间
+1. 标题块 `nearby` 前一块是段落、列表、连续标题三种情况。
+2. 标题块 `extended` 前面有正文、没有正文、前面只有低级标题三种情况。
+3. 普通块 `nearby` 邻居为列表项、列表容器、标题三种情况。
+4. 列表子块 `core` 只展示壳层、必要标题文本和焦点块，其他后代默认折叠。
+5. 列表子块 `nearby` 只展示当前项、前后同级项，以及规则允许的直接子项。
 
-2. 在 `tests/backlink-protyle-dom.test.js` 增加以下 DOM 约束测试
-- 一旦 `windowBlockIds` 确定，区间内部块不允许被隐藏
-- `visibleBlockIds` 或 `collapsedBlockIds` 不得再造成中间块消失
-- 区间边界内的祖先容器仍保持可见，且顺序不变
+### DOM / Rendering
 
-3. 在 `tests/backlink-protyle-rendering.test.js` 增加以下渲染测试
-- `nearby` 和 `extended` 仅按连续区间裁边界
-- 扩展态不依赖 preview 主链
-- 全文态仍保持原样渲染，不受 planner 特殊裁剪影响
+1. `scrollAttr.startId / endId` 与 `bodyRange.startBlockId / endBlockId` 一致。
+2. `windowBlockIds` 内不允许缺口，窗口外块不允许回流进入正文。
+3. 展开可见列表壳时，窗口外后代不能被补回。
+4. 标题壳、列表壳、焦点块在首次渲染时都能出现在 DOM 中。
 
-### Phase 2. 重写 planner 为连续区间模型
+### Header / Meta
 
-1. 在 `backlink-source-window.js` 明确两个概念
-- `bodyRange.windowBlockIds`: 正文唯一连续区间
-- `orderedVisibleBlockIds`: 如保留，只能等于连续区间本身或用于非正文辅助，不得用于正文打洞
+1. 文档头部显示文档名、标题路径、列表路径、命中来源、摘要。
+2. 标题路径和列表路径不参与正文裁剪。
+3. 没有路径信息时有明确降级行为，不伪装成正文。
 
-2. 重写 `buildNearbyBacklinkSourceWindow`
-- 普通块：先找同父级前后相邻块，再求最小连续边界
-- 标题块：单独走标题规则，不再复用普通块线性前后索引
-- 列表块：仍以列表壳为锚点，但产出的是连续原文边界，不是稀疏可见项集合
+## 7. Execution Order
 
-3. 重写 `buildExtendedBacklinkSourceWindow`
-- 标题文档内：严格按所属标题节
-- 标题块本身：向上扩到“前一个段落所在标题节”，向下扩到当前标题节
-- 首个标题前：统一进入前言区连续边界，不因是否在列表内改走无标题兜底
-- 仅在整篇无标题时才允许走结构容器兜底
+1. 先做 `RF-CTX-017` 中最小失败测试，复现用户反馈的 5 类问题。
+2. 再执行 `RF-CTX-013` 和 `RF-CTX-012`，先把错误边界和缺失标题修正。
+3. 接着执行 `RF-CTX-011` 和 `RF-CTX-014`，让折叠策略和 DOM 过滤重新闭环。
+4. 然后执行 `RF-CTX-015`，补齐标题节扩展边界。
+5. 最后执行 `RF-CTX-016` 和 `RF-CTX-018`，补定位层和文档同步。
 
-### Phase 3. 移除正文打洞能力
+## 8. Approval Gate
 
-1. 修改 `hideBlocksOutsideBacklinkSourceWindow`
-- 只依据连续区间隐藏边界外块
-- 删除或降级“区间内显式可见块集合”逻辑
-- 保留祖先容器展开和原生结构可见性处理
+建议先批准以下实现顺序：
 
-2. 校正展开逻辑
-- 扩展态允许结构展开，但不能以折叠为名删除区间中间块
-- 如需保留折叠，只能保留原文原生结构折叠，不改变正文块线性顺序
+1. `RF-CTX-017`
+2. `RF-CTX-013`
+3. `RF-CTX-012`
+4. `RF-CTX-011`
+5. `RF-CTX-014`
 
-### Phase 4. 收敛 explanation 与 preview
+这五项先完成后，才能判断“扩展态不按标题节显示、标题内容缺失、标题近邻错误、顺序异常、内容缺口”是否已经被根治；`RF-CTX-015` 和 `RF-CTX-016` 适合在主链稳定后继续推进。
 
-1. `contextBundle` 改为 explanation/search 层
-- 保留 match summary、source label、budget hint
-- 移除其对正文 visibility 的暗示性语义
+## 9. Execution Log
 
-2. `backlink-preview-assembly.js` 改为降级专用
-- 梳理调用点
-- 确保反链页签正文不再依赖它
-- 异常降级 UI 需要显式标注“降级结果”
-
-### Phase 5. 打通交互重算闭环
-
-1. 梳理触发点
-- 编辑完成
-- 拖拽完成
-- 折叠/结构变化完成
-
-2. 建立统一重算入口
-- 输入当前文档、当前档位、当前焦点
-- 输出新的连续区间 planner
-- 局部刷新当前文档组
-
-3. 回归验证
-- 当前档位保持不变
-- 焦点块仍可定位
-- 正文仍连续、顺序仍正确、渲染仍来自原文
-
-## 6. Execution Log
-
-| ID | Start Date | End Date | Test Commands | Result | Notes |
-| --- | --- | --- | --- | --- | --- |
-| RF-CTX-001 | 2026-03-17 | 2026-03-17 | `node --test tests/backlink-source-window.test.js`; `node --test tests/*.test.js` | pass | `contextPlan` 与 `sourceWindow` 的正文主语义已收敛到连续原文区间，`orderedVisibleBlockIds` 与连续窗口保持一致，不再表达正文打洞语义 |
-| RF-CTX-002 | 2026-03-17 | 2026-03-17 | `node --test tests/backlink-source-window.test.js`; `node --test tests/*.test.js` | pass | `nearby` 已按普通块、标题块、列表场景分别计算连续边界，补上“同父级优先”和“标题 nearby 不回拉前一个标题”规则 |
-| RF-CTX-003 | 2026-03-17 | 2026-03-17 | `node --test tests/backlink-source-window.test.js`; `node --test tests/*.test.js` | pass | `extended` 已修正为：有标题文档优先标题节或前言区，无标题文档才走结构容器兜底；首个标题前列表块不再错误降级为仅容器子树 |
-| RF-CTX-004 | 2026-03-17 | 2026-03-17 | `node --test tests/backlink-protyle-dom.test.js`; `node --test tests/backlink-protyle-rendering.test.js`; `node --test tests/*.test.js` | pass | DOM 过滤已改为只隐藏连续区间外块， legacy `visibleBlockIds/collapsedBlockIds` 不再导致正文中间块消失 |
-| RF-CTX-005 | 2026-03-17 | 2026-03-17 | `node --test tests/backlink-document-interaction.test.js`; `node --test tests/backlink-protyle-rendering.test.js`; `node --test tests/*.test.js` | pass | 正文渲染仍只消费原文 DOM 与 source window 连续区间；无 source window 时只退回原始 backlink DOM，不引入 preview 主链依赖 |
-| RF-CTX-006 | 2026-03-17 | 2026-03-17 | `node --test tests/backlink-context-fragments.test.js tests/backlink-document-row.test.js tests/backlink-panel-header.test.js`; `node --test tests/*.test.js` | pass | 已新增 explanation-layer helper，UI 不再直接读取 `contextBundle` 内部规则字段拼装说明文案，命中来源与摘要统一经说明层接口输出 |
-| RF-CTX-007 | 2026-03-17 | 2026-03-17 | `node --test tests/backlink-preview-isolation.test.js`; `node --test tests/backlink-document-interaction.test.js`; `node --test tests/*.test.js` | pass | 生产正文链路继续保持无 preview import；异常降级与隔离测试已同步到“正文只认原文区间”的现状 |
-| RF-CTX-008 | 2026-03-17 | 2026-03-17 | `node --test tests/backlink-panel-controller-local-refresh.test.js tests/backlink-protyle-rendering.test.js`; `node --test tests/*.test.js` | pass | 当前档位下的 focusout/drop 局部重算链路保持有效，编辑/拖拽后仍按最新 base data + render data 重算连续区间 |
-| RF-CTX-009 | 2026-03-17 | 2026-03-17 | `node --test tests/backlink-document-navigation.test.js tests/backlink-render-data.test.js`; `node --test tests/*.test.js` | pass | 生产消费者进一步改为通过统一 getter/helper 读取 source window 与排序语义，legacy `sourceWindow/sourceDocumentOrder` 仅保留兼容用途 |
-| RF-CTX-010 |  |  |  |  |  |
-
-## 7. Decision and Confirmation
-
-- User approved items:
-- Deferred items:
-- Blocked items and reasons:
-
-## 8. Next Actions
-
-1. 先执行 `RF-CTX-001` 到 `RF-CTX-004`，把“连续原文区间”做成不可回退的测试基线
-2. 再执行 `RF-CTX-005` 到 `RF-CTX-007`，清理正文主链中的 preview 和旧正文语义
-3. 最后执行 `RF-CTX-008` 到 `RF-CTX-010`，补齐交互重算与双轨清理
+| ID | Date | Result | Evidence |
+| --- | --- | --- | --- |
+| RF-CTX-011 | 2026-03-18 | done | `node --test tests/backlink-protyle-rendering.test.js`; `node --test tests/*.test.js`; `npm run build` |
+| RF-CTX-012 | 2026-03-18 | done | `node --test tests/backlink-source-window.test.js`; `node --test tests/*.test.js` |
+| RF-CTX-013 | 2026-03-18 | done | `node --test tests/backlink-source-window.test.js`; `node --test tests/backlink-document-interaction.test.js`; `node --test tests/*.test.js` |
+| RF-CTX-014 | 2026-03-18 | done | `node --test tests/backlink-protyle-dom.test.js`; `node --test tests/*.test.js` |
+| RF-CTX-015 | 2026-03-18 | done | `node --test tests/backlink-source-window.test.js`; `node --test tests/*.test.js` |
+| RF-CTX-016 | 2026-03-18 | done | `node --test tests/backlink-document-row.test.js tests/backlink-context-fragments.test.js`; `node --test tests/*.test.js` |
+| RF-CTX-017 | 2026-03-18 | done | `node --test tests/backlink-source-window.test.js tests/backlink-protyle-dom.test.js tests/backlink-protyle-rendering.test.js tests/backlink-document-row.test.js tests/backlink-context-fragments.test.js`; `node --test tests/*.test.js` |
+| RF-CTX-018 | 2026-03-18 | done | 文档已同步更新本计划与基线说明 |

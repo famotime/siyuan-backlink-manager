@@ -312,7 +312,7 @@ test("hideBlocksOutsideBacklinkSourceWindow unfolds folded ancestor list items f
   assert.ok(innerItem.removedAttributes.includes("fold"));
 });
 
-test("hideBlocksOutsideBacklinkSourceWindow keeps descendant blocks visible when a list item container is in the window", () => {
+test("hideBlocksOutsideBacklinkSourceWindow keeps descendant blocks visible only when they are part of the source window", () => {
   const makeBlock = (id, dataType = "") => ({
     id,
     parentElement: null,
@@ -361,7 +361,7 @@ test("hideBlocksOutsideBacklinkSourceWindow keeps descendant blocks visible when
     {
       sourceWindows: {
         nearby: {
-          windowBlockIds: ["item-a"],
+          windowBlockIds: ["item-a", "block-a"],
         },
       },
     },
@@ -372,6 +372,69 @@ test("hideBlocksOutsideBacklinkSourceWindow keeps descendant blocks visible when
   assert.deepEqual(itemBlock.classList.removed, ["fn__none"]);
   assert.deepEqual(textBlock.classList.removed, ["fn__none"]);
   assert.deepEqual(otherBlock.classList.added, ["fn__none"]);
+});
+
+test("hideBlocksOutsideBacklinkSourceWindow does not bring back list descendants that are outside the source window", () => {
+  const makeBlock = (id, dataType = "") => ({
+    id,
+    parentElement: null,
+    getAttribute(name) {
+      if (name === "data-node-id") {
+        return id;
+      }
+      if (name === "data-type") {
+        return dataType;
+      }
+      return null;
+    },
+    querySelectorAll() {
+      return [];
+    },
+    classList: {
+      added: [],
+      removed: [],
+      add(name) {
+        this.added.push(name);
+      },
+      remove(name) {
+        this.removed.push(name);
+      },
+    },
+  });
+
+  const itemBlock = makeBlock("item-a", "NodeListItem");
+  const textBlock = makeBlock("block-a", "NodeParagraph");
+  const nestedTextBlock = makeBlock("block-b", "NodeParagraph");
+  itemBlock.querySelectorAll = () => [textBlock, nestedTextBlock];
+  textBlock.parentElement = itemBlock;
+  nestedTextBlock.parentElement = itemBlock;
+
+  const protyleWysiwygElement = {
+    querySelectorAll() {
+      return [itemBlock, textBlock, nestedTextBlock];
+    },
+  };
+  const protyleContentElement = {
+    querySelector() {
+      return protyleWysiwygElement;
+    },
+  };
+
+  hideBlocksOutsideBacklinkSourceWindow(
+    {
+      sourceWindows: {
+        nearby: {
+          windowBlockIds: ["item-a", "block-a"],
+        },
+      },
+    },
+    protyleContentElement,
+    "nearby",
+  );
+
+  assert.deepEqual(itemBlock.classList.removed, ["fn__none"]);
+  assert.deepEqual(textBlock.classList.removed, ["fn__none"]);
+  assert.deepEqual(nestedTextBlock.classList.added, ["fn__none"]);
 });
 
 test("hideBlocksOutsideBacklinkSourceWindow keeps the full continuous window visible even when legacy visibleBlockIds are narrower", () => {
@@ -867,7 +930,7 @@ test("hideBlocksOutsideBacklinkSourceWindow refreshes the DOM block snapshot aft
   assert.deepEqual(neighborText.classList.removed, ["fn__none"]);
 });
 
-test("hideBlocksOutsideBacklinkSourceWindow keeps inline text descendants of visible list item shells even when their ids are not in the source window", () => {
+test("hideBlocksOutsideBacklinkSourceWindow does not keep inline text descendants when their ids are outside the source window", () => {
   const makeBlock = (id, dataType = "") => ({
     id,
     parentElement: null,
@@ -929,6 +992,6 @@ test("hideBlocksOutsideBacklinkSourceWindow keeps inline text descendants of vis
   );
 
   assert.deepEqual(itemShell.classList.removed, ["fn__none"]);
-  assert.deepEqual(inlineText.classList.removed, ["fn__none"]);
+  assert.deepEqual(inlineText.classList.added, ["fn__none"]);
   assert.deepEqual(otherBlock.classList.added, ["fn__none"]);
 });

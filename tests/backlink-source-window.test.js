@@ -781,6 +781,39 @@ test("buildBacklinkSourceWindow keeps nearby mode on the paragraph before and af
   assert.equal(sourceWindow.endBlockId, "block-after-heading");
 });
 
+test("buildBacklinkSourceWindow keeps the previous list shell visible for heading nearby mode instead of jumping to its child block", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "list-root", type: "l", parent_id: "doc-a" },
+    { id: "item-prev", type: "i", parent_id: "list-root" },
+    { id: "block-prev", type: "p", parent_id: "item-prev" },
+    { id: "heading-focus", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "block-after-heading", type: "p", parent_id: "doc-a" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "heading-focus",
+        root_id: "doc-a",
+        parent_id: "doc-a",
+        type: "h",
+      },
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "nearby",
+  });
+
+  assert.deepEqual(sourceWindow.windowBlockIds, [
+    "list-root",
+    "item-prev",
+    "block-prev",
+    "heading-focus",
+    "block-after-heading",
+  ]);
+  assert.equal(sourceWindow.startBlockId, "list-root");
+  assert.equal(sourceWindow.endBlockId, "block-after-heading");
+});
+
 test("buildBacklinkSourceWindow nearby mode for heading backlinks does not pull in the previous heading when no paragraph exists", () => {
   const orderedBlocks = createDocumentBlocks([
     { id: "heading-prev", type: "h", subtype: "h2", parent_id: "doc-a" },
@@ -799,6 +832,35 @@ test("buildBacklinkSourceWindow nearby mode for heading backlinks does not pull 
     },
     orderedDocumentBlocks: orderedBlocks,
     contextVisibilityLevel: "nearby",
+  });
+
+  assert.deepEqual(sourceWindow.windowBlockIds, [
+    "heading-focus",
+    "block-after-heading",
+  ]);
+  assert.equal(sourceWindow.startBlockId, "heading-focus");
+  assert.equal(sourceWindow.endBlockId, "block-after-heading");
+});
+
+test("buildBacklinkSourceWindow keeps heading extended mode on the current heading section when previous headings have no body content", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "heading-prev", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "heading-focus", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "block-after-heading", type: "p", parent_id: "doc-a" },
+    { id: "heading-next", type: "h", subtype: "h2", parent_id: "doc-a" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "heading-focus",
+        root_id: "doc-a",
+        parent_id: "doc-a",
+        type: "h",
+      },
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "extended",
   });
 
   assert.deepEqual(sourceWindow.windowBlockIds, [

@@ -14,6 +14,7 @@ test("buildBacklinkDocumentListItemHtml renders title aria text and progress tex
     progressText: "2/3",
     matchSourceLabel: "父级",
     matchSummaryText: "父级：命中说明",
+    locationPathText: "标题：二、Skills / 1. Skills 是什么？ | 列表：上层节点 / 当前节点",
     contextControlState: {
       contextVisibilityLevel: "core",
       levelLabel: "核心",
@@ -34,8 +35,11 @@ test("buildBacklinkDocumentListItemHtml renders title aria text and progress tex
   );
   assert.match(html, /父级/);
   assert.match(html, /命中说明/);
+  assert.match(html, /标题：二、Skills/);
+  assert.match(html, /列表：上层节点/);
   assert.match(html, /backlink-document-header-row/);
   assert.match(html, /backlink-chip backlink-chip--flat backlink-context-source/);
+  assert.match(html, /backlink-context-location/);
   assert.match(html, /backlink-context-control-row/);
   assert.match(html, /backlink-context-step-button/);
   assert.match(html, /backlink-context-step-button previous/);
@@ -64,6 +68,7 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and 
   };
   const sourceElement = { textContent: "" };
   const summaryElement = { textContent: "" };
+  const locationElement = { textContent: "" };
   const controlRowElement = {
     attrs: {},
     setAttribute(name, value) {
@@ -102,6 +107,7 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and 
       if (selector === ".b3-list-item__text") return textElement;
       if (selector === ".backlink-context-source") return sourceElement;
       if (selector === ".backlink-context-summary") return summaryElement;
+      if (selector === ".backlink-context-location") return locationElement;
       if (selector === ".backlink-context-control-row") return controlRowElement;
       if (selector === ".backlink-context-step-button.previous") return previousContextButton;
       if (selector === ".backlink-context-step-button.next") return nextContextButton;
@@ -122,6 +128,14 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and 
       contextBundle: {
         primaryMatchSourceType: "parent",
         matchSummaryList: ["父级：命中说明"],
+        metaInfo: {
+          headingPath: {
+            text: "二、Skills / 1. Skills 是什么？",
+          },
+          listPath: {
+            text: "上层节点 / 当前节点",
+          },
+        },
       },
     },
   }, {
@@ -144,6 +158,10 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and 
   );
   assert.equal(sourceElement.textContent, "父级");
   assert.equal(summaryElement.textContent, "父级：命中说明");
+  assert.equal(
+    locationElement.textContent,
+    "标题：二、Skills / 1. Skills 是什么？ | 列表：上层节点 / 当前节点",
+  );
   assert.equal(controlRowElement.attrs["data-context-level"], "近邻");
   assert.equal(
     previousContextButton.attrs["aria-label"],

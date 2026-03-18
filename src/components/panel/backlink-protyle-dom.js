@@ -343,39 +343,11 @@ function collectVisibleBlockIdsFromExpandedListShells(
       }
       if (windowBlockIdSet.has(descendantBlockId)) {
         expandedVisibleBlockIdSet.add(descendantBlockId);
-        continue;
-      }
-      if (
-        blockType === "NodeListItem" &&
-        isInlineListItemTextDescendant(descendantBlockElement, blockElement)
-      ) {
-        expandedVisibleBlockIdSet.add(descendantBlockId);
       }
     }
   }
 
   return expandedVisibleBlockIdSet;
-}
-
-function isInlineListItemTextDescendant(descendantBlockElement, listItemElement) {
-  if (!descendantBlockElement || !listItemElement) {
-    return false;
-  }
-
-  const descendantType = descendantBlockElement?.getAttribute?.("data-type");
-  if (descendantType === "NodeList" || descendantType === "NodeListItem") {
-    return false;
-  }
-
-  let currentElement = descendantBlockElement.parentElement;
-  while (currentElement && currentElement !== listItemElement) {
-    if (currentElement?.getAttribute?.("data-type") === "NodeListItem") {
-      return false;
-    }
-    currentElement = currentElement.parentElement;
-  }
-
-  return currentElement === listItemElement;
 }
 
 function unfoldVisibleListItemAncestors(

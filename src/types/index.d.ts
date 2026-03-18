@@ -174,6 +174,27 @@ interface IBacklinkData {
     };
 }
 
+interface IBacklinkContextMetaInfoField {
+    key: string;
+    text: string;
+    renderMarkdown?: string;
+    searchText: string;
+    visibilityRole: "meta";
+    searchable: boolean;
+    matched: boolean;
+    matchTypes: string[];
+    matchKeywords: string[];
+}
+
+interface IBacklinkContextMetaInfo {
+    documentTitle?: IBacklinkContextMetaInfoField;
+    headingPath?: IBacklinkContextMetaInfoField;
+    listPath?: IBacklinkContextMetaInfoField;
+    matchedFieldKeys: string[];
+    matchSummaryList: string[];
+    primaryMatchKey?: string;
+}
+
 
 
 interface IProtyleOption {

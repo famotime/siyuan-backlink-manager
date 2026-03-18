@@ -88,6 +88,7 @@ test("buildBacklinkContextBundle materializes ordered fragments and default visi
   );
   assert.equal(bundle.metaInfo.documentTitle.text, "document title");
   assert.equal(bundle.metaInfo.documentTitle.visibilityRole, "meta");
+  assert.equal(bundle.metaInfo.headingPath.text, "parent");
   assert.equal(bundle.fragments[0].budgetPriority, 1);
   assert.equal(bundle.fragments[0].renderMarkdown, "- 当前列表项");
   assert.equal(bundle.fragments[1].budgetPriority, 3);
@@ -96,6 +97,30 @@ test("buildBacklinkContextBundle materializes ordered fragments and default visi
   assert.equal(bundle.previewSequence, undefined);
   assert.ok(bundle.includeCurDocDefBlockIds.has("def-current"));
   assert.ok(bundle.includeRelatedDefBlockIds.has("def-parent"));
+});
+
+test("getBacklinkContextMatchMeta exposes heading and list path location text from meta info", () => {
+  const result = getBacklinkContextMatchMeta({
+    primaryMatchSourceType: "parent",
+    matchSummaryList: ["父级：命中说明"],
+    metaInfo: {
+      headingPath: {
+        text: "二、Skills / 1. Skills 是什么？",
+      },
+      listPath: {
+        text: "上层节点 / 当前节点",
+      },
+    },
+  });
+
+  assert.deepEqual(result, {
+    primaryMatchSourceType: "parent",
+    matchSourceLabel: "父级",
+    matchSummaryText: "父级：命中说明",
+    headingPathText: "二、Skills / 1. Skills 是什么？",
+    listPathText: "上层节点 / 当前节点",
+    locationPathText: "标题：二、Skills / 1. Skills 是什么？ | 列表：上层节点 / 当前节点",
+  });
 });
 
 test("backlink context source rules cover every supported source with unified rule fields", () => {
@@ -441,6 +466,9 @@ test("getBacklinkContextMatchMeta returns explanation-layer match metadata", () 
       primaryMatchSourceType: "parent",
       matchSourceLabel: "父级",
       matchSummaryText: "父级：命中说明",
+      headingPathText: "",
+      listPathText: "",
+      locationPathText: "",
     },
   );
 
@@ -448,5 +476,8 @@ test("getBacklinkContextMatchMeta returns explanation-layer match metadata", () 
     primaryMatchSourceType: "",
     matchSourceLabel: "",
     matchSummaryText: "",
+    headingPathText: "",
+    listPathText: "",
+    locationPathText: "",
   });
 });

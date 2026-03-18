@@ -66,9 +66,13 @@ export function buildBacklinkDocumentListItemHtml({
   progressText = "",
   matchSourceLabel = "",
   matchSummaryText = "",
+  locationPathText = "",
   contextControlState = {},
 } = {}) {
   const truncatedAriaText = docAriaText ? docAriaText.substring(0, 100) : "";
+  const locationHtml = locationPathText
+    ? `<span class="b3-list-item__meta backlink-context-location">${locationPathText}</span>`
+    : "";
 
   return `
 <div class="backlink-document-header-row">
@@ -81,6 +85,7 @@ ${documentName}
 </span>
 <span class="b3-list-item__meta backlink-chip backlink-chip--flat backlink-context-source">${matchSourceLabel}</span>
 <span class="b3-list-item__meta backlink-context-summary">${matchSummaryText}</span>
+${locationHtml}
 <svg class="b3-list-item__graphic counter ariaLabel backlink-nav-button previous-backlink-icon" aria-label="上一个反链块"><use xlink:href="#iconLeft"></use></svg>
 <span class="b3-list-item__meta backlink-nav-progress">${progressText}</span>
 <svg class="b3-list-item__graphic counter ariaLabel backlink-nav-button next-backlink-icon" aria-label="下一个反链块"><use xlink:href="#iconRight"></use></svg>
@@ -163,8 +168,9 @@ export function updateBacklinkDocumentLiNavigation(
   const textElement = documentLiElement.querySelector(".b3-list-item__text");
   const sourceElement = documentLiElement.querySelector(".backlink-context-source");
   const summaryElement = documentLiElement.querySelector(".backlink-context-summary");
+  const locationElement = documentLiElement.querySelector(".backlink-context-location");
   const disableNavigation = documentGroup.backlinks.length <= 1;
-  const { matchSourceLabel, matchSummaryText } = getBacklinkMatchMeta(
+  const { matchSourceLabel, matchSummaryText, locationPathText } = getBacklinkMatchMeta(
     documentGroup.activeBacklink,
   );
 
@@ -187,6 +193,9 @@ export function updateBacklinkDocumentLiNavigation(
   }
   if (summaryElement) {
     summaryElement.textContent = matchSummaryText;
+  }
+  if (locationElement) {
+    locationElement.textContent = locationPathText;
   }
   updateBacklinkContextControlRow(documentLiElement, contextControlState);
   previousButton?.classList.toggle("disabled", disableNavigation);

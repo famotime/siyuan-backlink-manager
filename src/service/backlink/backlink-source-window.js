@@ -344,25 +344,6 @@ function getBlockRangeEndIndex(blockId = "", context) {
   return startIndex;
 }
 
-function resolveFirstDescendantBlockId(blockId = "", context) {
-  const startIndex = context.indexById.get(blockId);
-  if (startIndex === undefined) {
-    return blockId;
-  }
-
-  const block = context.blockById.get(blockId);
-  if (block?.type !== "i") {
-    return blockId;
-  }
-
-  const nextBlock = context.orderedDocumentBlocks[startIndex + 1];
-  if (!isDescendantBlock(nextBlock, blockId, context.blockById)) {
-    return blockId;
-  }
-
-  return nextBlock.id || blockId;
-}
-
 function resolveListItemAnchorBlockId(backlinkBlockNode = {}, context) {
   const backlinkBlock = backlinkBlockNode?.block;
   if (!backlinkBlock?.id) {
@@ -851,6 +832,92 @@ function resolveReadableListItemShellBlockIds(listItemBlockId = "", context) {
   return dedupeBlockIdArray(visibleBlockIds);
 }
 
+function resolveReadableStructuralUnit(blockId = "", context) {
+  if (!blockId) {
+    return {
+      startBlockId: "",
+      endBlockId: "",
+      startIndex: undefined,
+      endIndex: undefined,
+      visibleBlockIds: [],
+    };
+  }
+
+  const startIndex = context.indexById.get(blockId);
+  if (startIndex === undefined) {
+    return {
+      startBlockId: blockId,
+      endBlockId: blockId,
+      startIndex: undefined,
+      endIndex: undefined,
+      visibleBlockIds: [blockId],
+    };
+  }
+
+  const block = context.blockById.get(blockId);
+  if (!block?.id) {
+    return {
+      startBlockId: blockId,
+      endBlockId: blockId,
+      startIndex,
+      endIndex: startIndex,
+      visibleBlockIds: [blockId],
+    };
+  }
+
+  if (block.type === "i") {
+    const visibleBlockIds = resolveReadableListItemShellBlockIds(blockId, context);
+    const {
+      index: endIndex,
+      blockId: endBlockId,
+    } = getMaxIndexedBlockEntry(visibleBlockIds, context, startIndex, blockId);
+    return {
+      startBlockId: blockId,
+      endBlockId: endBlockId || blockId,
+      startIndex,
+      endIndex: Number.isFinite(endIndex) ? endIndex : startIndex,
+      visibleBlockIds,
+    };
+  }
+
+  if (block.type === "l") {
+    const visibleBlockIds = [blockId];
+    const firstChildListItem = getDirectChildBlocks(blockId, context).find(
+      (childBlock) => childBlock?.type === "i",
+    );
+    if (firstChildListItem?.id) {
+      visibleBlockIds.push(
+        ...resolveReadableListItemShellBlockIds(firstChildListItem.id, context),
+      );
+    }
+    const dedupedVisibleBlockIds = dedupeBlockIdArray(visibleBlockIds);
+    const {
+      index: endIndex,
+      blockId: endBlockId,
+    } = getMaxIndexedBlockEntry(
+      dedupedVisibleBlockIds,
+      context,
+      startIndex,
+      blockId,
+    );
+    return {
+      startBlockId: blockId,
+      endBlockId: endBlockId || blockId,
+      startIndex,
+      endIndex: Number.isFinite(endIndex) ? endIndex : startIndex,
+      visibleBlockIds: dedupedVisibleBlockIds,
+    };
+  }
+
+  return {
+    startBlockId: blockId,
+    endBlockId: blockId,
+    startIndex,
+    endIndex: startIndex,
+    visibleBlockIds: [blockId],
+  };
+}
+
 function buildSourceWindowFromRange({
   backlinkBlockNode = null,
   context,
@@ -980,22 +1047,28 @@ function buildNearbyBacklinkSourceWindow(backlinkBlockNode, context) {
     }
   }
 
-  const renderStartBlockId = resolveFirstDescendantBlockId(startBlockId, context);
-  const startIndex =
-    context.indexById.get(startBlockId) ??
-    context.indexById.get(anchorBlockId) ??
-    anchorStartIndex;
+  const startUnit = isListItemContext
+    ? resolveReadableStructuralUnit(startBlockId, context)
+    : resolveReadableStructuralUnit(startBlockId || anchorBlockId, context);
+  const endUnit = isListItemContext
+    ? resolveReadableStructuralUnit(endBlockId, context)
+    : resolveReadableStructuralUnit(endBlockId || anchorBlockId, context);
+  const startIndex = isListItemContext
+    ? context.indexById.get(startBlockId) ??
+      context.indexById.get(anchorBlockId) ??
+      anchorStartIndex
+    : startUnit.startIndex ?? anchorStartIndex;
   const boundaryBlockIds = isListItemContext
     ? dedupeBlockIdArray([
-        ...resolveReadableListItemShellBlockIds(startBlockId, context),
+        ...startUnit.visibleBlockIds,
         anchorBlockId,
         backlinkBlockNode.block.id,
-        ...resolveReadableListItemShellBlockIds(endBlockId, context),
+        ...endUnit.visibleBlockIds,
       ])
     : dedupeBlockIdArray([
-        startBlockId || anchorBlockId,
+        ...startUnit.visibleBlockIds,
         backlinkBlockNode.block.id,
-        endBlockId || anchorBlockId,
+        ...endUnit.visibleBlockIds,
       ]);
   const listContextWindowEnd = getMaxIndexedBlockEntry(
     boundaryBlockIds,
@@ -1005,13 +1078,13 @@ function buildNearbyBacklinkSourceWindow(backlinkBlockNode, context) {
   );
   const endIndex = isListItemContext
     ? listContextWindowEnd.index
-    : getBlockRangeEndIndex(endBlockId, context) ?? getBlockRangeEndIndex(anchorBlockId, context);
+    : endUnit.endIndex ?? anchorStartIndex;
   const sourceWindowStartBlockId = isListItemContext
     ? startBlockId
-    : renderStartBlockId;
+    : startUnit.startBlockId || anchorBlockId;
   const sourceWindowEndBlockId = isListItemContext
     ? listContextWindowEnd.blockId
-    : undefined;
+    : endUnit.endBlockId || anchorBlockId;
 
   return buildSourceWindowFromRange({
     backlinkBlockNode,
@@ -1026,6 +1099,15 @@ function buildNearbyBacklinkSourceWindow(backlinkBlockNode, context) {
   });
 }
 
+function findNearestNonHeadingIndex(focusIndex, orderedDocumentBlocks = []) {
+  for (let currentIndex = focusIndex - 1; currentIndex >= 0; currentIndex -= 1) {
+    if (orderedDocumentBlocks[currentIndex]?.type !== "h") {
+      return currentIndex;
+    }
+  }
+  return -1;
+}
+
 function buildExtendedBacklinkSourceWindow(backlinkBlockNode, context) {
   const focusBlockId = backlinkBlockNode.block.id;
   const listItemAnchorBlockId = resolveListItemAnchorBlockId(backlinkBlockNode, context);
@@ -1037,11 +1119,14 @@ function buildExtendedBacklinkSourceWindow(backlinkBlockNode, context) {
 
   const focusBlock = context.blockById.get(focusBlockId);
   if (focusBlock?.type === "h") {
-    const previousIndex = focusIndex - 1;
     let safeStartIndex = focusIndex;
-    if (previousIndex >= 0) {
+    const previousContentIndex = findNearestNonHeadingIndex(
+      focusIndex,
+      context.orderedDocumentBlocks,
+    );
+    if (previousContentIndex >= 0) {
       const previousSectionHeadingStartIndex = findContainingHeadingStartIndex(
-        previousIndex,
+        previousContentIndex,
         context.orderedDocumentBlocks,
       );
       safeStartIndex =

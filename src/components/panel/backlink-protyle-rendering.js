@@ -1,6 +1,7 @@
 import {
   getBacklinkSourceWindowByLevel,
   getBacklinkSourceWindowCandidateBlockIds,
+  getBacklinkSourceWindowCollapsedBlockIds,
 } from "../../service/backlink/backlink-source-window.js";
 
 export function syncBacklinkDocumentProtyleState(editor, deps) {
@@ -237,6 +238,19 @@ export function applyCreatedBacklinkProtyleState({
       contextVisibilityLevel,
     );
   };
+  const applyPlannerCollapsedListItems = () => {
+    const sourceWindow = getBacklinkSourceWindowByLevel(
+      backlinkData,
+      contextVisibilityLevel,
+    );
+    const collapsedBlockIds = getBacklinkSourceWindowCollapsedBlockIds(sourceWindow);
+    if (!Array.isArray(collapsedBlockIds) || collapsedBlockIds.length <= 0) {
+      return false;
+    }
+
+    foldListItemNodeByIdSet(protyleContentElement, new Set(collapsedBlockIds));
+    return true;
+  };
 
   if (showFullDocument) {
     expandBacklinkDocument(documentLiElement);
@@ -254,6 +268,8 @@ export function applyCreatedBacklinkProtyleState({
     const foldIdSet = backlinkProtyleItemFoldMap.get(backlinkBlockId);
     if (foldIdSet) {
       foldListItemNodeByIdSet(protyleContentElement, foldIdSet);
+    } else if (applyPlannerCollapsedListItems()) {
+      // Planner-controlled collapsed items take precedence over default depth expansion.
     } else if (contextVisibilityLevel === "extended") {
       expandAllListItemNode(protyleContentElement);
     } else if (

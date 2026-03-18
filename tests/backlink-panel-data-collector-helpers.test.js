@@ -10,14 +10,22 @@ import {
 } from "../src/service/backlink/backlink-panel-data-collector-helpers.js";
 
 test("panel data collectors delegate shared helper logic to a dedicated helper module", () => {
-  const source = readFileSync(
-    new URL("../src/service/backlink/backlink-panel-data-collectors.js", import.meta.url),
+  const coreSource = readFileSync(
+    new URL("../src/service/backlink/backlink-panel-data-collector-core.js", import.meta.url),
+    "utf8",
+  );
+  const contextSource = readFileSync(
+    new URL("../src/service/backlink/backlink-panel-data-collector-context.js", import.meta.url),
     "utf8",
   );
 
   assert.match(
-    source,
-    /import\s*\{[\s\S]*appendMarkdownSegment,[\s\S]*trackRelatedDefBlockId,[\s\S]*trackRelatedDefBlockIdWithoutDuplicates[\s\S]*\}\s*from "\.\/backlink-panel-data-collector-helpers\.js";/,
+    coreSource,
+    /import\s*\{[\s\S]*trackRelatedDefBlockId,[\s\S]*trackRelatedDefBlockIdWithoutDuplicates[\s\S]*\}\s*from "\.\/backlink-panel-data-collector-helpers\.js";/,
+  );
+  assert.match(
+    contextSource,
+    /import\s*\{[\s\S]*appendMarkdownSegment,[\s\S]*trackRelatedDefBlockIdWithoutDuplicates[\s\S]*\}\s*from "\.\/backlink-panel-data-collector-helpers\.js";/,
   );
 });
 

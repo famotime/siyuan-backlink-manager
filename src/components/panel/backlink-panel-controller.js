@@ -78,6 +78,7 @@ import {
   toggleRelatedDefBlockCondition,
   toggleRelatedDocumentCondition,
 } from "./backlink-panel-query-params.js";
+import { createBacklinkPanelActionHandlers } from "./backlink-panel-controller-actions.js";
 import { buildBacklinkContextControlState } from "./backlink-panel-header.js";
 import {
   cycleBacklinkDocumentVisibilityLevel,
@@ -838,142 +839,66 @@ export function createBacklinkPanelController(state) {
     initBaseData();
   }
 
+  const panelActionHandlers = createBacklinkPanelActionHandlers({
+    state,
+    BacklinkFilterPanelAttributeService,
+    resetFilterQueryParameters,
+    resetBacklinkQueryParameters,
+    toggleRelatedDefBlockCondition,
+    toggleRelatedDocumentCondition,
+    clonePanelQueryParamsForSave,
+    applySavedPanelCriteria,
+    isStrBlank,
+    updateRenderData,
+    refreshFilterDisplayData,
+  });
+
   function resetFilterQueryParametersToDefault() {
-    const defaultQueryParams =
-      BacklinkFilterPanelAttributeService.ins.getDefaultQueryParams();
-    resetFilterQueryParameters(state.queryParams, defaultQueryParams);
-    state.queryParams = state.queryParams;
-    updateRenderData();
+    return panelActionHandlers.resetFilterQueryParametersToDefault();
   }
 
   function resetBacklinkQueryParametersToDefault() {
-    const defaultQueryParams =
-      BacklinkFilterPanelAttributeService.ins.getDefaultQueryParams();
-    resetBacklinkQueryParameters(state.queryParams, defaultQueryParams);
-    updateRenderData();
-  }
-
-  function addIncludeRelatedDefBlockCondition(defBlock) {
-    toggleRelatedDefBlockCondition(state.queryParams, defBlock.id, "include");
-    updateRenderData();
-  }
-
-  function addExcludeRelatedDefBlockCondition(defBlock) {
-    toggleRelatedDefBlockCondition(state.queryParams, defBlock.id, "exclude");
-    updateRenderData();
-  }
-
-  function addIncludeRelatedDocBlockCondition(defBlock) {
-    toggleRelatedDocumentCondition(state.queryParams, defBlock.id, "include");
-    updateRenderData();
-  }
-
-  function addExcludeRelatedDocBlockCondition(defBlock) {
-    toggleRelatedDocumentCondition(state.queryParams, defBlock.id, "exclude");
-    updateRenderData();
+    return panelActionHandlers.resetBacklinkQueryParametersToDefault();
   }
 
   function handleRelatedDefBlockClick(event, defBlock) {
-    if (event.shiftKey) {
-      addExcludeRelatedDefBlockCondition(defBlock);
-      return;
-    }
-    state.clickCount += 1;
-    if (state.clickCount === 1) {
-      clearTimeout(state.clickTimeoutId);
-      state.clickTimeoutId = setTimeout(() => {
-        state.clickCount = 0;
-        addIncludeRelatedDefBlockCondition(defBlock);
-      }, state.doubleClickTimeout);
-      return;
-    }
-
-    clearTimeout(state.clickTimeoutId);
-    state.clickCount = 0;
-    addExcludeRelatedDefBlockCondition(defBlock);
+    return panelActionHandlers.handleRelatedDefBlockClick(event, defBlock);
   }
 
   function handleRelatedDefBlockContextmenu(_event, defBlock) {
-    addExcludeRelatedDefBlockCondition(defBlock);
+    return panelActionHandlers.handleRelatedDefBlockContextmenu(_event, defBlock);
   }
 
   function handleRelatedDocBlockClick(event, defBlock) {
-    if (event.shiftKey) {
-      addExcludeRelatedDocBlockCondition(defBlock);
-      return;
-    }
-    state.clickCount += 1;
-    if (state.clickCount === 1) {
-      clearTimeout(state.clickTimeoutId);
-      state.clickTimeoutId = setTimeout(() => {
-        state.clickCount = 0;
-        addIncludeRelatedDocBlockCondition(defBlock);
-      }, state.doubleClickTimeout);
-      return;
-    }
-
-    clearTimeout(state.clickTimeoutId);
-    state.clickCount = 0;
-    addExcludeRelatedDocBlockCondition(defBlock);
+    return panelActionHandlers.handleRelatedDocBlockClick(event, defBlock);
   }
 
   function handleRelatedDocBlockContextmenu(_event, defBlock) {
-    addExcludeRelatedDocBlockCondition(defBlock);
+    return panelActionHandlers.handleRelatedDocBlockContextmenu(_event, defBlock);
   }
 
   function handleCriteriaConfirm() {
-    if (isStrBlank(state.saveCriteriaInputText)) {
-      return;
-    }
-    const savedQueryParams = clonePanelQueryParamsForSave(state.queryParams);
-    if (!state.savedQueryParamMap) {
-      state.savedQueryParamMap = new Map();
-    }
-    state.savedQueryParamMap.set(state.saveCriteriaInputText, savedQueryParams);
-    BacklinkFilterPanelAttributeService.ins.updatePanelSavedCriteriaMap(
-      state.rootId,
-      state.savedQueryParamMap,
-    );
-    state.savedQueryParamMap = state.savedQueryParamMap;
-    state.saveCriteriaInputText = "";
-    state.showSaveCriteriaInputBox = false;
+    return panelActionHandlers.handleCriteriaConfirm();
   }
 
   function handleCriteriaCancel() {
-    state.saveCriteriaInputText = "";
-    state.showSaveCriteriaInputBox = false;
+    return panelActionHandlers.handleCriteriaCancel();
   }
 
   function handleSavedPanelCriteriaClick(name) {
-    const savedQueryParam = state.savedQueryParamMap.get(name);
-    if (!savedQueryParam) {
-      return;
-    }
-    applySavedPanelCriteria(state.queryParams, savedQueryParam);
-    updateRenderData();
+    return panelActionHandlers.handleSavedPanelCriteriaClick(name);
   }
 
   function handleSavedPanelCriteriaDeleteClick(name) {
-    state.savedQueryParamMap.delete(name);
-    BacklinkFilterPanelAttributeService.ins.updatePanelSavedCriteriaMap(
-      state.rootId,
-      state.savedQueryParamMap,
-    );
-    state.savedQueryParamMap = state.savedQueryParamMap;
+    return panelActionHandlers.handleSavedPanelCriteriaDeleteClick(name);
   }
 
   function handleBacklinkKeywordInput() {
-    clearTimeout(state.inputChangeTimeoutId);
-    state.inputChangeTimeoutId = setTimeout(() => {
-      updateRenderData();
-    }, 450);
+    return panelActionHandlers.handleBacklinkKeywordInput();
   }
 
   function handleFilterPanelInput() {
-    clearTimeout(state.inputChangeTimeoutId);
-    state.inputChangeTimeoutId = setTimeout(() => {
-      refreshFilterDisplayData();
-    }, 100);
+    return panelActionHandlers.handleFilterPanelInput();
   }
 
   return {

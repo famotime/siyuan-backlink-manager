@@ -3,267 +3,227 @@
 ## 1. Snapshot
 
 - Generated on: 2026-03-18
-- Scope: project-level module analysis and staged refactor recommendations
-- Goal: reduce coupling in backlink data flow, panel orchestration, and context planning without changing user-visible behavior
-- Workflow gate: this document is analysis only; no implementation should start before explicit approval
+- Scope: current-state refactor analysis after multiple completed module splits
+- Goal: continue reducing complexity in the remaining largest modules while preserving behavior and existing regression guarantees
+- Workflow gate: this document is planning only; no new refactor should start without explicit approval
 
-## 2. Module Map
+## 2. Current Module Map
 
-| Area | Key Files | Current Responsibility | Notes |
+| Area | Key Files | Current Responsibility | Status |
 | --- | --- | --- | --- |
-| Entry / lifecycle | `src/index.ts` | Plugin bootstrap, service startup, event hookup | Thin entrypoint, acceptable as composition root |
-| Data pipeline | `src/service/backlink/backlink-data.ts` | Query orchestration, filtering, context visibility, budgeting, source windows, pagination, render-data assembly | Large cross-module coordinator with broad dependency surface |
-| Query / collector layer | `src/service/backlink/backlink-query-loaders.js`, `src/service/backlink/backlink-panel-data-collectors.js`, `src/service/backlink/backlink-panel-base-data-builder.js`, `src/service/backlink/backlink-panel-data-assembly.js` | SQL-backed loading and block-node enrichment | Functional split exists, but boundaries are still leaky and callback-heavy |
-| Context / planner | `src/service/backlink/backlink-source-window.js`, `src/service/backlink/backlink-context.js`, `src/service/backlink/backlink-render-data.js` | Source window planning, explanation/meta bundle, DOM/render fallback data | Core logic is tested, but files are too large and mix multiple concerns |
-| UI orchestration | `src/components/panel/backlink-panel-controller.js` | Panel state machine, event handling, document navigation, rendering, refreshes, persistence hooks | Single high-risk orchestration file with many responsibilities |
-| Render / DOM helpers | `src/components/panel/backlink-protyle-dom.js`, `src/components/panel/backlink-protyle-rendering.js`, `src/components/panel/backlink-document-*.js` | Protyle DOM mutations, per-document rendering, row/header interactions | Reasonable helper split, but controller still owns too much sequencing |
-| Plugin hosts | `src/service/plugin/DocumentService.ts`, `src/service/plugin/backlink-panel-host.js`, `src/service/plugin/TabService.ts`, `src/service/plugin/DockServices.ts` | Document-bottom panel host, dock/tab mounting, focus forwarding | Lifecycle handling is functional but spread across host and controller layers |
-| Settings | `src/service/setting/SettingService.ts`, `src/service/setting/setting-config-resolver.js`, `src/service/setting/BacklinkPanelFilterCriteriaService.ts` | Persistent config, criteria persistence, default derivation | Good test coverage, but some API/naming debt remains |
-| Types / models | `src/models/backlink-model.ts`, `src/types/index.d.ts` | Main project data contracts | Runtime and type-layer duplication is accumulating |
-| Tests | `tests/*.test.js` | Regression suite across data, UI, styles, and plugin hosts | Broad coverage exists; integration-heavy modules still rely on large synthetic fixtures |
+| Entry / lifecycle | `src/index.ts` | Plugin bootstrap and service startup | Stable |
+| Planner / context | `src/service/backlink/backlink-source-window.js`, `src/service/backlink/backlink-source-window-*.js`, `src/service/backlink/backlink-context*.js` | Source window planning and explanation/meta logic | Improved, but planner facade and structure module are still sizable |
+| Data pipeline | `src/service/backlink/backlink-data.ts`, `src/service/backlink/backlink-data-pipeline.js` | Render-data orchestration, cache-backed backlink fetch, source window attach, packaging | Partially decomposed |
+| Query / collector layer | `src/service/backlink/backlink-query-loaders.js`, `src/service/backlink/backlink-panel-data-collectors.js`, `src/service/backlink/backlink-panel-data-collector-helpers.js` | SQL-backed loading and node enrichment | Improved, but loader/collector orchestration still large |
+| Render data | `src/service/backlink/backlink-render-data.js`, `src/service/backlink/backlink-render-data-dom.js` | Backlink API normalization, search validity checks, sort comparators, summary helpers | Improved, but main file still broad |
+| UI orchestration | `src/components/panel/backlink-panel-controller.js`, `src/components/panel/backlink-panel-controller-runtime.js`, `src/components/panel/backlink-panel-controller-rendering.js`, `src/components/panel/backlink-panel-controller-data.js` | Panel control flow, refresh scheduling, rerender coordination, render-data refresh | Improved, but controller still the largest file |
+| Plugin hosts | `src/service/plugin/DocumentService.ts`, `src/service/plugin/document-backlink-host-lifecycle.js`, `src/service/plugin/backlink-panel-host.js` | Host mount/update/destroy and focus propagation | Improved |
+| Settings / types | `src/service/setting/SettingService.ts`, `src/models/backlink-model.ts`, `src/types/index.d.ts` | Persistence, defaults, contracts | Naming cleanup done; type duplication still exists |
+| Tests | `tests/*.test.js` | 317 regression cases covering rules, UI, pipeline, host lifecycle, styles | Strong safety net |
 
-## 3. Highest-Value Refactor Candidates
+## 3. Largest Remaining Files
 
-| ID | Priority | Candidate | Files | Current Responsibility / Boundary | Refactor Value | Regression Risk | Test Gaps |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| RF-001 | P0 | Split panel controller orchestration | `src/components/panel/backlink-panel-controller.js`, related `backlink-document-*` helpers | One file owns state access, DOM event handling, navigation, refresh scheduling, rendering, persistence updates, and host coordination | Reduces complexity in the most change-prone UI control path; improves maintainability and local reasoning | High | Need focused tests for extracted action handlers, render coordinator, and refresh scheduler behavior |
-| RF-002 | P0 | Decompose source-window planner | `src/service/backlink/backlink-source-window.js` | One file owns document ordering, heading section math, list shell rules, source-window getters, attachment, and DB load orchestration | This is the core correctness engine; isolating strategies will lower future bug rate and make rules easier to evolve | High | Need tests per planner submodule boundary, especially ordering fallback, heading sections, and list shell visibility invariants |
-| RF-003 | P0 | Extract data assembly pipeline stages | `src/service/backlink/backlink-data.ts`, `src/service/backlink/backlink-panel-data-collectors.js`, `src/service/backlink/backlink-query-loaders.js`, `src/service/backlink/backlink-panel-data-assembly.js` | Query loading, node enrichment, visibility/budget application, pagination, and final render data are still stitched together in one broad function | Makes data flow explicit, narrows dependency injection surfaces, and improves observability for failures | High | Missing stage-level tests for pipeline contracts and error/empty-state boundaries between stages |
-| RF-004 | P1 | Separate explanation/meta building from match/search logic | `src/service/backlink/backlink-context.js`, `src/service/backlink/backlink-render-data.js`, `src/components/panel/backlink-document-row.js` | Bundle construction, matching, summary generation, and meta-path formatting live together | Clarifies domain boundaries and makes location/meta extensions safer | Medium | Need tests around meta field generation, summary formatting, and matching resets as independent helpers |
-| RF-005 | P1 | Consolidate host lifecycle and refresh ownership | `src/service/plugin/DocumentService.ts`, `src/service/plugin/backlink-panel-host.js`, `src/components/panel/backlink-panel-controller.js`, `src/service/plugin/document-protyle-guard.js` | EventBus lifecycle, host mount/update/destroy, focus propagation, and local refresh ownership are split across layers | Reduces lifecycle drift and duplicate state transitions across document-bottom/dock/tab hosts | Medium | Need tests for mount-update-destroy ownership and same-root focus refresh flows across hosts |
-| RF-006 | P2 | Clean up settings/type/naming debt | `src/service/setting/SettingService.ts`, `src/models/backlink-model.ts`, `src/types/index.d.ts` | Typoed APIs (`updateSettingCofnig*`), duplicated type contracts, mixed TS/JS boundaries | Improves consistency and lowers incidental friction for later refactors | Low | Need type-shape parity checks and settings API regression tests after renames/adapters |
+| File | Lines | Why It Still Matters |
+| --- | --- | --- |
+| `src/components/panel/backlink-panel-controller.js` | ~1012 | Still owns many UI actions and state mutation paths |
+| `src/service/backlink/backlink-source-window.js` | ~625 | Public planner facade still bundles several rule paths |
+| `src/service/backlink/backlink-data.ts` | ~563 | Still coordinates cache, fetch, source-window attach, and base-data loading |
+| `src/service/backlink/backlink-query-loaders.js` | ~500 | Multiple query families and sibling-order enrichment in one file |
+| `src/service/backlink/backlink-panel-data-collectors.js` | ~498 | Enrichment flows are better, but sibling/parent/list collectors still share one file |
+| `src/service/backlink/backlink-render-data.js` | ~459 | API normalization, keyword validation, and cache-backed backlink fetch remain combined |
+| `src/components/panel/backlink-protyle-dom.js` | ~452 | DOM filtering and list fold/unfold behavior still live together |
+| `src/service/backlink/backlink-source-window-structure.js` | ~429 | Structure rules are isolated, but still broad enough to be a future split candidate |
 
-## 4. Detailed Findings
+## 4. Next Refactor Candidates
 
-### RF-001. Split panel controller orchestration
+| ID | Priority | Candidate | Files | Refactor Value | Regression Risk | Test Gaps |
+| --- | --- | --- | --- | --- | --- | --- |
+| RF-012 | P0 | Split backlink data fetch/attach coordinator | `src/service/backlink/backlink-data.ts`, `src/service/backlink/backlink-data-pipeline.js`, related tests | Highest leverage remaining backend coordinator; makes cache/fetch/planner stages explicit | High | Need stage-level tests for backlink fetch normalization, source-window attach, and page-turn payload assembly |
+| RF-013 | P0 | Split panel controller action handlers | `src/components/panel/backlink-panel-controller.js`, related controller helpers/tests | Largest remaining orchestration file; isolate filter actions, criteria actions, and navigation actions | High | Need tests for action helper imports and unchanged query/state mutation semantics |
+| RF-014 | P1 | Decompose query loader families | `src/service/backlink/backlink-query-loaders.js`, related tests | Separates headline/list/parent/sibling query logic and lowers dependency bag width | Medium | Need focused tests per loader family and sibling-order enrichment helper |
+| RF-015 | P1 | Decompose collector families | `src/service/backlink/backlink-panel-data-collectors.js`, related tests | Split backlink/headline/list/parent/sibling collectors into narrower modules | Medium | Need import-boundary and helper-contract tests per collector |
+| RF-016 | P2 | Shrink planner facade again | `src/service/backlink/backlink-source-window.js`, `src/service/backlink/backlink-source-window-structure.js` | Continue reducing public facade size now that ordering/loader pieces are already extracted | Low | Need export-shape tests and public API compatibility checks |
 
-Current findings:
+## 5. Detailed Findings
 
-- [`src/components/panel/backlink-panel-controller.js`](/home/quincyzou/projects/siyuan-backlink-manager/src/components/panel/backlink-panel-controller.js) is about 1175 lines and mixes at least five concerns:
-  - editor lifecycle management
-  - DOM event capture and click routing
-  - local refresh scheduling
-  - data loading / pagination / filter refresh
-  - document-group rendering and navigation
-- The file already imports many helper modules, which indicates the controller is a composition root, but it still contains too much business logic inline.
-- Small controller changes are currently expensive because behavior is distributed across nested closures over shared mutable `state`.
-
-Expected target:
-
-- Keep one top-level controller factory, but extract internal responsibilities into stateless helpers or dedicated mini-coordinators:
-  - `document-group-refresh`
-  - `document-navigation-actions`
-  - `panel-data-refresh`
-  - `document-open-actions`
-  - `editor-lifecycle`
-
-Behavior invariants:
-
-- No change to navigation, context stepping, local refresh timing, or document active-index retention.
-- Existing eventBus and host integration must keep working for dock/tab/document-bottom mounts.
-
-### RF-002. Decompose source-window planner
+### RF-012. Split backlink data fetch/attach coordinator
 
 Current findings:
 
-- [`src/service/backlink/backlink-source-window.js`](/home/quincyzou/projects/siyuan-backlink-manager/src/service/backlink/backlink-source-window.js) is about 1411 lines.
-- It currently mixes:
-  - document ordering recovery
-  - tree reconstruction
-  - heading section discovery
-  - list shell visibility rules
-  - source-window construction
-  - getter/adaptor functions
-  - document block loading SQL orchestration
-- The module is well tested, but its internal cohesion is low. It is difficult to reason about one rule without loading the entire file.
+- [`src/service/backlink/backlink-data.ts`](/home/quincyzou/projects/siyuan-backlink-manager/src/service/backlink/backlink-data.ts) already delegates valid-node preparation and render payload assembly, but still owns:
+  - batch backlink fetch wiring
+  - source-window block loading and attachment
+  - filtered def/document arrays
+  - base-data loading orchestration
+- The file still builds large inline dependency objects for fetch and planner attachment.
 
 Expected target:
 
-- Split into planner-focused modules with narrow responsibilities, for example:
-  - `backlink-source-window-ordering`
-  - `backlink-source-window-structure`
-  - `backlink-source-window-planner`
-  - `backlink-source-window-adapter`
-  - `backlink-source-window-loader`
+- Extract helpers for:
+  - backlink fetch/normalize bundle
+  - source-window attachment stage
+  - turn-page render-data packaging
+  - base-data load orchestration
 
 Behavior invariants:
 
-- `bodyRange.windowBlockIds` remains the single source of truth for continuous body range.
-- Ordering and heading/list rules remain exactly aligned with current tests.
+- No change to cache use, fallback fetch trigger, or planner attachment semantics.
 
-### RF-003. Extract data assembly pipeline stages
+### RF-013. Split panel controller action handlers
 
 Current findings:
 
-- [`src/service/backlink/backlink-data.ts`](/home/quincyzou/projects/siyuan-backlink-manager/src/service/backlink/backlink-data.ts) is the main data orchestrator and still handles filtering, budget, pagination, cache fetches, source window attachment, and render-data packaging in large monolithic flows.
-- It builds very wide dependency bags and performs many transformations in-place, which makes stage-level reasoning and error isolation difficult.
-- The collector layer already exists, but contracts between loaders, collectors, bundle hydration, planner attachment, and render packaging are implicit.
+- [`src/components/panel/backlink-panel-controller.js`](/home/quincyzou/projects/siyuan-backlink-manager/src/components/panel/backlink-panel-controller.js) has shrunk, but still mixes:
+  - filter reset actions
+  - include/exclude condition actions
+  - saved criteria actions
+  - input debounce handlers
+  - document navigation and open actions
+- The file remains the biggest source of UI change risk.
 
 Expected target:
 
-- Express data flow as explicit stages with typed inputs/outputs:
-  - raw block loading
-  - backlink node hydration
-  - context/meta hydration
-  - planner attachment
-  - filter/sort/pagination
-  - render-data packaging
+- Extract action-centric helpers:
+  - query mutation actions
+  - criteria actions
+  - input debounce actions
+  - document navigation/open actions
 
 Behavior invariants:
 
-- No change to query semantics, cache usage, or sorting/pagination output.
-- `getBacklinkPanelRenderData` and `getBacklinkPanelData` keep their public signatures until the final adapter stage.
+- Query param updates, debounce timings, and event semantics remain identical.
 
-### RF-004. Separate explanation/meta building from match/search logic
+### RF-014. Decompose query loader families
 
 Current findings:
 
-- [`src/service/backlink/backlink-context.js`](/home/quincyzou/projects/siyuan-backlink-manager/src/service/backlink/backlink-context.js) handles fragment creation, meta info creation, visibility application, matching, summary construction, and match reset.
-- This is manageable but already broad enough that new explanation features will likely increase coupling.
+- [`src/service/backlink/backlink-query-loaders.js`](/home/quincyzou/projects/siyuan-backlink-manager/src/service/backlink/backlink-query-loaders.js) still combines:
+  - backlink block lookup
+  - headline child lookup
+  - list item child lookup
+  - parent block lookup
+  - sibling group loading and enrichment
+- Sibling enrichment alone has enough detail to justify its own file.
 
 Expected target:
 
-- Extract pure helpers around:
-  - meta info derivation
-  - fragment construction
-  - bundle visibility filtering
-  - bundle matching/reset
-  - row/header presentation helpers
+- Split into family modules:
+  - `backlink-query-loader-backlinks`
+  - `backlink-query-loader-children`
+  - `backlink-query-loader-parents`
+  - `backlink-query-loader-siblings`
 
 Behavior invariants:
 
-- Match summaries, primary source selection, and meta-path display stay unchanged.
+- SQL selection and sibling ordering stay unchanged.
 
-### RF-005. Consolidate host lifecycle and refresh ownership
+### RF-015. Decompose collector families
 
 Current findings:
 
-- [`src/service/plugin/DocumentService.ts`](/home/quincyzou/projects/siyuan-backlink-manager/src/service/plugin/DocumentService.ts) and [`src/service/plugin/backlink-panel-host.js`](/home/quincyzou/projects/siyuan-backlink-manager/src/service/plugin/backlink-panel-host.js) both participate in panel mount/update flows.
-- Refresh ownership spans host services and controller logic, which creates more places to audit when same-root focus behavior changes.
+- [`src/service/backlink/backlink-panel-data-collectors.js`](/home/quincyzou/projects/siyuan-backlink-manager/src/service/backlink/backlink-panel-data-collectors.js) now delegates small helpers but still hosts five distinct collector families.
+- Parent/sibling enrichment paths are materially different and can be isolated.
 
 Expected target:
 
-- Centralize host lifecycle contracts:
-  - host decides mount/update/destroy
-  - controller decides panel-local state transitions
-  - focus propagation path is explicit and one-directional
+- Split by collector family:
+  - backlink node collector
+  - headline child collector
+  - list tree collector
+  - parent collector
+  - sibling collector
 
 Behavior invariants:
 
-- Same-root focus refresh and document-bottom reuse behavior must remain intact.
+- All context maps and block-node mutations remain byte-for-byte compatible with current tests.
 
-### RF-006. Clean up settings/type/naming debt
+### RF-016. Shrink planner facade again
 
 Current findings:
 
-- [`src/service/setting/SettingService.ts`](/home/quincyzou/projects/siyuan-backlink-manager/src/service/setting/SettingService.ts) still exposes typoed public method names.
-- `src/models/backlink-model.ts` and `src/types/index.d.ts` duplicate related contract shapes.
-- The repo mixes TS and JS intentionally, but some shared boundary modules now pay a maintenance cost because type ownership is unclear.
+- [`src/service/backlink/backlink-source-window.js`](/home/quincyzou/projects/siyuan-backlink-manager/src/service/backlink/backlink-source-window.js) is smaller than before, but still combines:
+  - contextPlan/build adapters
+  - public getter exports
+  - core/nearby/extended planners
+  - source-window attachment
 
 Expected target:
 
-- Introduce adapters for backward compatibility, then normalize names and reduce duplicated type ownership.
+- Move actual planner strategies into a dedicated `planner` module and leave the facade mainly as export surface + compatibility layer.
 
 Behavior invariants:
 
-- No persistence schema change.
-- Existing import sites continue working during the transition.
+- Export names and return shapes must remain unchanged.
 
-## 5. Pre-Refactor Test Checklist
+## 6. Pre-Refactor Test Checklist
 
-### RF-001
+### RF-012
 
-- Navigation still cycles within a document group.
-- Context stepping still preserves current active backlink and render state.
-- Local refresh still re-renders only the target document group.
-- Event handlers are detached on teardown.
+- `getBacklinkPanelRenderData` still returns the same payload shape for the same inputs.
+- Page-turn payloads still omit unchanged arrays where expected.
+- Source windows are still attached for the paged backlink subset only.
 
-### RF-002
+### RF-013
 
-- Ordering fallback remains stable when block indexes are incomplete.
-- Heading `nearby` and `extended` boundaries remain correct.
-- List `core/nearby` shell and collapse rules remain correct.
-- Getter behavior still prefers `contextPlan` and falls back to legacy fields.
+- Filter reset actions still mutate the same query fields.
+- Saved criteria actions still persist/delete the same payloads.
+- Debounced input actions still call the same refresh functions after the same delays.
 
-### RF-003
+### RF-014
 
-- Empty query results and cache hits still produce the same render data shape.
-- Visibility/budget application order remains unchanged.
-- Pagination and document grouping outputs stay stable.
+- Sibling loader order and enrichment remain unchanged.
+- Parent/list/headline child loaders still use the same SQL and post-processing paths.
 
-### RF-004
+### RF-015
 
-- Match summaries and primary source remain unchanged.
-- Meta fields remain separate from body rendering.
-- Visibility application still affects only explanation fragments.
+- Each collector still updates the same context maps and node fields.
+- Sibling collector still sets markdown/renderMarkdown/block id arrays exactly as before.
 
-### RF-005
+### RF-016
 
-- Document-bottom panel reuse on same-root updates remains intact.
-- Focus refresh still forwards the focused block id correctly.
-- Host destroy still tears down panel instance and listeners.
+- Public getter and builder exports stay unchanged.
+- Core/nearby/extended planner outputs remain identical under existing source-window tests.
 
-### RF-006
-
-- Settings persist/load behavior remains unchanged.
-- Type-adapter changes do not alter runtime object shapes.
-
-## 6. Execution Backlog
+## 7. Execution Backlog
 
 | ID | Priority | Scope | Files | Status |
 | --- | --- | --- | --- | --- |
-| RF-001 | P0 | Panel controller orchestration split | `src/components/panel/backlink-panel-controller.js`, related panel helpers | done |
-| RF-002 | P0 | Source-window planner decomposition | `src/service/backlink/backlink-source-window.js`, related tests | done |
-| RF-003 | P0 | Data pipeline stage extraction | `src/service/backlink/backlink-data.ts`, collectors/loaders/assembly files | done |
-| RF-004 | P1 | Explanation/meta pipeline separation | `src/service/backlink/backlink-context.js`, `src/service/backlink/backlink-render-data.js`, row/header helpers | done |
-| RF-005 | P1 | Host lifecycle ownership cleanup | plugin host services + controller integration | done |
-| RF-006 | P2 | Settings/type/naming cleanup | settings services and shared type definitions | done |
-| RF-007 | P1 | Render-data DOM helper extraction | `src/service/backlink/backlink-render-data.js`, related tests | done |
-| RF-008 | P1 | Panel data collector helper extraction | `src/service/backlink/backlink-panel-data-collectors.js`, related tests | done |
-| RF-009 | P1 | Render-data filter/sort helper extraction | `src/service/backlink/backlink-render-data.js`, related tests | done |
-| RF-010 | P1 | Panel controller preview/render coordinator extraction | `src/components/panel/backlink-panel-controller.js`, related tests | done |
-| RF-011 | P1 | Panel controller data refresh coordinator extraction | `src/components/panel/backlink-panel-controller.js`, related tests | done |
+| RF-012 | P0 | Backlink data fetch/attach coordinator split | `src/service/backlink/backlink-data.ts`, related pipeline helpers | done |
+| RF-013 | P0 | Panel controller action handler split | `src/components/panel/backlink-panel-controller.js`, related helper modules | done |
+| RF-014 | P1 | Query loader family decomposition | `src/service/backlink/backlink-query-loaders.js` | pending |
+| RF-015 | P1 | Collector family decomposition | `src/service/backlink/backlink-panel-data-collectors.js` | pending |
+| RF-016 | P2 | Planner facade shrink | `src/service/backlink/backlink-source-window.js` | pending |
 
-## 7. Recommended Order
+## 8. Recommended Order
 
-1. `RF-002` first, because source-window rules are the most correctness-sensitive domain boundary.
-2. `RF-001` next, because controller orchestration is the highest operational complexity surface.
-3. `RF-003` after that, to turn the data flow into explicit stages while the UI and planner seams are clearer.
-4. `RF-004` and `RF-005` once the heavy P0 surfaces are reduced.
-5. `RF-006` last as cleanup and consistency work.
+1. `RF-012`
+2. `RF-013`
+3. `RF-014`
+4. `RF-015`
+5. `RF-016`
 
-## 8. Approval Gate
+The first two give the highest leverage on the remaining largest coordination files while staying inside the current regression safety net.
 
-No refactor implementation has started.
+## 9. Approval Gate
+
+No new refactor implementation has started in this planning cycle.
 
 Approve one or more item IDs to execute next:
 
-- `RF-002`
-- `RF-001`
-- `RF-003`
-- `RF-004`
-- `RF-005`
-- `RF-006`
+- `RF-012`
+- `RF-013`
+- `RF-014`
+- `RF-015`
+- `RF-016`
 
 Recommended first batch:
 
-1. `RF-002`
-2. `RF-001`
+1. `RF-012`
+2. `RF-013`
 
-That pair gives the best leverage with the least ambiguity: it attacks the two largest, highest-risk modules first while preserving the existing test safety net.
-
-## 9. Execution Log
+## 10. Execution Log
 
 | ID | Date | Result | Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| RF-002 | 2026-03-18 | done | `node --test tests/backlink-source-window.test.js` | 已拆出 `backlink-source-window-ordering.js`、`backlink-source-window-structure.js`、`backlink-source-window-loader.js`，主模块改为 planner facade + public API |
-| RF-001 | 2026-03-18 | done | `node --test tests/backlink-panel-controller-local-refresh.test.js tests/backlink-panel-controller-focus-refresh.test.js tests/backlink-panel-controller-forwarding.test.js` | 已拆出 `backlink-panel-controller-runtime.js`，把 editor registry 和 document-group refresh tracking 从控制器主文件中下沉 |
-| RF-003 | 2026-03-18 | done | `node --test tests/backlink-data-pipeline.test.js tests/backlink-panel-focus.test.js` | 已拆出 `backlink-data-pipeline.js`，把有效节点准备和 render payload 组装从 `backlink-data.ts` 主流程中抽离为显式 stage helper |
-| RF-004 | 2026-03-18 | done | `node --test tests/backlink-context-helpers.test.js tests/backlink-context-fragments.test.js` | 已拆出 `backlink-context-meta.js` 和 `backlink-context-match.js`，把 meta 生成与 match/reset 细节从主 bundle 文件中分离 |
-| RF-005 | 2026-03-18 | done | `node --test tests/document-service-host-lifecycle.test.js tests/document-service-focus-sync.test.js tests/backlink-panel-host.test.js` | 已拆出 `document-backlink-host-lifecycle.js`，把 DocumentService 的底部面板复用/挂载决策下沉到独立 host helper |
-| RF-006 | 2026-03-18 | done | `node --test tests/setting-service-api.test.js tests/setting-config-resolver.test.js` | `SettingService` 新增正确拼写的 `updateSettingConfig*` API，并保留旧 typo 方法作为兼容别名 |
-| RF-007 | 2026-03-18 | done | `node --test tests/backlink-render-data-helpers.test.js tests/backlink-render-data.test.js` | 已拆出 `backlink-render-data-dom.js`，把 DOM 提取、嵌套节点归一化和容器回填逻辑从 `backlink-render-data.js` 分离 |
-| RF-008 | 2026-03-18 | done | `node --test tests/backlink-panel-data-collector-helpers.test.js tests/backlink-panel-data-collectors.test.js` | 已拆出 `backlink-panel-data-collector-helpers.js`，把 markdown 拼接、block id 路径拼接和 related-def 跟踪逻辑从 collectors 主文件分离 |
-| RF-009 | 2026-03-18 | done | `node --test tests/backlink-render-data-helpers.test.js tests/backlink-render-data.test.js` | 在 `backlink-render-data-dom.js` 中继续抽出 `matchesBacklinkKeywords` 和 `getBacklinkNodeSortComparator`，主文件的搜索/排序路径进一步收敛为编排层 |
-| RF-010 | 2026-03-18 | done | `node --test tests/backlink-panel-controller-local-refresh.test.js tests/backlink-panel-controller-forwarding.test.js tests/backlink-panel-controller-focus-refresh.test.js` | 已拆出 `backlink-panel-controller-rendering.js`，把 preview refresh 与 document-group rerender 协调逻辑从主控制器中分离 |
-| RF-011 | 2026-03-18 | done | `node --test tests/backlink-panel-controller-local-refresh.test.js tests/backlink-panel-controller-forwarding.test.js tests/backlink-panel-controller-focus-refresh.test.js` | 已拆出 `backlink-panel-controller-data.js`，把 filter display refresh、render-data refresh 和 page turning 协调逻辑从主控制器中分离 |
+| RF-012 | 2026-03-18 | done | `node --test tests/backlink-data-fetch-stage.test.js tests/backlink-data-pipeline.test.js tests/backlink-panel-focus.test.js` | 已拆出 `backlink-data-fetch-stage.js`，把 backlink fetch、source-window block loading 和 attach 逻辑从 `backlink-data.ts` 主流程中抽成显式 stage |
+| RF-013 | 2026-03-18 | done | `node --test tests/backlink-panel-controller-actions.test.js tests/backlink-panel-controller-local-refresh.test.js tests/backlink-panel-controller-forwarding.test.js tests/backlink-panel-controller-focus-refresh.test.js` | 已拆出 `backlink-panel-controller-actions.js`，把 query mutation、criteria 操作和输入防抖逻辑从主控制器中分离 |

@@ -38,7 +38,18 @@ export function compareBlocksByDocumentOrder(
 }
 
 export function hasCompleteDocumentOrder(blockArray = [], indexMap = new Map()) {
-  return blockArray.every((block) => Number.isFinite(indexMap.get(block?.id)));
+  if (!Array.isArray(blockArray) || blockArray.length <= 0) {
+    return false;
+  }
+
+  const documentIndexArray = blockArray.map((block) => indexMap.get(block?.id));
+  if (!documentIndexArray.every((index) => Number.isFinite(index))) {
+    return false;
+  }
+
+  // Some SiYuan builds collapse a whole structural subtree to the same block index.
+  // Those values are not sufficient to reconstruct the visible document order.
+  return new Set(documentIndexArray).size === documentIndexArray.length;
 }
 
 function compareBlocksBySiblingOrder(

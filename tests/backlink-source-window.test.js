@@ -1251,6 +1251,62 @@ test("buildBacklinkSourceWindow uses the previous sibling text block as the near
   ]);
 });
 
+test("buildBacklinkSourceWindow includes the parent list item shell and readable body in nearby mode for nested list items", () => {
+  const orderedBlocks = createDocumentBlocks([
+    { id: "heading-skills", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "heading-what", type: "h", subtype: "h3", parent_id: "doc-a" },
+    { id: "item-parent", type: "i", parent_id: "list-root" },
+    { id: "block-parent", type: "p", parent_id: "item-parent" },
+    { id: "list-parent", type: "l", parent_id: "item-parent" },
+    { id: "item-nearby", type: "i", parent_id: "list-parent" },
+    { id: "block-nearby", type: "p", parent_id: "item-nearby" },
+    { id: "item-brand", type: "i", parent_id: "list-parent" },
+    { id: "block-brand", type: "p", parent_id: "item-brand" },
+    { id: "item-title", type: "i", parent_id: "list-parent" },
+    { id: "block-title", type: "p", parent_id: "item-title" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "block-brand",
+        root_id: "doc-a",
+        parent_id: "item-brand",
+        type: "p",
+      },
+      previousSiblingBlockId: "item-nearby",
+      nextSiblingBlockId: "item-title",
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "nearby",
+  });
+
+  assert.equal(sourceWindow.anchorBlockId, "item-brand");
+  assert.equal(sourceWindow.startBlockId, "item-parent");
+  assert.equal(sourceWindow.endBlockId, "block-title");
+  assert.deepEqual(sourceWindow.windowBlockIds, [
+    "item-parent",
+    "block-parent",
+    "list-parent",
+    "item-nearby",
+    "block-nearby",
+    "item-brand",
+    "block-brand",
+    "item-title",
+    "block-title",
+  ]);
+  assert.deepEqual(sourceWindow.visibleBlockIds, [
+    "item-parent",
+    "block-parent",
+    "item-nearby",
+    "block-nearby",
+    "item-brand",
+    "block-brand",
+    "item-title",
+    "block-title",
+  ]);
+});
+
 test("buildBacklinkSourceWindow keeps list core mode focused on the list shell and focus child with subtree collapsed", () => {
   const orderedBlocks = createDocumentBlocks([
     { id: "item-brand", type: "i", parent_id: "list-root" },
@@ -1541,6 +1597,172 @@ test("loadOrderedBacklinkSourceWindowBlocks preserves parent-before-child tree o
     orderedBlocksByRootId.get("doc-a").map((block) => block.id),
     ["item-brand", "block-brand", "item-next"],
   );
+});
+
+test("loadOrderedBacklinkSourceWindowBlocks falls back to tree ordering when block indexes collapse to the same value", async () => {
+  const orderedBlocksByRootId = await loadOrderedBacklinkSourceWindowBlocks({
+    backlinkDataArray: [
+      {
+        backlinkBlock: {
+          id: "item-brand",
+          root_id: "doc-a",
+        },
+      },
+    ],
+    deps: {
+      queryDocumentBlocksByRootIds: async () => [
+        {
+          id: "block-parent",
+          root_id: "doc-a",
+          parent_id: "item-parent",
+          type: "p",
+          sort: 10,
+          path: "/doc-a/list",
+        },
+        {
+          id: "block-nearby",
+          root_id: "doc-a",
+          parent_id: "item-nearby",
+          type: "p",
+          sort: 10,
+          path: "/doc-a/list",
+        },
+        {
+          id: "item-nearby",
+          root_id: "doc-a",
+          parent_id: "list-root",
+          type: "i",
+          sort: 20,
+          path: "/doc-a/list",
+        },
+        {
+          id: "item-title",
+          root_id: "doc-a",
+          parent_id: "list-root",
+          type: "i",
+          sort: 20,
+          path: "/doc-a/list",
+        },
+        {
+          id: "item-parent",
+          root_id: "doc-a",
+          parent_id: "doc-a",
+          type: "i",
+          sort: 20,
+          path: "/doc-a/list",
+        },
+        {
+          id: "list-root",
+          root_id: "doc-a",
+          parent_id: "item-parent",
+          type: "l",
+          sort: 20,
+          path: "/doc-a/list",
+        },
+        {
+          id: "item-brand",
+          root_id: "doc-a",
+          parent_id: "list-root",
+          type: "i",
+          sort: 20,
+          path: "/doc-a/list",
+        },
+        {
+          id: "block-brand",
+          root_id: "doc-a",
+          parent_id: "item-brand",
+          type: "p",
+          sort: 10,
+          path: "/doc-a/list",
+        },
+        {
+          id: "block-title",
+          root_id: "doc-a",
+          parent_id: "item-title",
+          type: "p",
+          sort: 10,
+          path: "/doc-a/list",
+        },
+      ],
+      getBlockIndexMap: async () =>
+        new Map([
+          ["item-parent", 15],
+          ["block-parent", 15],
+          ["list-root", 15],
+          ["item-nearby", 15],
+          ["block-nearby", 15],
+          ["item-brand", 15],
+          ["block-brand", 15],
+          ["item-title", 15],
+          ["block-title", 15],
+        ]),
+      getChildBlocks: async (parentId) => {
+        if (parentId === "doc-a") {
+          return [{ id: "item-parent" }];
+        }
+        if (parentId === "item-parent") {
+          return [{ id: "block-parent" }, { id: "list-root" }];
+        }
+        if (parentId === "list-root") {
+          return [{ id: "item-nearby" }, { id: "item-brand" }, { id: "item-title" }];
+        }
+        if (parentId === "item-nearby") {
+          return [{ id: "block-nearby" }];
+        }
+        if (parentId === "item-brand") {
+          return [{ id: "block-brand" }];
+        }
+        if (parentId === "item-title") {
+          return [{ id: "block-title" }];
+        }
+        return [];
+      },
+    },
+  });
+
+  assert.deepEqual(
+    orderedBlocksByRootId.get("doc-a").map((block) => block.id),
+    [
+      "item-parent",
+      "block-parent",
+      "list-root",
+      "item-nearby",
+      "block-nearby",
+      "item-brand",
+      "block-brand",
+      "item-title",
+      "block-title",
+    ],
+  );
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "item-brand",
+        root_id: "doc-a",
+        parent_id: "list-root",
+        type: "i",
+      },
+      previousSiblingBlockId: "item-nearby",
+      nextSiblingBlockId: "item-title",
+    },
+    orderedDocumentBlocks: orderedBlocksByRootId.get("doc-a"),
+    contextVisibilityLevel: "nearby",
+  });
+
+  assert.equal(sourceWindow.startBlockId, "item-parent");
+  assert.equal(sourceWindow.endBlockId, "block-title");
+  assert.deepEqual(sourceWindow.windowBlockIds, [
+    "item-parent",
+    "block-parent",
+    "list-root",
+    "item-nearby",
+    "block-nearby",
+    "item-brand",
+    "block-brand",
+    "item-title",
+    "block-title",
+  ]);
 });
 
 test("loadOrderedBacklinkSourceWindowBlocks keeps original query order when fallback metadata ties", async () => {

@@ -137,12 +137,12 @@ test("buildBacklinkContextControlState hides the next action once full mode is r
       visibleSourceSummary: "已进入全文模式",
       budgetHint: "",
       previousDisabled: false,
-      nextDisabled: true,
+      nextDisabled: false,
     },
   );
 });
 
-test("buildBacklinkContextControlState marks boundary navigation availability", () => {
+test("buildBacklinkContextControlState keeps context navigation enabled at every level", () => {
   assert.deepEqual(
     buildBacklinkContextControlState({
       contextVisibilityLevel: "core",
@@ -155,7 +155,7 @@ test("buildBacklinkContextControlState marks boundary navigation availability", 
       nextActionText: "下一步：近邻",
       visibleSourceSummary: "",
       budgetHint: "",
-      previousDisabled: true,
+      previousDisabled: false,
       nextDisabled: false,
     },
   );
@@ -173,7 +173,7 @@ test("buildBacklinkContextControlState marks boundary navigation availability", 
       visibleSourceSummary: "已进入全文模式",
       budgetHint: "",
       previousDisabled: false,
-      nextDisabled: true,
+      nextDisabled: false,
     },
   );
 });
@@ -227,7 +227,7 @@ test("buildBacklinkContextControlState hides the degraded hint in full mode", ()
       visibleSourceSummary: "已进入全文模式",
       budgetHint: "",
       previousDisabled: false,
-      nextDisabled: true,
+      nextDisabled: false,
     },
   );
 });

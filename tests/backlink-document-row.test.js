@@ -192,7 +192,6 @@ test("buildBacklinkDocumentListItemHtml renders title aria text and progress tex
   assert.match(html, /backlink-context-step-button/);
   assert.match(html, /backlink-context-step-button previous/);
   assert.match(html, /backlink-context-step-button next/);
-  assert.match(html, /backlink-context-step-button previous"[^>]*disabled/);
   assert.match(html, /backlink-context-state-group/);
   assert.match(
     html,
@@ -322,7 +321,7 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, brea
   assert.equal(nextButton.disabled, false);
 });
 
-test("updateBacklinkDocumentLiNavigation disables bounded context step buttons at the edges", () => {
+test("updateBacklinkDocumentLiNavigation keeps context step buttons enabled for cyclic navigation", () => {
   const previousContextButton = {
     attrs: {},
     setAttribute(name, value) {
@@ -370,21 +369,21 @@ test("updateBacklinkDocumentLiNavigation disables bounded context step buttons a
 
   updateBacklinkDocumentLiNavigation(documentLiElement, documentGroup, {
     contextVisibilityLevel: "core",
-    previousDisabled: true,
+    previousDisabled: false,
     nextDisabled: false,
   });
 
-  assert.equal(previousContextButton.attrs.disabled, true);
+  assert.equal(previousContextButton.attrs.disabled, undefined);
   assert.equal(nextContextButton.attrs.disabled, undefined);
 
   updateBacklinkDocumentLiNavigation(documentLiElement, documentGroup, {
     contextVisibilityLevel: "full",
     previousDisabled: false,
-    nextDisabled: true,
+    nextDisabled: false,
   });
 
   assert.equal(previousContextButton.attrs.disabled, undefined);
-  assert.equal(nextContextButton.attrs.disabled, true);
+  assert.equal(nextContextButton.attrs.disabled, undefined);
 });
 
 test("createBacklinkDocumentListItemElement wires toggle and navigation events", () => {

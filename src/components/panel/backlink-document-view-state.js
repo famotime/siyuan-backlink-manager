@@ -95,10 +95,15 @@ export function cycleBacklinkDocumentVisibilityLevel(
     state.documentVisibilityLevelMap?.get(documentId),
   );
   const currentIndex = BACKLINK_DOCUMENT_VISIBILITY_LEVELS.indexOf(currentLevel);
+  const lastIndex = BACKLINK_DOCUMENT_VISIBILITY_LEVELS.length - 1;
   const nextIndex =
     direction === "previous"
-      ? Math.max(currentIndex - 1, 0)
-      : Math.min(currentIndex + 1, BACKLINK_DOCUMENT_VISIBILITY_LEVELS.length - 1);
+      ? currentIndex <= 0
+        ? lastIndex
+        : currentIndex - 1
+      : currentIndex >= lastIndex
+      ? 0
+      : currentIndex + 1;
   const nextLevel = BACKLINK_DOCUMENT_VISIBILITY_LEVELS[nextIndex];
   markBacklinkDocumentVisibilityLevel(state, documentId, nextLevel);
   return nextLevel;

@@ -69,9 +69,7 @@ export function buildBacklinkContextControlState({
       contextBundle: activeBacklink?.contextBundle || null,
       activeBacklink,
     }),
-    previousDisabled: normalizedLevel === BACKLINK_CONTEXT_LEVEL_ORDER[0],
-    nextDisabled:
-      normalizedLevel ===
-      BACKLINK_CONTEXT_LEVEL_ORDER[BACKLINK_CONTEXT_LEVEL_ORDER.length - 1],
+    previousDisabled: false,
+    nextDisabled: false,
   };
 }

@@ -56,16 +56,22 @@ export function createBacklinkPanelNavigationActions({
     if (!sourceWindow) {
       return false;
     }
+    if (sourceWindow.renderMode === "document") {
+      return true;
+    }
 
-    const visibleBlockIdSet = new Set([
-      ...getBacklinkSourceWindowOrderedVisibleBlockIdsDep(sourceWindow),
-      ...(getBacklinkSourceWindowBodyRangeDep(sourceWindow)?.windowBlockIds || []),
-      getBacklinkSourceWindowIdentityDep(sourceWindow)?.anchorBlockId || "",
-      getBacklinkSourceWindowIdentityDep(sourceWindow)?.focusBlockId || "",
-      getBacklinkSourceWindowIdentityDep(sourceWindow)?.zoomInBlockId || "",
-    ]);
-    visibleBlockIdSet.delete("");
-    return visibleBlockIdSet.has(blockId);
+    const bodyRangeBlockIdSet = new Set(
+      getBacklinkSourceWindowBodyRangeDep(sourceWindow)?.windowBlockIds || [],
+    );
+    bodyRangeBlockIdSet.delete("");
+    if (
+      bodyRangeBlockIdSet.has(blockId) &&
+      bodyRangeBlockIdSet.has(activeBacklink?.backlinkBlock?.id)
+    ) {
+      return true;
+    }
+
+    return false;
   }
 
   function resolveBacklinkBreadcrumbVisibilityLevel(
@@ -194,7 +200,29 @@ export function createBacklinkPanelNavigationActions({
       return false;
     }
 
+    const documentGroup = state.backlinkDocumentGroupArray.find(
+      (group) => group.documentId === documentId,
+    );
+    const activeBacklink = documentGroup?.activeBacklink || null;
+    if (!activeBacklink) {
+      return Boolean(
+        jumpToBreadcrumbBlockInPreview(protyleContentElement, blockId, {
+          documentId,
+        }),
+      );
+    }
+
+    const currentVisibilityLevel = getBacklinkDocumentRenderState(
+      state.backlinkDocumentViewState,
+      documentId,
+    ).contextVisibilityLevel;
     if (
+      canNavigateBreadcrumbBlockAtLevel(
+        activeBacklink,
+        blockId,
+        currentVisibilityLevel,
+        documentId,
+      ) &&
       jumpToBreadcrumbBlockInPreview(protyleContentElement, blockId, {
         documentId,
       })
@@ -202,18 +230,6 @@ export function createBacklinkPanelNavigationActions({
       return true;
     }
 
-    const documentGroup = state.backlinkDocumentGroupArray.find(
-      (group) => group.documentId === documentId,
-    );
-    const activeBacklink = documentGroup?.activeBacklink || null;
-    if (!activeBacklink) {
-      return false;
-    }
-
-    const currentVisibilityLevel = getBacklinkDocumentRenderState(
-      state.backlinkDocumentViewState,
-      documentId,
-    ).contextVisibilityLevel;
     const targetVisibilityLevel = resolveBacklinkBreadcrumbVisibilityLevel(
       activeBacklink,
       blockId,

@@ -2,6 +2,64 @@ function getProtyleWysiwygElement(element) {
   return element?.querySelector?.("div.protyle-wysiwyg.protyle-wysiwyg--attr");
 }
 
+function unfoldBreadcrumbTargetAncestors(targetBlockElement, protyleWysiwygElement) {
+  let currentElement = targetBlockElement;
+  while (currentElement && currentElement !== protyleWysiwygElement) {
+    if (
+      currentElement?.getAttribute?.("data-type") === "NodeListItem" &&
+      currentElement?.getAttribute?.("fold") === "1"
+    ) {
+      currentElement.removeAttribute?.("fold");
+    }
+    currentElement.classList?.remove?.("fn__none");
+    currentElement = currentElement.parentElement;
+  }
+}
+
+export function navigateToBacklinkBreadcrumbBlock(
+  protyleContentElement,
+  blockId = "",
+  {
+    documentId = "",
+  } = {},
+) {
+  if (!protyleContentElement || !blockId) {
+    return false;
+  }
+
+  const protyleWysiwygElement = getProtyleWysiwygElement(protyleContentElement);
+  if (!protyleWysiwygElement) {
+    return false;
+  }
+
+  const targetBlockElement = protyleWysiwygElement.querySelector(
+    `[data-node-id="${blockId}"]`,
+  );
+  if (!targetBlockElement && documentId && blockId === documentId) {
+    const firstBlockElement = protyleWysiwygElement.querySelector("[data-node-id]");
+    if (!firstBlockElement) {
+      return false;
+    }
+
+    unfoldBreadcrumbTargetAncestors(firstBlockElement, protyleWysiwygElement);
+    firstBlockElement.scrollIntoView?.({
+      block: "start",
+      inline: "nearest",
+    });
+    return true;
+  }
+  if (!targetBlockElement) {
+    return false;
+  }
+
+  unfoldBreadcrumbTargetAncestors(targetBlockElement, protyleWysiwygElement);
+  targetBlockElement.scrollIntoView?.({
+    block: "center",
+    inline: "nearest",
+  });
+  return true;
+}
+
 export function expandAllListItemNode(element) {
   const protyleWysiwygElement = getProtyleWysiwygElement(element);
   if (!protyleWysiwygElement) {
@@ -18,14 +76,15 @@ export function expandAllListItemNode(element) {
 
 export function foldListItemNodeByIdSet(element, idSet) {
   if (!element || !idSet) {
-    return;
+    return false;
   }
 
   const protyleWysiwygElement = getProtyleWysiwygElement(element);
   if (!protyleWysiwygElement) {
-    return;
+    return false;
   }
 
+  let folded = false;
   expandAllListItemNode(element);
   for (const nodeId of idSet) {
     const foldItemElement = protyleWysiwygElement.querySelector(
@@ -35,7 +94,10 @@ export function foldListItemNodeByIdSet(element, idSet) {
       continue;
     }
     foldItemElement.setAttribute("fold", "1");
+    folded = true;
   }
+
+  return folded;
 }
 
 export function expandListItemNodeByDepth(element, depth, deps) {

@@ -124,6 +124,7 @@ export function buildBacklinkDocumentRenderOptions({
         scrollTop: 0,
         focusId: sourceWindowIdentity.focusBlockId || activeBacklink.backlinkBlock?.id,
         zoomInId:
+          sourceWindowIdentity.zoomInBlockId ||
           sourceWindowIdentity.anchorBlockId ||
           sourceWindowIdentity.focusBlockId ||
           activeBacklink.backlinkBlock?.id,
@@ -144,17 +145,21 @@ export function buildBacklinkDocumentRenderOptions({
   if (!useFullDocument && sourceWindow) {
     const sourceWindowIdentity = getBacklinkSourceWindowIdentity(sourceWindow) || {};
     const bodyRange = getBacklinkSourceWindowBodyRange(sourceWindow);
-    options.scrollAttr = {
+    const scrollAttr = {
       rootId: sourceWindowIdentity.rootId || documentId,
       startId: bodyRange?.startBlockId || "",
       endId: bodyRange?.endBlockId || "",
       scrollTop: 0,
       focusId: sourceWindowIdentity.focusBlockId || activeBacklink.backlinkBlock?.id,
-      zoomInId:
+    };
+    if (normalizedVisibilityLevel !== "nearby") {
+      scrollAttr.zoomInId =
+        sourceWindowIdentity.zoomInBlockId ||
         sourceWindowIdentity.anchorBlockId ||
         sourceWindowIdentity.focusBlockId ||
-        activeBacklink.backlinkBlock?.id,
-      };
+        activeBacklink.backlinkBlock?.id;
+    }
+    options.scrollAttr = scrollAttr;
     return options;
   }
 

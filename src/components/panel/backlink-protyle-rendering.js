@@ -248,8 +248,9 @@ export function applyCreatedBacklinkProtyleState({
       return false;
     }
 
-    foldListItemNodeByIdSet(protyleContentElement, new Set(collapsedBlockIds));
-    return true;
+    return Boolean(
+      foldListItemNodeByIdSet(protyleContentElement, new Set(collapsedBlockIds)),
+    );
   };
 
   if (showFullDocument) {

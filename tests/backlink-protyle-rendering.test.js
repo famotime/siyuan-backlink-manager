@@ -433,6 +433,107 @@ test("applyCreatedBacklinkProtyleState folds planner-collapsed list items before
   ]);
 });
 
+test("applyCreatedBacklinkProtyleState still applies nearby depth expansion when planner collapsed ids contain no foldable list items", () => {
+  const calls = [];
+
+  applyCreatedBacklinkProtyleState({
+    backlinkData: {
+      backlinkBlock: {
+        id: "block-a",
+        root_id: "doc-a",
+      },
+      sourceWindows: {
+        nearby: {
+          anchorBlockId: "item-parent",
+          focusBlockId: "block-a",
+          contextPlan: {
+            bodyRange: {
+              startBlockId: "item-parent",
+              endBlockId: "block-next",
+              windowBlockIds: [
+                "item-parent",
+                "block-parent",
+                "list-parent",
+                "item-prev",
+                "block-prev",
+                "item-a",
+                "block-a",
+                "item-next",
+                "block-next",
+              ],
+            },
+            orderedVisibleBlockIds: [
+              "item-parent",
+              "block-parent",
+              "item-prev",
+              "block-prev",
+              "item-a",
+              "block-a",
+              "item-next",
+              "block-next",
+            ],
+            collapsedBlockIds: ["list-parent"],
+          },
+        },
+      },
+    },
+    documentLiElement: { id: "li-a" },
+    protyle: {
+      protyle: {
+        contentElement: {
+          querySelector(selector) {
+            return selector === "[data-node-id='block-a']" ? {} : null;
+          },
+          addEventListener(type) {
+            calls.push(type);
+          },
+        },
+      },
+    },
+    contextVisibilityLevel: "nearby",
+    deps: {
+      emitLoadedProtyleStatic: () => calls.push("emit"),
+      getBacklinkDocumentRenderState: () => ({ isFolded: false }),
+      backlinkDocumentViewState: {},
+      expandBacklinkDocument: () => calls.push("expand-document"),
+      collapseBacklinkDocument: () => calls.push("collapse-document"),
+      expandAllListItemNode: () => calls.push("expand-all-items"),
+      expandBacklinkHeadingMore: () => calls.push("expand-heading"),
+      backlinkProtyleItemFoldMap: new Map(),
+      foldListItemNodeByIdSet: (_element, idSet) => {
+        calls.push(`fold-by-id-set:${Array.from(idSet).join(",")}`);
+        return false;
+      },
+      hideBlocksOutsideBacklinkSourceWindow: () => calls.push("hide-window"),
+      defaultExpandedListItemLevel: 1,
+      expandListItemNodeByDepth: (_element, depth) =>
+        calls.push(`expand-by-depth:${depth}`),
+      getElementsBeforeDepth: () => [],
+      getElementsAtDepth: () => [],
+      syHasChildListNode: () => false,
+      backlinkProtyleHeadingExpandMap: new Map(),
+      hideOtherListItemElement: () => calls.push("hide-items"),
+      queryParams: { backlinkKeywordStr: "" },
+      sanitizeBacklinkKeywords: () => [],
+      splitKeywordStringToArray: () => [],
+      highlightElementTextByCss: () => calls.push("highlight"),
+      delayedTwiceRefresh: (callback) => callback(),
+    },
+  });
+
+  assert.deepEqual(calls, [
+    "emit",
+    "fold-by-id-set:list-parent",
+    "expand-by-depth:2",
+    "expand-heading",
+    "hide-window",
+    "highlight",
+    "hide-window",
+    "highlight",
+    "touchend",
+  ]);
+});
+
 test("applyCreatedBacklinkProtyleState skips source window hiding when preview dom has no original backlink block id", () => {
   const calls = [];
   const protyleContentElement = {

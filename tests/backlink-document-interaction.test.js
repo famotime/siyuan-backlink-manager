@@ -184,7 +184,6 @@ test("uses source window scrollAttr for nearby mode when original context is ava
         endId: "block-next",
         scrollTop: 0,
         focusId: "backlink-1",
-        zoomInId: "backlink-1",
       },
       render: {
         background: false,
@@ -235,7 +234,6 @@ test("uses contextPlan bodyRange for scrollAttr when source window provides unif
         endId: "block-next",
         scrollTop: 0,
         focusId: "backlink-1",
-        zoomInId: "backlink-1",
       },
       render: {
         background: false,
@@ -286,7 +284,6 @@ test("uses contextPlan identity for scrollAttr when legacy source window identit
         endId: "block-next",
         scrollTop: 0,
         focusId: "backlink-child",
-        zoomInId: "list-item-1",
       },
       render: {
         background: false,
@@ -331,7 +328,51 @@ test("uses source window scrollAttr for nearby mode when the source window spans
         endId: "block-next",
         scrollTop: 0,
         focusId: "backlink-child",
-        zoomInId: "list-item-1",
+      },
+      render: {
+        background: false,
+        title: false,
+        gutter: true,
+        scroll: false,
+        breadcrumb: false,
+      },
+    },
+  );
+});
+
+test("does not set zoomInId in nearby mode when the source window starts from the parent shell", () => {
+  const activeBacklink = {
+    backlinkBlock: {
+      id: "backlink-child",
+      root_id: "doc-1",
+      box: "box-1",
+    },
+    sourceWindows: {
+      nearby: {
+        rootId: "doc-1",
+        startBlockId: "list-item-parent",
+        endBlockId: "block-next",
+        focusBlockId: "backlink-child",
+        anchorBlockId: "list-item-1",
+        zoomInBlockId: "list-item-parent",
+      },
+    },
+  };
+
+  assert.deepEqual(
+    buildBacklinkDocumentRenderOptions({
+      documentId: "doc-1",
+      activeBacklink,
+      contextVisibilityLevel: "nearby",
+    }),
+    {
+      blockId: "doc-1",
+      scrollAttr: {
+        rootId: "doc-1",
+        startId: "list-item-parent",
+        endId: "block-next",
+        scrollTop: 0,
+        focusId: "backlink-child",
       },
       render: {
         background: false,
@@ -438,7 +479,6 @@ test("keeps source window rendering ahead of preview fallback for reference-only
         endId: "backlink-1",
         scrollTop: 0,
         focusId: "backlink-1",
-        zoomInId: "backlink-1",
       },
       render: {
         background: false,

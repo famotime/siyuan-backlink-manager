@@ -64,6 +64,7 @@ import {
   foldListItemNodeByIdSet,
   hideBlocksOutsideBacklinkSourceWindow,
   hideOtherListItemElement,
+  navigateToBacklinkBreadcrumbBlock,
 } from "./backlink-protyle-dom.js";
 import {
   applyCreatedBacklinkProtyleState,
@@ -351,6 +352,8 @@ export function createBacklinkPanelController(state) {
       navigateBacklinkDocument(event, direction),
     stepBacklinkDocumentContext: (documentLiElement, direction) =>
       stepBacklinkDocumentContext(documentLiElement, direction),
+    navigateBacklinkBreadcrumb: (documentLiElement, blockId) =>
+      navigateBacklinkBreadcrumb(documentLiElement, blockId),
   });
 
   function renderBacklinkDocumentGroup(
@@ -507,6 +510,7 @@ export function createBacklinkPanelController(state) {
     markBacklinkDocumentFullView,
     expandBacklinkDocument,
     refreshBacklinkDocumentGroupById,
+    jumpToBreadcrumbBlockInPreview: navigateToBacklinkBreadcrumbBlock,
   });
 
   function stepBacklinkDocumentContext(documentLiElement, direction = "next") {
@@ -612,6 +616,13 @@ export function createBacklinkPanelController(state) {
 
   function navigateBacklinkDocument(event, direction) {
     return panelNavigationActions.navigateBacklinkDocument(event, direction);
+  }
+
+  function navigateBacklinkBreadcrumb(documentLiElement, blockId) {
+    return panelNavigationActions.navigateBacklinkBreadcrumb(
+      documentLiElement,
+      blockId,
+    );
   }
 
   function clearCacheAndRefresh() {

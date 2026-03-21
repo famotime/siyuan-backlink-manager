@@ -47,6 +47,7 @@ export function createBacklinkPanelRenderBindings({
   toggleBacklinkDocument,
   navigateBacklinkDocument,
   stepBacklinkDocumentContext,
+  navigateBacklinkBreadcrumb,
 } = {}) {
   function renderBacklinkDocumentGroup(
     documentGroup,
@@ -162,8 +163,9 @@ export function createBacklinkPanelRenderBindings({
             onToggle: toggleBacklinkDocument,
             onNavigate: navigateBacklinkDocument,
             onStepContextLevel: stepBacklinkDocumentContext,
+            onBreadcrumbNavigate: navigateBacklinkBreadcrumb,
           }),
-        renderDocumentGroup,
+        renderDocumentGroup: renderBacklinkDocumentGroup,
       },
     });
   }

@@ -1,13 +1,8 @@
-import { getBacklinkContextMatchMeta } from "../../service/backlink/backlink-context.js";
 import { getBacklinkContextLevelLabel } from "./backlink-panel-header.js";
 
 const BACKLINK_CONTEXT_LEVEL_ORDER = ["core", "nearby", "extended", "full"];
 const BACKLINK_DOCUMENT_TITLE_TOOLTIP =
   "左键在主窗口打开文档，右键在右侧打开文档，Ctrl+左键跟随当前焦点打开文档";
-
-function getBacklinkMatchMeta(backlinkData = null) {
-  return getBacklinkContextMatchMeta(backlinkData?.contextBundle || null);
-}
 
 function normalizeBacklinkContextControlState(contextControlState = {}) {
   const contextVisibilityLevel =
@@ -30,6 +25,164 @@ function getBacklinkContextStateLevelFromTarget(target) {
     target.closest(".backlink-context-state")?.getAttribute("data-context-level") ||
     ""
   );
+}
+
+function normalizeBacklinkBreadcrumbItemType(type = "") {
+  const normalizedType = String(type || "").trim();
+  if (!normalizedType) {
+    return "";
+  }
+
+  const typeMap = {
+    NodeDocument: "d",
+    NodeHeading: "h",
+    NodeList: "l",
+    NodeListItem: "i",
+    NodeParagraph: "p",
+    NodeBlockquote: "b",
+    NodeTable: "t",
+    NodeCodeBlock: "c",
+  };
+  return typeMap[normalizedType] || normalizedType;
+}
+
+function createBacklinkBreadcrumbItem(blockPath = {}) {
+  const label = String(blockPath?.name || "").trim();
+  if (!label) {
+    return null;
+  }
+
+  return {
+    id: String(blockPath?.id || "").trim(),
+    label,
+    type: normalizeBacklinkBreadcrumbItemType(blockPath?.type),
+    subType: String(blockPath?.subType || "").trim(),
+    clickable: Boolean(String(blockPath?.id || "").trim()),
+  };
+}
+
+function findBacklinkBreadcrumbTrail(
+  blockPaths = [],
+  targetBlockIdSet = new Set(),
+) {
+  for (const blockPath of blockPaths || []) {
+    if (!blockPath) {
+      continue;
+    }
+
+    const currentItem = createBacklinkBreadcrumbItem(blockPath);
+    if (targetBlockIdSet.has(blockPath.id)) {
+      return currentItem ? [currentItem] : [];
+    }
+
+    const childTrail = findBacklinkBreadcrumbTrail(
+      blockPath.children || [],
+      targetBlockIdSet,
+    );
+    if (childTrail) {
+      return currentItem ? [currentItem, ...childTrail] : childTrail;
+    }
+  }
+
+  return null;
+}
+
+function buildSingleBranchBreadcrumbTrail(blockPaths = []) {
+  const breadcrumbItems = [];
+  let currentLevel = blockPaths;
+
+  while (Array.isArray(currentLevel) && currentLevel.length === 1) {
+    const currentNode = currentLevel[0];
+    const currentItem = createBacklinkBreadcrumbItem(currentNode);
+    if (currentItem) {
+      breadcrumbItems.push(currentItem);
+    }
+    currentLevel = currentNode?.children || [];
+  }
+
+  return breadcrumbItems;
+}
+
+function buildTopLevelBreadcrumbItems(blockPaths = []) {
+  return (blockPaths || [])
+    .map((blockPath) => createBacklinkBreadcrumbItem(blockPath))
+    .filter(Boolean);
+}
+
+function buildFlatBacklinkBreadcrumbTrail(
+  blockPaths = [],
+  targetBlockIdSet = new Set(),
+) {
+  if (!Array.isArray(blockPaths) || blockPaths.length <= 0) {
+    return null;
+  }
+
+  const targetIndex = blockPaths.findIndex((blockPath) =>
+    targetBlockIdSet.has(blockPath?.id),
+  );
+  if (targetIndex < 0) {
+    return null;
+  }
+
+  return blockPaths
+    .slice(0, targetIndex + 1)
+    .map((blockPath) => createBacklinkBreadcrumbItem(blockPath))
+    .filter(Boolean);
+}
+
+function getBacklinkBreadcrumbTargetBlockIds(activeBacklink = null) {
+  const targetBlockIdSet = new Set();
+  const backlinkBlockId = String(activeBacklink?.backlinkBlock?.id || "").trim();
+  if (backlinkBlockId) {
+    targetBlockIdSet.add(backlinkBlockId);
+  }
+  return targetBlockIdSet;
+}
+
+function buildHeadingBreadcrumbItems(breadcrumbItems = []) {
+  return (breadcrumbItems || []).filter((item) => item?.type === "h");
+}
+
+export function buildBacklinkBreadcrumbItems(activeBacklink = null) {
+  const blockPaths = Array.isArray(activeBacklink?.blockPaths)
+    ? activeBacklink.blockPaths
+    : [];
+  const targetBlockIdSet = getBacklinkBreadcrumbTargetBlockIds(activeBacklink);
+  const matchedTrail = findBacklinkBreadcrumbTrail(blockPaths, targetBlockIdSet);
+  if (Array.isArray(matchedTrail) && matchedTrail.length > 0) {
+    const matchedHeadingTrail = buildHeadingBreadcrumbItems(matchedTrail);
+    if (matchedHeadingTrail.length > 0) {
+      return matchedHeadingTrail;
+    }
+  }
+
+  const flatTrail = buildFlatBacklinkBreadcrumbTrail(blockPaths, targetBlockIdSet);
+  if (Array.isArray(flatTrail) && flatTrail.length > 0) {
+    const flatHeadingTrail = buildHeadingBreadcrumbItems(flatTrail);
+    if (flatHeadingTrail.length > 0) {
+      return flatHeadingTrail;
+    }
+  }
+
+  const singleBranchTrail = buildSingleBranchBreadcrumbTrail(blockPaths);
+  if (singleBranchTrail.length > 1) {
+    return buildHeadingBreadcrumbItems(singleBranchTrail);
+  }
+
+  return buildHeadingBreadcrumbItems(buildTopLevelBreadcrumbItems(blockPaths));
+}
+
+function buildBacklinkBreadcrumbItemsHtml(breadcrumbItems = []) {
+  return breadcrumbItems
+    .map((item) => {
+      const clickableClass = item.clickable
+        ? " backlink-breadcrumb__item--clickable"
+        : "";
+      const nodeIdAttr =
+        item.clickable && item.id ? ` data-node-id="${item.id}"` : "";
+      return `<span class="protyle-breadcrumb__item backlink-breadcrumb__item${clickableClass}"${nodeIdAttr}>${item.label}</span>`;
+    })
+    .join("");
 }
 
 function buildBacklinkContextStateGroupHtml(contextVisibilityLevel = "core") {
@@ -64,18 +217,14 @@ export function buildBacklinkDocumentListItemHtml({
   documentName = "",
   docAriaText = "",
   progressText = "",
-  matchSourceLabel = "",
-  matchSummaryText = "",
-  locationPathText = "",
+  breadcrumbItems = [],
   contextControlState = {},
 } = {}) {
   const truncatedAriaText = docAriaText ? docAriaText.substring(0, 100) : "";
-  const locationHtml = locationPathText
-    ? `<span class="b3-list-item__meta backlink-context-location">${locationPathText}</span>`
-    : "";
 
   return `
 <div class="backlink-document-header-row">
+<div class="backlink-document-title-row">
 <span style="padding-left: 4px;margin-right: 2px" class="b3-list-item__toggle b3-list-item__toggle--hl">
 <svg class="b3-list-item__arrow b3-list-item__arrow--open"><use xlink:href="#iconRight"></use></svg>
 </span>
@@ -83,14 +232,17 @@ export function buildBacklinkDocumentListItemHtml({
 <span class="b3-list-item__text ariaLabel"  aria-label="${truncatedAriaText}" title="${BACKLINK_DOCUMENT_TITLE_TOOLTIP}"  >
 ${documentName}
 </span>
-<span class="b3-list-item__meta backlink-chip backlink-chip--flat backlink-context-source">${matchSourceLabel}</span>
-<span class="b3-list-item__meta backlink-context-summary">${matchSummaryText}</span>
-${locationHtml}
+<span class="backlink-document-nav-group">
 <svg class="b3-list-item__graphic counter ariaLabel backlink-nav-button previous-backlink-icon" aria-label="上一个反链块"><use xlink:href="#iconLeft"></use></svg>
 <span class="b3-list-item__meta backlink-nav-progress">${progressText}</span>
 <svg class="b3-list-item__graphic counter ariaLabel backlink-nav-button next-backlink-icon" aria-label="下一个反链块"><use xlink:href="#iconRight"></use></svg>
+</span>
 </div>
 ${buildBacklinkContextControlRowHtml(contextControlState)}
+<div class="protyle-breadcrumb__bar protyle-breadcrumb__bar--nowrap backlink-breadcrumb-row">${buildBacklinkBreadcrumbItemsHtml(
+    breadcrumbItems,
+  )}</div>
+</div>
 `;
 }
 
@@ -166,13 +318,8 @@ export function updateBacklinkDocumentLiNavigation(
   );
   const nextButton = documentLiElement.querySelector(".next-backlink-icon");
   const textElement = documentLiElement.querySelector(".b3-list-item__text");
-  const sourceElement = documentLiElement.querySelector(".backlink-context-source");
-  const summaryElement = documentLiElement.querySelector(".backlink-context-summary");
-  const locationElement = documentLiElement.querySelector(".backlink-context-location");
+  const breadcrumbElement = documentLiElement.querySelector(".backlink-breadcrumb-row");
   const disableNavigation = documentGroup.backlinks.length <= 1;
-  const { matchSourceLabel, matchSummaryText, locationPathText } = getBacklinkMatchMeta(
-    documentGroup.activeBacklink,
-  );
 
   documentLiElement.setAttribute(
     "data-backlink-block-id",
@@ -188,14 +335,10 @@ export function updateBacklinkDocumentLiNavigation(
     );
     textElement.setAttribute("title", BACKLINK_DOCUMENT_TITLE_TOOLTIP);
   }
-  if (sourceElement) {
-    sourceElement.textContent = matchSourceLabel;
-  }
-  if (summaryElement) {
-    summaryElement.textContent = matchSummaryText;
-  }
-  if (locationElement) {
-    locationElement.textContent = locationPathText;
+  if (breadcrumbElement) {
+    breadcrumbElement.innerHTML = buildBacklinkBreadcrumbItemsHtml(
+      buildBacklinkBreadcrumbItems(documentGroup.activeBacklink),
+    );
   }
   updateBacklinkContextControlRow(documentLiElement, contextControlState);
   previousButton?.classList.toggle("disabled", disableNavigation);
@@ -213,6 +356,7 @@ export function createBacklinkDocumentListItemElement({
   onToggle,
   onNavigate,
   onStepContextLevel,
+  onBreadcrumbNavigate,
 } = {}) {
   if (!documentGroup || !documentRef?.createElement) {
     return null;
@@ -235,7 +379,7 @@ export function createBacklinkDocumentListItemElement({
     docAriaText: activeBacklink?.backlinkBlock?.content,
     progressText: documentGroup.progressText,
     contextControlState,
-    ...getBacklinkMatchMeta(activeBacklink),
+    breadcrumbItems: buildBacklinkBreadcrumbItems(activeBacklink),
   });
 
   documentLiElement.addEventListener("mousedown", (event) => {
@@ -291,6 +435,19 @@ export function createBacklinkDocumentListItemElement({
       event.preventDefault();
       event.stopPropagation();
       onStepContextLevel?.(documentLiElement, contextLevel);
+    });
+
+  documentLiElement
+    .querySelector(".backlink-breadcrumb-row")
+    ?.addEventListener("click", (event) => {
+      const breadcrumbItem = event.target?.closest?.(".backlink-breadcrumb__item");
+      const blockId = breadcrumbItem?.getAttribute?.("data-node-id") || "";
+      if (!blockId) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      onBreadcrumbNavigate?.(documentLiElement, blockId);
     });
 
   documentLiElement

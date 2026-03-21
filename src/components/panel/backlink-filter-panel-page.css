@@ -201,26 +201,51 @@
 }
 
 .backlink-panel__area .list-item__document-name {
-    display: flex;
-    flex-wrap: wrap;
+    display: block;
 }
 
 .backlink-panel__area .backlink-document-header-row {
     display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    min-width: 0;
+}
+
+.backlink-panel__area .backlink-document-title-row {
+    display: flex;
     align-items: center;
-    flex-wrap: wrap;
     gap: 4px;
     width: 100%;
     min-width: 0;
+    flex-wrap: nowrap;
+}
+
+.backlink-panel__area .backlink-document-title-row .b3-list-item__text {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.backlink-panel__area .backlink-document-nav-group {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .backlink-panel__area .backlink-context-control-row {
     display: flex;
     align-items: center;
     gap: 6px;
-    margin: 4px 8px 0 26px;
+    margin: 4px 0 0 26px;
     padding: 4px 0 0;
-    width: calc(100% - 26px);
+    width: auto;
+    min-width: 0;
 }
 
 .backlink-panel__area .backlink-context-step-button {
@@ -283,6 +308,26 @@
     color: var(--b3-theme-warning);
 }
 
+.backlink-panel__area .backlink-breadcrumb-row {
+    margin: 4px 0 0 26px;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+}
+
+.backlink-panel__area .backlink-breadcrumb-row:empty {
+    display: none;
+}
+
+.backlink-panel__area .backlink-breadcrumb__item {
+    cursor: default;
+}
+
+.backlink-panel__area .backlink-breadcrumb__item--clickable {
+    cursor: pointer;
+}
+
 .backlink-panel__area .backlink-saved-criteria-tag {
     padding-right: 4px;
     max-width: none;
@@ -306,15 +351,12 @@
 }
 
 @media (max-width: 640px) {
-    .backlink-panel__area .backlink-context-source,
-    .backlink-panel__area .backlink-context-summary {
-        max-width: 100%;
-        white-space: normal;
-    }
-
     .backlink-panel__area .backlink-context-control-row {
         margin-left: 20px;
-        width: calc(100% - 20px);
+    }
+
+    .backlink-panel__area .backlink-breadcrumb-row {
+        margin-left: 20px;
     }
 }
 

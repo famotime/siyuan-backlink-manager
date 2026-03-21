@@ -2,19 +2,167 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildBacklinkBreadcrumbItems,
   buildBacklinkDocumentListItemHtml,
   createBacklinkDocumentListItemElement,
   updateBacklinkDocumentLiNavigation,
 } from "../src/components/panel/backlink-document-row.js";
+
+test("buildBacklinkBreadcrumbItems keeps only the matched in-document heading path", () => {
+  const breadcrumbItems = buildBacklinkBreadcrumbItems({
+    backlinkBlock: {
+      id: "target-block",
+      root_id: "doc-a",
+    },
+    blockPaths: [
+      {
+        id: "doc-a",
+        name: "Document A",
+        type: "d",
+        subType: "",
+        children: [
+          {
+            id: "wrong-heading",
+            name: "重复标题",
+            type: "h",
+            subType: "h2",
+            children: [
+              {
+                id: "wrong-leaf",
+                name: "错误节点",
+                type: "p",
+                subType: "",
+                children: [],
+              },
+            ],
+          },
+          {
+            id: "matched-heading",
+            name: "重复标题",
+            type: "h",
+            subType: "h2",
+            children: [
+              {
+                id: "list-shell",
+                name: "列表项",
+                type: "i",
+                subType: "",
+                children: [
+                  {
+                    id: "target-block",
+                    name: "列表项",
+                    type: "p",
+                    subType: "",
+                    children: [],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  assert.deepEqual(
+    breadcrumbItems.map((item) => `${item.id}:${item.label}`),
+    ["matched-heading:重复标题"],
+  );
+});
+
+test("buildBacklinkBreadcrumbItems returns empty when the matched path contains no heading nodes", () => {
+  const breadcrumbItems = buildBacklinkBreadcrumbItems({
+    backlinkBlock: {
+      id: "target-block",
+      root_id: "doc-a",
+    },
+    blockPaths: [
+      {
+        id: "doc-a",
+        name: "Document A",
+        type: "d",
+        subType: "",
+        children: [
+          {
+            id: "list-shell",
+            name: "列表项",
+            type: "i",
+            subType: "",
+            children: [
+              {
+                id: "target-block",
+                name: "正文段落",
+                type: "p",
+                subType: "",
+                children: [],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  assert.deepEqual(breadcrumbItems, []);
+});
+
+test("buildBacklinkBreadcrumbItems supports flat SiYuan blockPaths with NodeHeading items", () => {
+  const breadcrumbItems = buildBacklinkBreadcrumbItems({
+    backlinkBlock: {
+      id: "target-paragraph",
+      root_id: "doc-a",
+    },
+    blockPaths: [
+      {
+        id: "doc-a",
+        name: "插件测试笔记本/主题笔记/~Skills/Claude Skills 不就是把提示词存个文件夹吗？ ***",
+        type: "NodeDocument",
+        subType: "",
+        children: null,
+      },
+      {
+        id: "heading-1",
+        name: "二、Skills：让 Claude 真正「学会干活」",
+        type: "NodeHeading",
+        subType: "h2",
+        children: null,
+      },
+      {
+        id: "heading-2",
+        name: "1. Skills 是什么？",
+        type: "NodeHeading",
+        subType: "h3",
+        children: null,
+      },
+      {
+        id: "target-paragraph",
+        name: "",
+        type: "NodeParagraph",
+        subType: "",
+        children: null,
+      },
+    ],
+  });
+
+  assert.deepEqual(
+    breadcrumbItems.map((item) => `${item.id}:${item.label}`),
+    [
+      "heading-1:二、Skills：让 Claude 真正「学会干活」",
+      "heading-2:1. Skills 是什么？",
+    ],
+  );
+});
 
 test("buildBacklinkDocumentListItemHtml renders title aria text and progress text", () => {
   const html = buildBacklinkDocumentListItemHtml({
     documentName: "Document A",
     docAriaText: "A".repeat(120),
     progressText: "2/3",
-    matchSourceLabel: "父级",
-    matchSummaryText: "父级：命中说明",
-    locationPathText: "标题：二、Skills / 1. Skills 是什么？ | 列表：上层节点 / 当前节点",
+    breadcrumbItems: [
+      { id: "doc-a", label: "Document A", clickable: false },
+      { id: "heading-1", label: "二、Skills", clickable: true },
+      { id: "heading-2", label: "1. Skills 是什么？", clickable: true },
+    ],
     contextControlState: {
       contextVisibilityLevel: "core",
       levelLabel: "核心",
@@ -33,14 +181,14 @@ test("buildBacklinkDocumentListItemHtml renders title aria text and progress tex
     html,
     /title="左键在主窗口打开文档，右键在右侧打开文档，Ctrl\+左键跟随当前焦点打开文档"/,
   );
-  assert.match(html, /父级/);
-  assert.match(html, /命中说明/);
-  assert.match(html, /标题：二、Skills/);
-  assert.match(html, /列表：上层节点/);
   assert.match(html, /backlink-document-header-row/);
-  assert.match(html, /backlink-chip backlink-chip--flat backlink-context-source/);
-  assert.match(html, /backlink-context-location/);
+  assert.match(html, /backlink-document-title-row/);
+  assert.match(html, /backlink-document-nav-group/);
   assert.match(html, /backlink-context-control-row/);
+  assert.match(html, /protyle-breadcrumb__bar/);
+  assert.match(html, /backlink-breadcrumb-row/);
+  assert.match(html, /data-node-id="heading-1"/);
+  assert.match(html, /1\. Skills 是什么/);
   assert.match(html, /backlink-context-step-button/);
   assert.match(html, /backlink-context-step-button previous/);
   assert.match(html, /backlink-context-step-button next/);
@@ -52,11 +200,15 @@ test("buildBacklinkDocumentListItemHtml renders title aria text and progress tex
   );
   assert.doesNotMatch(html, /backlink-context-next-action/);
   assert.doesNotMatch(html, /backlink-context-visible-summary/);
+  assert.doesNotMatch(html, /backlink-context-source/);
+  assert.doesNotMatch(html, /backlink-context-summary/);
+  assert.doesNotMatch(html, /标题：/);
+  assert.doesNotMatch(html, /列表：/);
   assert.match(html, /backlink-context-budget-hint/);
   assert.match(html, /部分上下文已裁剪/);
 });
 
-test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and disabled state", () => {
+test("updateBacklinkDocumentLiNavigation updates progress text, aria label, breadcrumb, and disabled state", () => {
   const progressElement = { textContent: "" };
   const previousButton = { classList: { toggle: (name, state) => (previousButton[name] = state) } };
   const nextButton = { classList: { toggle: (name, state) => (nextButton[name] = state) } };
@@ -66,9 +218,7 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and 
       this.attrs[name] = value;
     },
   };
-  const sourceElement = { textContent: "" };
-  const summaryElement = { textContent: "" };
-  const locationElement = { textContent: "" };
+  const breadcrumbElement = { innerHTML: "" };
   const controlRowElement = {
     attrs: {},
     setAttribute(name, value) {
@@ -105,10 +255,8 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and 
       if (selector === ".previous-backlink-icon") return previousButton;
       if (selector === ".next-backlink-icon") return nextButton;
       if (selector === ".b3-list-item__text") return textElement;
-      if (selector === ".backlink-context-source") return sourceElement;
-      if (selector === ".backlink-context-summary") return summaryElement;
-      if (selector === ".backlink-context-location") return locationElement;
       if (selector === ".backlink-context-control-row") return controlRowElement;
+      if (selector === ".backlink-breadcrumb-row") return breadcrumbElement;
       if (selector === ".backlink-context-step-button.previous") return previousContextButton;
       if (selector === ".backlink-context-step-button.next") return nextContextButton;
       if (selector === ".backlink-context-state-group") return stateGroupElement;
@@ -125,18 +273,11 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and 
         id: "block-a",
         content: "content",
       },
-      contextBundle: {
-        primaryMatchSourceType: "parent",
-        matchSummaryList: ["父级：命中说明"],
-        metaInfo: {
-          headingPath: {
-            text: "二、Skills / 1. Skills 是什么？",
-          },
-          listPath: {
-            text: "上层节点 / 当前节点",
-          },
-        },
-      },
+      blockPaths: [
+        { id: "doc-a", name: "Document A", type: "d", subType: "", children: [] },
+        { id: "heading-1", name: "二、Skills", type: "h", subType: "h2", children: [] },
+        { id: "heading-2", name: "1. Skills 是什么？", type: "h", subType: "h2", children: [] },
+      ],
     },
   }, {
     contextVisibilityLevel: "nearby",
@@ -156,12 +297,10 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, and 
     textElement.attrs.title,
     "左键在主窗口打开文档，右键在右侧打开文档，Ctrl+左键跟随当前焦点打开文档",
   );
-  assert.equal(sourceElement.textContent, "父级");
-  assert.equal(summaryElement.textContent, "父级：命中说明");
-  assert.equal(
-    locationElement.textContent,
-    "标题：二、Skills / 1. Skills 是什么？ | 列表：上层节点 / 当前节点",
-  );
+  assert.match(breadcrumbElement.innerHTML, /protyle-breadcrumb__item/);
+  assert.match(breadcrumbElement.innerHTML, /data-node-id="heading-1"/);
+  assert.match(breadcrumbElement.innerHTML, /1\. Skills 是什么/);
+  assert.doesNotMatch(breadcrumbElement.innerHTML, /Document A/);
   assert.equal(controlRowElement.attrs["data-context-level"], "近邻");
   assert.equal(
     previousContextButton.attrs["aria-label"],
@@ -281,6 +420,11 @@ test("createBacklinkDocumentListItemElement wires toggle and navigation events",
       listeners[`context-state-group:${type}`] = handler;
     },
   };
+  const breadcrumbElement = {
+    addEventListener(type, handler) {
+      listeners[`breadcrumb:${type}`] = handler;
+    },
+  };
   const documentLiElement = {
     classList: { add() {} },
     attrs: {},
@@ -306,6 +450,9 @@ test("createBacklinkDocumentListItemElement wires toggle and navigation events",
       }
       if (selector === ".backlink-context-state-group") {
         return stateGroupElement;
+      }
+      if (selector === ".backlink-breadcrumb-row") {
+        return breadcrumbElement;
       }
       return null;
     },
@@ -340,6 +487,7 @@ test("createBacklinkDocumentListItemElement wires toggle and navigation events",
     onToggle: () => calls.push("toggle"),
     onNavigate: (_, direction) => calls.push(direction),
     onStepContextLevel: (_, direction) => calls.push(`context-${direction}`),
+    onBreadcrumbNavigate: (_, blockId) => calls.push(`breadcrumb:${blockId}`),
     contextControlState: {
       contextVisibilityLevel: "core",
       levelLabel: "核心",
@@ -387,6 +535,22 @@ test("createBacklinkDocumentListItemElement wires toggle and navigation events",
       },
     },
   });
+  listeners["breadcrumb:click"]({
+    preventDefault() {},
+    stopPropagation() {},
+    target: {
+      closest(selector) {
+        if (selector !== ".backlink-breadcrumb__item") {
+          return null;
+        }
+        return {
+          getAttribute(name) {
+            return name === "data-node-id" ? "heading-1" : null;
+          },
+        };
+      },
+    },
+  });
 
   assert.equal(created, documentLiElement);
   assert.equal(appended[0], documentLiElement);
@@ -402,5 +566,6 @@ test("createBacklinkDocumentListItemElement wires toggle and navigation events",
     "context-previous",
     "context-next",
     "context-extended",
+    "breadcrumb:heading-1",
   ]);
 });

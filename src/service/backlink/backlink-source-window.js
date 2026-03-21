@@ -74,6 +74,9 @@ export function getBacklinkSourceWindowIdentity(sourceWindow = null) {
     rootId: identity.rootId || sourceWindow.rootId || "",
     anchorBlockId: identity.anchorBlockId || sourceWindow.anchorBlockId || "",
     focusBlockId: identity.focusBlockId || sourceWindow.focusBlockId || "",
+    ...(identity.zoomInBlockId || sourceWindow.zoomInBlockId
+      ? { zoomInBlockId: identity.zoomInBlockId || sourceWindow.zoomInBlockId }
+      : {}),
     sourceDocumentOrder:
       identity.sourceDocumentOrder ?? sourceWindow.sourceDocumentOrder,
   };

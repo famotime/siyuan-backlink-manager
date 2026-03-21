@@ -141,7 +141,7 @@ interface IBreadcrumb {
     name: string;
     type: string;
     subType: string;
-    children: [];
+    children: IBreadcrumb[];
 }
 
 interface IBacklinkData {
@@ -157,10 +157,18 @@ interface IBacklinkData {
         startBlockId: string;
         endBlockId: string;
         focusBlockId: string;
+        zoomInBlockId?: string;
         windowBlockIds?: string[];
         visibleBlockIds?: string[];
         orderedVisibleBlockIds?: string[];
         contextPlan?: {
+            identity?: {
+                rootId?: string;
+                anchorBlockId?: string;
+                focusBlockId?: string;
+                zoomInBlockId?: string;
+                sourceDocumentOrder?: number;
+            };
             bodyRange?: {
                 startBlockId?: string;
                 endBlockId?: string;

@@ -901,6 +901,41 @@ test("buildBacklinkSourceWindow nearby mode for heading backlinks does not pull 
   assert.equal(sourceWindow.endBlockId, "block-after-heading");
 });
 
+test("buildBacklinkSourceWindow nearby mode for heading backlinks shows only the last block of the previous heading section, not the entire section", () => {
+  // Mirrors the real-world bug: tacmq7q (heading) whose previous sibling is
+  // gyarqs3 (heading container with children). Nearby should show only the
+  // last child of gyarqs3 immediately before the focus heading, not all of gyarqs3.
+  const orderedBlocks = createDocumentBlocks([
+    { id: "heading-prev", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "child-prev-1", type: "p", parent_id: "heading-prev" },
+    { id: "child-prev-2", type: "p", parent_id: "heading-prev" },
+    { id: "heading-focus", type: "h", subtype: "h2", parent_id: "doc-a" },
+    { id: "child-focus-1", type: "p", parent_id: "heading-focus" },
+    { id: "block-tail", type: "p", parent_id: "doc-a" },
+  ]);
+
+  const sourceWindow = buildBacklinkSourceWindow({
+    backlinkBlockNode: {
+      block: {
+        id: "heading-focus",
+        root_id: "doc-a",
+        parent_id: "doc-a",
+        type: "h",
+      },
+    },
+    orderedDocumentBlocks: orderedBlocks,
+    contextVisibilityLevel: "nearby",
+  });
+
+  assert.deepEqual(sourceWindow.windowBlockIds, [
+    "child-prev-2",
+    "heading-focus",
+    "child-focus-1",
+  ]);
+  assert.equal(sourceWindow.startBlockId, "child-prev-2");
+  assert.equal(sourceWindow.endBlockId, "child-focus-1");
+});
+
 test("buildBacklinkSourceWindow keeps heading extended mode on the current heading section when previous headings have no body content", () => {
   const orderedBlocks = createDocumentBlocks([
     { id: "heading-prev", type: "h", subtype: "h2", parent_id: "doc-a" },

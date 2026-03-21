@@ -8,7 +8,6 @@ import {
   findContainingHeadingStartIndex,
   findFirstHeadingIndex,
   findNearestNonHeadingIndex,
-  findNearestSiblingBlockIdByPredicate,
   findSectionEndIndexByHeadingStart,
   getBlockRangeEndIndex,
   getMaxIndexedBlockEntry,
@@ -25,6 +24,7 @@ function buildSourceWindowContextPlan({
   rootId = "",
   anchorBlockId = "",
   focusBlockId = "",
+  zoomInBlockId = "",
   sourceDocumentOrder,
   startBlockId = "",
   endBlockId = "",
@@ -47,6 +47,7 @@ function buildSourceWindowContextPlan({
       rootId,
       anchorBlockId,
       focusBlockId,
+      ...(zoomInBlockId ? { zoomInBlockId } : {}),
       sourceDocumentOrder,
     },
     bodyRange: {
@@ -77,6 +78,7 @@ function buildSourceWindowFromContextPlan({
     startBlockId: bodyRange.startBlockId || "",
     endBlockId: bodyRange.endBlockId || "",
     focusBlockId: identity.focusBlockId || "",
+    ...(identity.zoomInBlockId ? { zoomInBlockId: identity.zoomInBlockId } : {}),
     sourceDocumentOrder: identity.sourceDocumentOrder,
     windowBlockIds: Array.isArray(bodyRange.windowBlockIds)
       ? bodyRange.windowBlockIds
@@ -101,6 +103,7 @@ function buildSourceWindowFromRange({
   backlinkBlockNode = null,
   context,
   anchorBlockId = "",
+  zoomInBlockId = "",
   startIndex,
   endIndex,
   startBlockId = "",
@@ -139,6 +142,7 @@ function buildSourceWindowFromRange({
     rootId: sourceWindow.rootId,
     anchorBlockId: sourceWindow.anchorBlockId,
     focusBlockId: sourceWindow.focusBlockId,
+    ...(zoomInBlockId ? { zoomInBlockId } : {}),
     sourceDocumentOrder: sourceWindow.sourceDocumentOrder,
     startBlockId: startBlockId || windowBlockIds[0],
     endBlockId: endBlockId || windowBlockIds[windowBlockIds.length - 1],
@@ -150,6 +154,21 @@ function buildSourceWindowFromRange({
     contextPlan,
     renderMode,
   });
+}
+
+function resolveParentListItemReadableUnit(listItemBlockId = "", context) {
+  const listItemBlock = context?.blockById?.get(listItemBlockId);
+  const parentListBlock = context?.blockById?.get(listItemBlock?.parent_id);
+  if (parentListBlock?.type !== "l") {
+    return null;
+  }
+
+  const parentListItemBlock = context?.blockById?.get(parentListBlock.parent_id);
+  if (parentListItemBlock?.type !== "i") {
+    return null;
+  }
+
+  return resolveReadableStructuralUnit(parentListItemBlock.id, context);
 }
 
 export function buildCoreBacklinkSourceWindow(backlinkBlockNode, context) {
@@ -208,18 +227,19 @@ export function buildNearbyBacklinkSourceWindow(backlinkBlockNode, context) {
   } else {
     const focusBlock = context.blockById.get(anchorBlockId);
     if (focusBlock?.type === "h") {
-      startBlockId = findNearestSiblingBlockIdByPredicate(
-        anchorBlockId,
-        "previous",
-        (candidateBlock) => candidateBlock?.type && candidateBlock.type !== "h",
-        context,
-      );
-      endBlockId = findNearestSiblingBlockIdByPredicate(
-        anchorBlockId,
-        "next",
-        (candidateBlock) => candidateBlock?.type && candidateBlock.type !== "h",
-        context,
-      );
+      const prevSiblingBlockId = getSiblingBlockIdByOffset(anchorBlockId, -1, context);
+      const prevSiblingBlock = context.blockById.get(prevSiblingBlockId);
+      if (prevSiblingBlock?.type === "h") {
+        // Previous sibling is a heading container. Use the block immediately before
+        // the focus heading in flat document order (the last content of the previous
+        // heading section), but exclude the empty case where the previous heading
+        // has no body content and the flat-previous block is the heading itself.
+        const prevFlatBlockId = context.orderedDocumentBlocks[anchorStartIndex - 1]?.id || "";
+        startBlockId = prevFlatBlockId !== prevSiblingBlockId ? prevFlatBlockId : "";
+      } else {
+        startBlockId = prevSiblingBlockId || "";
+      }
+      endBlockId = context.orderedDocumentBlocks[anchorStartIndex + 1]?.id || "";
     } else {
       startBlockId = getSiblingBlockIdByOffset(anchorBlockId, -1, context);
       endBlockId = getSiblingBlockIdByOffset(anchorBlockId, 1, context);
@@ -232,13 +252,18 @@ export function buildNearbyBacklinkSourceWindow(backlinkBlockNode, context) {
   const endUnit = isListItemContext
     ? resolveReadableStructuralUnit(endBlockId, context)
     : resolveReadableStructuralUnit(endBlockId || anchorBlockId, context);
+  const parentListItemUnit = isListItemContext
+    ? resolveParentListItemReadableUnit(anchorBlockId, context)
+    : null;
   const startIndex = isListItemContext
-    ? context.indexById.get(startBlockId) ??
+    ? parentListItemUnit?.startIndex ??
+      context.indexById.get(startBlockId) ??
       context.indexById.get(anchorBlockId) ??
       anchorStartIndex
     : startUnit.startIndex ?? anchorStartIndex;
   const boundaryBlockIds = isListItemContext
     ? dedupeBlockIdArray([
+        ...(parentListItemUnit?.visibleBlockIds || []),
         ...startUnit.visibleBlockIds,
         anchorBlockId,
         backlinkBlockNode.block.id,
@@ -259,7 +284,7 @@ export function buildNearbyBacklinkSourceWindow(backlinkBlockNode, context) {
     ? listContextWindowEnd.index
     : endUnit.endIndex ?? anchorStartIndex;
   const sourceWindowStartBlockId = isListItemContext
-    ? startBlockId
+    ? parentListItemUnit?.startBlockId || startBlockId
     : startUnit.startBlockId || anchorBlockId;
   const sourceWindowEndBlockId = isListItemContext
     ? listContextWindowEnd.blockId
@@ -269,6 +294,9 @@ export function buildNearbyBacklinkSourceWindow(backlinkBlockNode, context) {
     backlinkBlockNode,
     context,
     anchorBlockId,
+    ...(parentListItemUnit?.startBlockId
+      ? { zoomInBlockId: parentListItemUnit.startBlockId }
+      : {}),
     startIndex,
     endIndex,
     startBlockId: sourceWindowStartBlockId,

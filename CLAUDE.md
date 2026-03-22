@@ -128,3 +128,22 @@ Key test areas:
 - The codebase mixes TypeScript (`.ts`) and JavaScript (`.js`) - new service logic uses `.js` for easier testing
 - Definition blocks are special blocks that define terms/concepts and are used for filtering
 - The plugin supports both desktop and mobile SiYuan environments
+
+## gstack
+
+Use the `/browse` skill from gstack for all web browsing. Never use `mcp__claude-in-chrome__*` tools.
+
+Available skills:
+- `/plan-ceo-review` - CEO/founder-mode plan review
+- `/plan-eng-review` - Engineering plan review
+- `/plan-design-review` - Designer's eye plan review
+- `/design-consultation` - Design system creation
+- `/review` - Pre-landing PR code review
+- `/ship` - Ship workflow (test, review, PR)
+- `/browse` - Headless browser for web browsing and QA
+- `/qa` - QA test and fix bugs
+- `/qa-only` - QA report only (no fixes)
+- `/qa-design-review` - Visual design audit
+- `/setup-browser-cookies` - Import browser cookies for authenticated testing
+- `/retro` - Weekly engineering retrospective
+- `/document-release` - Post-ship documentation update

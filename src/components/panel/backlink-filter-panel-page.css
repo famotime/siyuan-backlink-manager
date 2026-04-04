@@ -308,6 +308,11 @@
     color: var(--b3-theme-warning);
 }
 
+.backlink-panel__area .list-item__document-name.backlink-hide .backlink-context-control-row,
+.backlink-panel__area .list-item__document-name.backlink-hide .backlink-breadcrumb-row {
+    display: none;
+}
+
 .backlink-panel__area .backlink-breadcrumb-row {
     margin: 4px 0 0 26px;
     min-width: 0;

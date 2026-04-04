@@ -59,3 +59,12 @@ test("backlink context state chips stay flatter than the generic pill", () => {
         /\.backlink-panel__area\s+\.backlink-context-state\s*\{[\s\S]*?height:\s*14px;[\s\S]*?min-height:\s*14px;[\s\S]*?padding:\s*0 3px;[\s\S]*?line-height:\s*1;[\s\S]*?\}/,
     );
 });
+
+test("collapsed backlink documents hide context controls and breadcrumb rows", () => {
+    const css = readFileSync(panelCssPath, "utf8");
+
+    assert.match(
+        css,
+        /\.backlink-panel__area\s+\.list-item__document-name\.backlink-hide\s+\.backlink-context-control-row,\s*\.backlink-panel__area\s+\.list-item__document-name\.backlink-hide\s+\.backlink-breadcrumb-row\s*\{[\s\S]*?display:\s*none;[\s\S]*?\}/,
+    );
+});

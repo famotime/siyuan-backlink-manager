@@ -2,7 +2,7 @@ import { getBacklinkContextLevelLabel } from "./backlink-panel-header.js";
 
 const BACKLINK_CONTEXT_LEVEL_ORDER = ["core", "nearby", "extended", "full"];
 const BACKLINK_DOCUMENT_TITLE_TOOLTIP =
-  "左键在主窗口打开文档，右键在右侧打开文档，Ctrl+左键跟随当前焦点打开文档";
+  "左键在主窗口打开文档，右键在右侧打开文档";
 
 function normalizeBacklinkContextControlState(contextControlState = {}) {
   const contextVisibilityLevel =

@@ -5,15 +5,11 @@
         RELATED_DEF_BLOCK_TYPE_ELEMENT,
     } from "@/models/backlink-constant";
     import { isArrayNotEmpty } from "@/utils/array-util";
-    import {
-        buildBacklinkPaginationState,
-        getBacklinkSummaryText,
-    } from "./backlink-panel-header.js";
+    import { getBacklinkSummaryText } from "./backlink-panel-header.js";
 
     export let panelBacklinkViewExpand = true;
     export let queryParams;
     export let backlinkFilterPanelRenderData;
-    export let backlinkPaginationState = buildBacklinkPaginationState();
     export let displayHintBacklinkBlockCacheUsage = false;
     export let hideBacklinkProtyleBreadcrumb = false;
     export let backlinkULElement;
@@ -25,7 +21,6 @@
     export let expandAllBacklinkListItemNode;
     export let collapseAllBacklinkDocument;
     export let collapseAllBacklinkListItemNode;
-    export let pageTurning;
 
     function handleKeyDownDefault() {}
 </script>
@@ -124,7 +119,7 @@
     {/if}
     {#if panelBacklinkViewExpand && backlinkFilterPanelRenderData && isArrayNotEmpty(backlinkFilterPanelRenderData.backlinkDataArray)}
         <div class="block__icons" style="overflow:auto;style=color:var(--b3-theme-on-background);">
-            <span class="fn__flex-shrink ft__selectnone {backlinkPaginationState.isVisible ? '' : 'fn__none'}">
+            <span class="fn__flex-shrink ft__selectnone">
                 <span class="fn__space"></span>
                 <span>
                     {getBacklinkSummaryText(
@@ -135,29 +130,6 @@
             </span>
             <span class="fn__space"></span>
             <span class="fn__flex-1" style="min-height: 100%"></span>
-            <span
-                class="fn__flex-shrink ft__selectnone backlink-pagination {backlinkPaginationState.isVisible ? '' : 'fn__none'}"
-            >
-                <span
-                    data-position="9bottom"
-                    class="block__icon block__icon--show ariaLabel backlink-nav-button {backlinkPaginationState.previousDisabled ? 'disabled' : ''}"
-                    aria-label={EnvConfig.ins.i18n.previousLabel}
-                    on:click={() => {
-                        pageTurning(backlinkFilterPanelRenderData.pageNum - 1);
-                    }}
-                    on:keydown={handleKeyDownDefault}
-                ><svg><use xlink:href="#iconLeft"></use></svg></span>
-                <span class="backlink-nav-progress">{backlinkPaginationState.progressText}</span>
-                <span
-                    data-position="9bottom"
-                    class="block__icon block__icon--show ariaLabel backlink-nav-button {backlinkPaginationState.nextDisabled ? 'disabled' : ''}"
-                    aria-label={EnvConfig.ins.i18n.nextLabel}
-                    on:click={() => {
-                        pageTurning(backlinkFilterPanelRenderData.pageNum + 1);
-                    }}
-                    on:keydown={handleKeyDownDefault}
-                ><svg><use xlink:href="#iconRight"></use></svg></span>
-            </span>
             <span class="fn__space"></span>
         </div>
     {/if}

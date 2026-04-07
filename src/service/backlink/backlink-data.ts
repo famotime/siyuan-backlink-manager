@@ -33,7 +33,7 @@ import { CacheManager } from "@/config/CacheManager";
 import { SettingService } from "../setting/SettingService";
 import { stringToDom } from "@/utils/html-util";
 import { getQueryStrByBlock, NewNodeID } from "@/utils/siyuan-util";
-import { paginateBacklinkBlocksByDocument } from "./backlink-document-pagination.js";
+import { buildBacklinkDocumentRenderState } from "./backlink-document-pagination.js";
 import {
     filterBacklinkDocumentBlocks,
     filterExistingDefBlocks,
@@ -118,7 +118,6 @@ export async function getBacklinkPanelRenderData(
     if (!backlinkPanelData || !queryParams) {
         return
     }
-    let pageNum = 1;
     let pageSize = SettingService.ins.SettingConfig.pageSize;
     let rootId = backlinkPanelData.rootId;
 
@@ -158,15 +157,14 @@ export async function getBacklinkPanelRenderData(
             applyBacklinkContextBudgetToNodes,
         },
     });
-    let pagination = paginateBacklinkBlocksByDocument(validBacklinkBlockNodeArray, pageNum, pageSize);
-    let pageBacklinkBlockArray = pagination.pageBacklinkBlockArray;
+    let pagination = buildBacklinkDocumentRenderState(validBacklinkBlockNodeArray);
     const fetchStageResult = await buildBacklinkFetchStageResult({
         rootId,
-        pageBacklinkBlockArray,
+        pageBacklinkBlockArray: validBacklinkBlockNodeArray,
         deps: {
             getBatchBacklinkDoc: () => getBatchBacklinkDoc({
                 curRootId: rootId,
-                backlinkBlockNodeArray: pageBacklinkBlockArray,
+                backlinkBlockNodeArray: validBacklinkBlockNodeArray,
                 deps: {
                     intersectionSet,
                     getBacklinkDocByApiOrCache: (currentRootId, defId, refTreeId, keyword, containChildren) =>
@@ -271,22 +269,20 @@ export async function getTurnPageBacklinkPanelRenderData(
     queryParams: IPanelRenderBacklinkQueryParams,
 ): Promise<IBacklinkPanelRenderData> {
     const startTime = performance.now(); // 记录开始时间
-    let pageNum = queryParams.pageNum;
     let pageSize = SettingService.ins.SettingConfig.pageSize;
     backlinkBlockNodeArraySort(
         validBacklinkBlockNodeArray,
         queryParams.backlinkBlockSortMethod,
         { getDefBlockSortFun },
     );
-    let pagination = paginateBacklinkBlocksByDocument(validBacklinkBlockNodeArray, pageNum, pageSize);
-    let pageBacklinkBlockArray = pagination.pageBacklinkBlockArray;
+    let pagination = buildBacklinkDocumentRenderState(validBacklinkBlockNodeArray);
     const fetchStageResult = await buildBacklinkFetchStageResult({
         rootId,
-        pageBacklinkBlockArray,
+        pageBacklinkBlockArray: validBacklinkBlockNodeArray,
         deps: {
             getBatchBacklinkDoc: () => getBatchBacklinkDoc({
                 curRootId: rootId,
-                backlinkBlockNodeArray: pageBacklinkBlockArray,
+                backlinkBlockNodeArray: validBacklinkBlockNodeArray,
                 deps: {
                     intersectionSet,
                     getBacklinkDocByApiOrCache: (currentRootId, defId, refTreeId, keyword, containChildren) =>

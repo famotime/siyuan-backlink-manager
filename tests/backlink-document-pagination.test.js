@@ -2,10 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  paginateBacklinkBlocksByDocument,
+  buildBacklinkDocumentRenderState,
 } from "../src/service/backlink/backlink-document-pagination.js";
 
-test("paginates backlink blocks by unique document count and keeps a document's backlinks on the same page", () => {
+test("builds a single render-state result with every filtered backlink block", () => {
   const backlinkBlockNodeArray = [
     { block: { id: "a-1", root_id: "doc-a" } },
     { block: { id: "a-2", root_id: "doc-a" } },
@@ -14,46 +14,28 @@ test("paginates backlink blocks by unique document count and keeps a document's 
     { block: { id: "c-2", root_id: "doc-c" } },
   ];
 
-  const firstPage = paginateBacklinkBlocksByDocument(
-    backlinkBlockNodeArray,
-    1,
-    2,
-  );
-  const secondPage = paginateBacklinkBlocksByDocument(
-    backlinkBlockNodeArray,
-    2,
-    2,
-  );
+  const renderState = buildBacklinkDocumentRenderState(backlinkBlockNodeArray);
 
-  assert.equal(firstPage.totalDocumentCount, 3);
-  assert.equal(firstPage.totalPage, 2);
+  assert.equal(renderState.totalDocumentCount, 3);
+  assert.equal(renderState.pageNum, 1);
+  assert.equal(renderState.totalPage, 1);
   assert.deepEqual(
-    firstPage.pageBacklinkBlockArray.map((item) => item.block.id),
-    ["a-1", "a-2", "b-1"],
-  );
-  assert.deepEqual(
-    secondPage.pageBacklinkBlockArray.map((item) => item.block.id),
-    ["c-1", "c-2"],
+    renderState.pageBacklinkBlockArray.map((item) => item.block.id),
+    ["a-1", "a-2", "b-1", "c-1", "c-2"],
   );
 });
 
-test("clamps the page number using document-based pagination", () => {
+test("returns an empty render-state result when no backlink documents remain", () => {
   const backlinkBlockNodeArray = [
-    { block: { id: "a-1", root_id: "doc-a" } },
-    { block: { id: "b-1", root_id: "doc-b" } },
-    { block: { id: "c-1", root_id: "doc-c" } },
+    { block: { id: "orphan", root_id: "" } },
   ];
 
-  const page = paginateBacklinkBlocksByDocument(
-    backlinkBlockNodeArray,
-    99,
-    2,
-  );
+  const renderState = buildBacklinkDocumentRenderState(backlinkBlockNodeArray);
 
-  assert.equal(page.pageNum, 2);
-  assert.equal(page.totalPage, 2);
-  assert.deepEqual(
-    page.pageBacklinkBlockArray.map((item) => item.block.id),
-    ["c-1"],
-  );
+  assert.deepEqual(renderState, {
+    pageNum: 0,
+    totalPage: 0,
+    totalDocumentCount: 0,
+    pageBacklinkBlockArray: [],
+  });
 });

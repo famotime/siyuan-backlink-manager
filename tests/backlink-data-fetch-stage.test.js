@@ -14,7 +14,7 @@ test("backlink data delegates backlink fetch and source-window attachment to a d
   );
   assert.match(
     source,
-    /const fetchStageResult = await buildBacklinkFetchStageResult\(\s*\{[\s\S]*rootId,[\s\S]*pageBacklinkBlockArray,[\s\S]*\}\s*\);/,
+    /const fetchStageResult = await buildBacklinkFetchStageResult\(\s*\{[\s\S]*rootId,[\s\S]*pageBacklinkBlockArray:\s*validBacklinkBlockNodeArray,[\s\S]*\}\s*\);/,
   );
   assert.match(source, /const backlinkDataArray = fetchStageResult\.backlinkDataArray;/);
   assert.match(source, /const usedCache = fetchStageResult\.usedCache;/);

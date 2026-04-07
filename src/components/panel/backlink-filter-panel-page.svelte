@@ -6,9 +6,6 @@
     import {
         createBacklinkDocumentViewState,
     } from "./backlink-document-view-state.js";
-    import {
-        buildBacklinkPaginationState,
-    } from "./backlink-panel-header.js";
     import { buildDefBlockAriaLabel } from "./backlink-panel-formatting.js";
     import { createBacklinkPanelController } from "./backlink-panel-controller.js";
     import BacklinkFilterPanelControls from "./backlink-filter-panel-controls.svelte";
@@ -47,7 +44,6 @@
     let hideBacklinkProtyleBreadcrumb = false;
     let showSaveCriteriaInputBox = false;
     let saveCriteriaInputText = "";
-    let backlinkPaginationState = buildBacklinkPaginationState();
     let filterPanelResizeObserver: ResizeObserver;
     let observedFilterPanelStickyElement: HTMLDivElement;
 
@@ -258,9 +254,6 @@
         controller.initBaseData();
     }
     $: controller.updateLastCriteria();
-    $: backlinkPaginationState = buildBacklinkPaginationState(
-        backlinkFilterPanelRenderData || {},
-    );
     $: syncFilterPanelStickyObserver();
 
     onMount(() => {
@@ -341,7 +334,6 @@
         bind:backlinkULElement
         {queryParams}
         {backlinkFilterPanelRenderData}
-        {backlinkPaginationState}
         {displayHintBacklinkBlockCacheUsage}
         {hideBacklinkProtyleBreadcrumb}
         resetBacklinkQueryParametersToDefault={controller.resetBacklinkQueryParametersToDefault}
@@ -352,6 +344,5 @@
         expandAllBacklinkListItemNode={controller.expandAllBacklinkListItemNode}
         collapseAllBacklinkDocument={controller.collapseAllBacklinkDocument}
         collapseAllBacklinkListItemNode={controller.collapseAllBacklinkListItemNode}
-        pageTurning={controller.pageTurning}
     />
 </div>

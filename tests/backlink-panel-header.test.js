@@ -1,56 +1,28 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import {
   buildBacklinkContextControlState,
-  buildBacklinkPaginationState,
   getBacklinkContextLevelLabel,
   getBacklinkSummaryText,
 } from "../src/components/panel/backlink-panel-header.js";
 
-test("builds visible pagination state with progress text between arrows", () => {
-  assert.deepEqual(
-    buildBacklinkPaginationState({
-      pageNum: 2,
-      totalPage: 4,
-    }),
-    {
-      isVisible: true,
-      progressText: "2/4",
-      previousDisabled: false,
-      nextDisabled: false,
-    },
+test("backlink results panel no longer renders document pagination controls", () => {
+  const panelSource = readFileSync(
+    new URL("../src/components/panel/backlink-results-panel.svelte", import.meta.url),
+    "utf8",
   );
-});
+  const pageSource = readFileSync(
+    new URL("../src/components/panel/backlink-filter-panel-page.svelte", import.meta.url),
+    "utf8",
+  );
 
-test("disables previous and next arrows at pagination boundaries", () => {
-  assert.deepEqual(
-    buildBacklinkPaginationState({
-      pageNum: 1,
-      totalPage: 1,
-    }),
-    {
-      isVisible: true,
-      progressText: "1/1",
-      previousDisabled: true,
-      nextDisabled: true,
-    },
-  );
-});
-
-test("hides pagination state when there are no pages", () => {
-  assert.deepEqual(
-    buildBacklinkPaginationState({
-      pageNum: 0,
-      totalPage: 0,
-    }),
-    {
-      isVisible: false,
-      progressText: "",
-      previousDisabled: true,
-      nextDisabled: true,
-    },
-  );
+  assert.doesNotMatch(panelSource, /export let backlinkPaginationState/);
+  assert.doesNotMatch(panelSource, /export let pageTurning/);
+  assert.doesNotMatch(panelSource, /backlink-pagination/);
+  assert.doesNotMatch(pageSource, /buildBacklinkPaginationState/);
+  assert.doesNotMatch(pageSource, /pageTurning=\{controller\.pageTurning\}/);
 });
 
 test("prefers backlink document summary text when available", () => {

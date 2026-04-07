@@ -6,6 +6,19 @@ import {
   buildValidBacklinkRenderNodes,
 } from "../src/service/backlink/backlink-data-pipeline.js";
 
+test("backlink data module fetches every filtered backlink document in a single render pass", () => {
+  const source = readFileSync(
+    new URL("../src/service/backlink/backlink-data.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.doesNotMatch(source, /paginateBacklinkBlocksByDocument/);
+  assert.match(
+    source,
+    /buildBacklinkFetchStageResult\(\{\s*[\s\S]*rootId,\s*[\s\S]*pageBacklinkBlockArray:\s*validBacklinkBlockNodeArray,/,
+  );
+});
+
 test("backlink data module delegates render-node preparation and render-payload assembly to pipeline helpers", () => {
   const source = readFileSync(
     new URL("../src/service/backlink/backlink-data.ts", import.meta.url),

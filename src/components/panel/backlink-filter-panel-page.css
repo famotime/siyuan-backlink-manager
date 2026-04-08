@@ -248,6 +248,22 @@
     min-width: 0;
 }
 
+.backlink-panel__area .backlink-results-summary-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow: auto;
+    color: var(--b3-theme-on-background);
+}
+
+.backlink-panel__area .backlink-context-control-row--global {
+    margin: 0;
+    margin-left: auto;
+    padding: 0;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+}
+
 .backlink-panel__area .backlink-context-step-button {
     display: inline-flex;
     align-items: center;

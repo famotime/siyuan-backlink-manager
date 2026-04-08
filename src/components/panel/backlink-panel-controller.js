@@ -527,6 +527,9 @@ export function createBacklinkPanelController(state) {
     expandAllListItemNode,
     collapseAllListItemNode,
     syHasChildListNode,
+    markBacklinkDocumentVisibilityLevel,
+    refreshBacklinkDocumentGroupById,
+    getBacklinkDocumentRenderState,
   });
 
   function expandAllBacklinkDocument() {
@@ -543,6 +546,16 @@ export function createBacklinkPanelController(state) {
 
   function collapseAllBacklinkListItemNode() {
     return panelBulkActions.collapseAllBacklinkListItemNode();
+  }
+
+  function setAllBacklinkDocumentContextVisibilityLevel(level) {
+    return panelBulkActions.setAllBacklinkDocumentContextVisibilityLevel(level);
+  }
+
+  function stepAllBacklinkDocumentContextVisibilityLevel(direction) {
+    return panelBulkActions.stepAllBacklinkDocumentContextVisibilityLevel(
+      direction,
+    );
   }
 
   async function openDesktopBlockTab(params) {
@@ -713,6 +726,8 @@ export function createBacklinkPanelController(state) {
     expandAllBacklinkListItemNode,
     collapseAllBacklinkDocument,
     collapseAllBacklinkListItemNode,
+    setAllBacklinkDocumentContextVisibilityLevel,
+    stepAllBacklinkDocumentContextVisibilityLevel,
     resetFilterQueryParametersToDefault,
     resetBacklinkQueryParametersToDefault,
     refreshBacklinkPanelToCurrentMainDocument,

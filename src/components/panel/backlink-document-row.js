@@ -1,6 +1,7 @@
-import { getBacklinkContextLevelLabel } from "./backlink-panel-header.js";
-
-const BACKLINK_CONTEXT_LEVEL_ORDER = ["core", "nearby", "extended", "full"];
+import {
+  BACKLINK_CONTEXT_LEVEL_ORDER,
+  getBacklinkContextLevelLabel,
+} from "./backlink-panel-header.js";
 const BACKLINK_DOCUMENT_TITLE_TOOLTIP =
   "左键在主窗口打开文档，右键在右侧打开文档";
 

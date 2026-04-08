@@ -44,6 +44,8 @@
     let hideBacklinkProtyleBreadcrumb = false;
     let showSaveCriteriaInputBox = false;
     let saveCriteriaInputText = "";
+    let backlinkGlobalContextVisibilityLevel =
+        backlinkDocumentViewState.globalContextVisibilityLevel;
     let filterPanelResizeObserver: ResizeObserver;
     let observedFilterPanelStickyElement: HTMLDivElement;
 
@@ -143,6 +145,13 @@
         },
         get backlinkDocumentViewState() {
             return backlinkDocumentViewState;
+        },
+        get backlinkGlobalContextVisibilityLevel() {
+            return backlinkGlobalContextVisibilityLevel;
+        },
+        set backlinkGlobalContextVisibilityLevel(value) {
+            backlinkGlobalContextVisibilityLevel = value;
+            backlinkDocumentViewState.globalContextVisibilityLevel = value;
         },
         get backlinkDocumentFoldMap() {
             return backlinkDocumentViewState.documentFoldMap;
@@ -336,10 +345,13 @@
         {backlinkFilterPanelRenderData}
         {displayHintBacklinkBlockCacheUsage}
         {hideBacklinkProtyleBreadcrumb}
+        {backlinkGlobalContextVisibilityLevel}
         resetBacklinkQueryParametersToDefault={controller.resetBacklinkQueryParametersToDefault}
         refreshBacklinkPanelToCurrentMainDocument={controller.refreshBacklinkPanelToCurrentMainDocument}
         updateRenderData={controller.updateRenderData}
         handleBacklinkKeywordInput={controller.handleBacklinkKeywordInput}
+        setAllBacklinkDocumentContextVisibilityLevel={controller.setAllBacklinkDocumentContextVisibilityLevel}
+        stepAllBacklinkDocumentContextVisibilityLevel={controller.stepAllBacklinkDocumentContextVisibilityLevel}
         expandAllBacklinkDocument={controller.expandAllBacklinkDocument}
         expandAllBacklinkListItemNode={controller.expandAllBacklinkListItemNode}
         collapseAllBacklinkDocument={controller.collapseAllBacklinkDocument}

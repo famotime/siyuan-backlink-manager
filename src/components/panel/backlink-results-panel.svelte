@@ -5,18 +5,25 @@
         RELATED_DEF_BLOCK_TYPE_ELEMENT,
     } from "@/models/backlink-constant";
     import { isArrayNotEmpty } from "@/utils/array-util";
-    import { getBacklinkSummaryText } from "./backlink-panel-header.js";
+    import {
+        BACKLINK_CONTEXT_LEVEL_ORDER,
+        getBacklinkContextLevelLabel,
+        getBacklinkSummaryText,
+    } from "./backlink-panel-header.js";
 
     export let panelBacklinkViewExpand = true;
     export let queryParams;
     export let backlinkFilterPanelRenderData;
     export let displayHintBacklinkBlockCacheUsage = false;
     export let hideBacklinkProtyleBreadcrumb = false;
+    export let backlinkGlobalContextVisibilityLevel = "core";
     export let backlinkULElement;
     export let resetBacklinkQueryParametersToDefault;
     export let refreshBacklinkPanelToCurrentMainDocument;
     export let updateRenderData;
     export let handleBacklinkKeywordInput;
+    export let setAllBacklinkDocumentContextVisibilityLevel;
+    export let stepAllBacklinkDocumentContextVisibilityLevel;
     export let expandAllBacklinkDocument;
     export let expandAllBacklinkListItemNode;
     export let collapseAllBacklinkDocument;
@@ -34,7 +41,7 @@
         on:keydown={handleKeyDownDefault}
     >
         <div class="block__logo" style="font-weight: bold;">
-            <svg class="block__logoicon"><use xlink:href="#iconLink"></use></svg>反向链接
+            <svg class="block__logoicon"><use xlink:href="#iconLink"></use></svg>反链管家
         </div>
         <span class="fn__flex-1"></span>
         <span class="fn__space"></span>
@@ -118,7 +125,7 @@
         </div>
     {/if}
     {#if panelBacklinkViewExpand && backlinkFilterPanelRenderData && isArrayNotEmpty(backlinkFilterPanelRenderData.backlinkDataArray)}
-        <div class="block__icons" style="overflow:auto;style=color:var(--b3-theme-on-background);">
+        <div class="block__icons backlink-results-summary-row">
             <span class="fn__flex-shrink ft__selectnone">
                 <span class="fn__space"></span>
                 <span>
@@ -130,6 +137,37 @@
             </span>
             <span class="fn__space"></span>
             <span class="fn__flex-1" style="min-height: 100%"></span>
+            <div class="backlink-context-control-row backlink-context-control-row--global">
+                <button
+                    type="button"
+                    class="block__icon ariaLabel backlink-context-step-button previous"
+                    aria-label="切换全部文档到上一个上下文层级"
+                    on:click={() => stepAllBacklinkDocumentContextVisibilityLevel("previous")}
+                >
+                    <svg><use xlink:href="#iconLeft"></use></svg>
+                </button>
+                <div class="backlink-context-state-group">
+                    {#each BACKLINK_CONTEXT_LEVEL_ORDER as level}
+                        <button
+                            type="button"
+                            class="backlink-chip backlink-chip--flat backlink-context-state {level === backlinkGlobalContextVisibilityLevel ? 'active' : ''}"
+                            data-context-level={level}
+                            aria-pressed={level === backlinkGlobalContextVisibilityLevel}
+                            on:click={() => setAllBacklinkDocumentContextVisibilityLevel(level)}
+                        >
+                            {getBacklinkContextLevelLabel(level)}
+                        </button>
+                    {/each}
+                </div>
+                <button
+                    type="button"
+                    class="block__icon ariaLabel backlink-context-step-button next"
+                    aria-label="切换全部文档到下一个上下文层级"
+                    on:click={() => stepAllBacklinkDocumentContextVisibilityLevel("next")}
+                >
+                    <svg><use xlink:href="#iconRight"></use></svg>
+                </button>
+            </div>
             <span class="fn__space"></span>
         </div>
     {/if}

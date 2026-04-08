@@ -14,6 +14,7 @@ function normalizeBacklinkDocumentVisibilityLevel(level) {
 
 export function createBacklinkDocumentViewState() {
   return {
+    globalContextVisibilityLevel: "core",
     documentFoldMap: new Map(),
     documentShowFullMap: new Map(),
     documentVisibilityLevelMap: new Map(),
@@ -50,7 +51,12 @@ export function markBacklinkDocumentFullView(state, documentId) {
   markBacklinkDocumentVisibilityLevel(state, documentId, "full");
 }
 
-export function markBacklinkDocumentVisibilityLevel(state, documentId, level) {
+export function markBacklinkDocumentVisibilityLevel(
+  state,
+  documentId,
+  level,
+  { preserveFoldState = false } = {},
+) {
   if (!state || !documentId) {
     return;
   }
@@ -62,7 +68,9 @@ export function markBacklinkDocumentVisibilityLevel(state, documentId, level) {
   } else {
     state.documentShowFullMap.delete(documentId);
   }
-  markBacklinkDocumentExpanded(state.documentFoldMap, documentId);
+  if (!preserveFoldState) {
+    markBacklinkDocumentExpanded(state.documentFoldMap, documentId);
+  }
 }
 
 export function advanceBacklinkDocumentVisibilityLevel(state, documentId) {
@@ -111,7 +119,8 @@ export function cycleBacklinkDocumentVisibilityLevel(
 
 export function getBacklinkDocumentRenderState(state, documentId) {
   const contextVisibilityLevel = normalizeBacklinkDocumentVisibilityLevel(
-    state?.documentVisibilityLevelMap?.get(documentId),
+    state?.documentVisibilityLevelMap?.get(documentId) ??
+      state?.globalContextVisibilityLevel,
   );
   const showFullDocument =
     state?.documentShowFullMap?.get(documentId) === true ||

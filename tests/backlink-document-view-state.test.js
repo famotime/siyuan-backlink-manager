@@ -15,6 +15,7 @@ import {
 test("creates isolated maps for backlink document view state", () => {
   const state = createBacklinkDocumentViewState();
 
+  assert.equal(state.globalContextVisibilityLevel, "core");
   assert.ok(state.documentFoldMap instanceof Map);
   assert.ok(state.documentShowFullMap instanceof Map);
   assert.ok(state.documentVisibilityLevelMap instanceof Map);
@@ -105,5 +106,17 @@ test("render state reflects folded and full-view flags", () => {
     contextVisibilityLevel: "full",
     showFullDocument: true,
     activeIndex: 2,
+  });
+});
+
+test("render state falls back to the global context visibility level", () => {
+  const state = createBacklinkDocumentViewState();
+  state.globalContextVisibilityLevel = "extended";
+
+  assert.deepEqual(getBacklinkDocumentRenderState(state, "doc-a"), {
+    isFolded: false,
+    contextVisibilityLevel: "extended",
+    showFullDocument: false,
+    activeIndex: 0,
   });
 });

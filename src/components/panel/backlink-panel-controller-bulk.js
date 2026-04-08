@@ -1,3 +1,12 @@
+import {
+  cycleBacklinkContextLevel,
+  normalizeBacklinkContextLevel,
+} from "./backlink-panel-header.js";
+import {
+  getBacklinkDocumentRenderState,
+  markBacklinkDocumentVisibilityLevel,
+} from "./backlink-document-view-state.js";
+
 export function createBacklinkPanelBulkActions({
   state,
   expandBacklinkDocument,
@@ -5,7 +14,47 @@ export function createBacklinkPanelBulkActions({
   expandAllListItemNode,
   collapseAllListItemNode,
   syHasChildListNode,
+  markBacklinkDocumentVisibilityLevel:
+    markBacklinkDocumentVisibilityLevelDep = markBacklinkDocumentVisibilityLevel,
+  refreshBacklinkDocumentGroupById = () => {},
+  getBacklinkDocumentRenderState:
+    getBacklinkDocumentRenderStateDep = getBacklinkDocumentRenderState,
+  cycleBacklinkContextLevel: cycleBacklinkContextLevelDep =
+    cycleBacklinkContextLevel,
 } = {}) {
+  function setAllBacklinkDocumentContextVisibilityLevel(level = "core") {
+    const normalizedLevel = normalizeBacklinkContextLevel(level);
+    state.backlinkDocumentViewState.globalContextVisibilityLevel = normalizedLevel;
+    if ("backlinkGlobalContextVisibilityLevel" in state) {
+      state.backlinkGlobalContextVisibilityLevel = normalizedLevel;
+    }
+
+    for (const documentGroup of state.backlinkDocumentGroupArray || []) {
+      const documentId = documentGroup?.documentId;
+      if (!documentId) {
+        continue;
+      }
+
+      markBacklinkDocumentVisibilityLevelDep(
+        state.backlinkDocumentViewState,
+        documentId,
+        normalizedLevel,
+        { preserveFoldState: true },
+      );
+      refreshBacklinkDocumentGroupById(documentId);
+    }
+  }
+
+  function stepAllBacklinkDocumentContextVisibilityLevel(direction = "next") {
+    const currentLevel = getBacklinkDocumentRenderStateDep(
+      state.backlinkDocumentViewState,
+      "",
+    ).contextVisibilityLevel;
+    const nextLevel = cycleBacklinkContextLevelDep(currentLevel, direction);
+    setAllBacklinkDocumentContextVisibilityLevel(nextLevel);
+    return nextLevel;
+  }
+
   function expandAllBacklinkDocument() {
     const documentLiElementArray = state.backlinkULElement?.querySelectorAll(
       "li.list-item__document-name",
@@ -41,6 +90,8 @@ export function createBacklinkPanelBulkActions({
   }
 
   return {
+    setAllBacklinkDocumentContextVisibilityLevel,
+    stepAllBacklinkDocumentContextVisibilityLevel,
     expandAllBacklinkDocument,
     expandAllBacklinkListItemNode,
     collapseAllBacklinkDocument,

@@ -68,3 +68,16 @@ test("collapsed backlink documents hide context controls and breadcrumb rows", (
         /\.backlink-panel__area\s+\.list-item__document-name\.backlink-hide\s+\.backlink-context-control-row,\s*\.backlink-panel__area\s+\.list-item__document-name\.backlink-hide\s+\.backlink-breadcrumb-row\s*\{[\s\S]*?display:\s*none;[\s\S]*?\}/,
     );
 });
+
+test("global context control row keeps header-specific layout styles", () => {
+    const css = readFileSync(panelCssPath, "utf8");
+
+    assert.match(
+        css,
+        /\.backlink-panel__area\s+\.backlink-results-summary-row\s*\{[\s\S]*?display:\s*flex;[\s\S]*?align-items:\s*center;[\s\S]*?\}/,
+    );
+    assert.match(
+        css,
+        /\.backlink-panel__area\s+\.backlink-context-control-row--global\s*\{[\s\S]*?margin:\s*0;[\s\S]*?padding:\s*0;[\s\S]*?\}/,
+    );
+});

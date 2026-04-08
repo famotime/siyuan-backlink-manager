@@ -22,6 +22,25 @@ export function createBacklinkPanelBulkActions({
   cycleBacklinkContextLevel: cycleBacklinkContextLevelDep =
     cycleBacklinkContextLevel,
 } = {}) {
+  function resetDocumentPreviewExpansionState(documentGroup = null) {
+    const backlinkBlockId = String(
+      documentGroup?.activeBacklink?.backlinkBlock?.id || "",
+    ).trim();
+    if (!backlinkBlockId) {
+      return;
+    }
+
+    if (!(state.backlinkDocumentViewState?.skipNextPreviewStateCaptureBlockIdSet instanceof Set)) {
+      state.backlinkDocumentViewState.skipNextPreviewStateCaptureBlockIdSet =
+        new Set();
+    }
+    state.backlinkDocumentViewState.skipNextPreviewStateCaptureBlockIdSet.add(
+      backlinkBlockId,
+    );
+    state.backlinkProtyleItemFoldMap?.delete?.(backlinkBlockId);
+    state.backlinkProtyleHeadingExpandMap?.delete?.(backlinkBlockId);
+  }
+
   function setAllBacklinkDocumentContextVisibilityLevel(level = "core") {
     const normalizedLevel = normalizeBacklinkContextLevel(level);
     state.backlinkDocumentViewState.globalContextVisibilityLevel = normalizedLevel;
@@ -35,6 +54,7 @@ export function createBacklinkPanelBulkActions({
         continue;
       }
 
+      resetDocumentPreviewExpansionState(documentGroup);
       markBacklinkDocumentVisibilityLevelDep(
         state.backlinkDocumentViewState,
         documentId,

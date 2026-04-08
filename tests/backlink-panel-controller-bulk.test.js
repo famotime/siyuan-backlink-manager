@@ -55,3 +55,67 @@ test("setAllBacklinkDocumentContextVisibilityLevel updates all current documents
   assert.equal(state.backlinkDocumentViewState.documentFoldMap.has("doc-b"), false);
   assert.deepEqual(refreshCalls, ["doc-a", "doc-b"]);
 });
+
+test("setAllBacklinkDocumentContextVisibilityLevel clears cached preview expansion state before rerendering", () => {
+  const state = {
+    backlinkULElement: {
+      querySelectorAll() {
+        return [];
+      },
+    },
+    backlinkDocumentViewState: {
+      globalContextVisibilityLevel: "full",
+      documentVisibilityLevelMap: new Map(),
+      documentFoldMap: new Map(),
+      documentShowFullMap: new Map(),
+    },
+    backlinkProtyleItemFoldMap: new Map([
+      ["block-a", new Set(["item-a"])],
+      ["block-b", new Set(["item-b"])],
+    ]),
+    backlinkProtyleHeadingExpandMap: new Map([
+      ["block-a", true],
+      ["block-b", true],
+    ]),
+    backlinkDocumentGroupArray: [
+      {
+        documentId: "doc-a",
+        activeBacklink: {
+          backlinkBlock: {
+            id: "block-a",
+          },
+        },
+      },
+      {
+        documentId: "doc-b",
+        activeBacklink: {
+          backlinkBlock: {
+            id: "block-b",
+          },
+        },
+      },
+    ],
+  };
+
+  const bulkActions = createBacklinkPanelBulkActions({
+    state,
+    expandBacklinkDocument() {},
+    collapseBacklinkDocument() {},
+    expandAllListItemNode() {},
+    collapseAllListItemNode() {},
+    syHasChildListNode() {
+      return false;
+    },
+    markBacklinkDocumentVisibilityLevel(viewState, documentId, level) {
+      viewState.documentVisibilityLevelMap.set(documentId, level);
+    },
+    refreshBacklinkDocumentGroupById() {},
+  });
+
+  bulkActions.setAllBacklinkDocumentContextVisibilityLevel("nearby");
+
+  assert.equal(state.backlinkProtyleItemFoldMap.has("block-a"), false);
+  assert.equal(state.backlinkProtyleItemFoldMap.has("block-b"), false);
+  assert.equal(state.backlinkProtyleHeadingExpandMap.has("block-a"), false);
+  assert.equal(state.backlinkProtyleHeadingExpandMap.has("block-b"), false);
+});

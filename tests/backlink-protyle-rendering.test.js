@@ -165,6 +165,91 @@ test("renderBacklinkDocumentGroup preserves folded items and heading expansion a
   assert.deepEqual(addedEditors, [editor]);
 });
 
+test("renderBacklinkDocumentGroup skips previous preview state capture when the next rerender requests a clean context reset", () => {
+  const backlinkDocumentFoldMap = new Map();
+  const backlinkProtyleItemFoldMap = new Map();
+  const backlinkProtyleHeadingExpandMap = new Map();
+  const removedEditors = [];
+  const addedEditors = [];
+  const existingEditor = {
+    id: "editor-old",
+    destroyCalled: false,
+    destroy() {
+      this.destroyCalled = true;
+    },
+  };
+  const backlinkDocumentEditorMap = new Map([["doc-a", existingEditor]]);
+  const backlinkDocumentViewState = {
+    skipNextPreviewStateCaptureBlockIdSet: new Set(["block-a"]),
+  };
+  let syncCallCount = 0;
+  let applySnapshot = null;
+
+  renderBacklinkDocumentGroup({
+    documentGroup: {
+      documentId: "doc-a",
+      activeBacklink: {
+        backlinkBlock: {
+          id: "block-a",
+          box: "box-a",
+        },
+      },
+    },
+    documentLiElement: {},
+    editorElement: { innerHTML: "stale" },
+    backlinkDocumentEditorMap,
+    backlinkDocumentViewState,
+    deps: {
+      updateBacklinkDocumentLiNavigation: () => {},
+      syncBacklinkDocumentProtyleState: () => {
+        syncCallCount += 1;
+        backlinkProtyleItemFoldMap.set("block-a", new Set(["item-1"]));
+        backlinkProtyleHeadingExpandMap.set("block-a", true);
+        backlinkDocumentFoldMap.set("doc-a", true);
+      },
+      removeEditor: (targetEditor) => removedEditors.push(targetEditor.id),
+      ProtyleCtor: class FakeProtyle {
+        constructor() {
+          this.protyle = {};
+        }
+      },
+      app: {},
+      buildBacklinkDocumentRenderOptions: () => ({}),
+      getBacklinkDocumentRenderState: () => ({
+        showFullDocument: false,
+        contextVisibilityLevel: "nearby",
+      }),
+      applyCreatedBacklinkProtyleState: ({ backlinkData, protyle }) => {
+        applySnapshot = {
+          backlinkId: backlinkData.backlinkBlock.id,
+          foldIds: Array.from(backlinkProtyleItemFoldMap.get("block-a") || []),
+          headingExpanded: backlinkProtyleHeadingExpandMap.get("block-a"),
+          documentFolded: backlinkDocumentFoldMap.get("doc-a"),
+          protyle,
+        };
+      },
+      addEditor: (targetEditor) => addedEditors.push(targetEditor),
+    },
+  });
+
+  assert.equal(syncCallCount, 0);
+  assert.equal(existingEditor.destroyCalled, true);
+  assert.deepEqual(removedEditors, ["editor-old"]);
+  assert.deepEqual(applySnapshot && {
+    backlinkId: applySnapshot.backlinkId,
+    foldIds: applySnapshot.foldIds,
+    headingExpanded: applySnapshot.headingExpanded,
+    documentFolded: applySnapshot.documentFolded,
+  }, {
+    backlinkId: "block-a",
+    foldIds: [],
+    headingExpanded: undefined,
+    documentFolded: undefined,
+  });
+  assert.equal(backlinkDocumentViewState.skipNextPreviewStateCaptureBlockIdSet.has("block-a"), false);
+  assert.equal(addedEditors.length, 1);
+});
+
 test("applyCreatedBacklinkProtyleState expands full document mode and skips item hiding", () => {
   const calls = [];
   const protyleContentElement = {
@@ -218,6 +303,75 @@ test("applyCreatedBacklinkProtyleState expands full document mode and skips item
   assert.deepEqual(calls, [
     "emit",
     "expand-document",
+    "expand-all-items",
+    "expand-heading",
+    "highlight",
+    "highlight",
+    "touchend",
+  ]);
+});
+
+test("applyCreatedBacklinkProtyleState keeps the document collapsed in full mode when fold state is preserved", () => {
+  const calls = [];
+  const backlinkDocumentViewState = {
+    documentFoldMap: new Map([["doc-a", true]]),
+    documentShowFullMap: new Map([["doc-a", true]]),
+    documentVisibilityLevelMap: new Map([["doc-a", "full"]]),
+  };
+
+  applyCreatedBacklinkProtyleState({
+    backlinkData: {
+      backlinkBlock: {
+        id: "block-a",
+        root_id: "doc-a",
+      },
+    },
+    documentLiElement: { id: "li-a" },
+    protyle: {
+      protyle: {
+        contentElement: {
+          addEventListener(type) {
+            calls.push(type);
+          },
+        },
+      },
+    },
+    showFullDocument: true,
+    deps: {
+      emitLoadedProtyleStatic: () => calls.push("emit"),
+      getBacklinkDocumentRenderState: () => ({
+        isFolded: true,
+        contextVisibilityLevel: "full",
+        showFullDocument: true,
+      }),
+      backlinkDocumentViewState,
+      expandBacklinkDocument: () => calls.push("expand-document"),
+      collapseBacklinkDocument: () => calls.push("collapse-document"),
+      expandAllListItemNode: () => calls.push("expand-all-items"),
+      expandBacklinkHeadingMore: () => calls.push("expand-heading"),
+      backlinkProtyleItemFoldMap: new Map(),
+      foldListItemNodeByIdSet: () => calls.push("fold-by-id-set"),
+      defaultExpandedListItemLevel: 2,
+      expandListItemNodeByDepth: () => calls.push("expand-by-depth"),
+      getElementsBeforeDepth: () => [],
+      getElementsAtDepth: () => [],
+      syHasChildListNode: () => false,
+      backlinkProtyleHeadingExpandMap: new Map(),
+      hideOtherListItemElement: () => calls.push("hide-items"),
+      queryParams: { backlinkKeywordStr: "" },
+      isSetEmpty: () => true,
+      isSetNotEmpty: () => false,
+      isArrayNotEmpty: () => false,
+      sanitizeBacklinkKeywords: () => [],
+      splitKeywordStringToArray: () => [],
+      highlightElementTextByCss: () => calls.push("highlight"),
+      delayedTwiceRefresh: (callback) => callback(),
+    },
+  });
+
+  assert.deepEqual(calls, [
+    "emit",
+    "collapse-document",
     "expand-all-items",
     "expand-heading",
     "highlight",

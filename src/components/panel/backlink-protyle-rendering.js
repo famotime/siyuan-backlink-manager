@@ -111,9 +111,20 @@ export function renderBacklinkDocumentGroup({
 
   updateBacklinkDocumentLiNavigation(documentLiElement, documentGroup);
 
+  const activeBacklinkBlockId = String(
+    documentGroup?.activeBacklink?.backlinkBlock?.id || "",
+  ).trim();
+  const skipNextPreviewStateCaptureBlockIdSet =
+    backlinkDocumentViewState?.skipNextPreviewStateCaptureBlockIdSet;
+  const shouldSkipPreviousPreviewStateCapture =
+    Boolean(activeBacklinkBlockId) &&
+    skipNextPreviewStateCaptureBlockIdSet instanceof Set &&
+    skipNextPreviewStateCaptureBlockIdSet.delete(activeBacklinkBlockId);
   const existingEditor = backlinkDocumentEditorMap.get(documentGroup.documentId);
   if (existingEditor) {
-    syncBacklinkDocumentProtyleState(existingEditor);
+    if (!shouldSkipPreviousPreviewStateCapture) {
+      syncBacklinkDocumentProtyleState(existingEditor);
+    }
     existingEditor.destroy();
     removeEditor(existingEditor);
   }
@@ -220,6 +231,10 @@ export function applyCreatedBacklinkProtyleState({
 
   const backlinkBlockId = backlinkData.backlinkBlock.id;
   const backlinkRootId = backlinkData.backlinkBlock.root_id;
+  const currentDocumentRenderState = getBacklinkDocumentRenderState(
+    backlinkDocumentViewState,
+    backlinkRootId,
+  );
   const applySourceWindowFiltering = () => {
     if (
       !canApplySourceWindowFiltering({
@@ -253,13 +268,10 @@ export function applyCreatedBacklinkProtyleState({
     );
   };
 
-  if (showFullDocument) {
-    expandBacklinkDocument(documentLiElement);
-  } else if (
-    getBacklinkDocumentRenderState(backlinkDocumentViewState, backlinkRootId)
-      .isFolded
-  ) {
+  if (currentDocumentRenderState.isFolded) {
     collapseBacklinkDocument(documentLiElement);
+  } else if (showFullDocument) {
+    expandBacklinkDocument(documentLiElement);
   }
 
   if (showFullDocument) {

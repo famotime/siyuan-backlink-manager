@@ -15,6 +15,7 @@ function normalizeBacklinkDocumentVisibilityLevel(level) {
 export function createBacklinkDocumentViewState() {
   return {
     globalContextVisibilityLevel: "core",
+    skipNextPreviewStateCaptureBlockIdSet: new Set(),
     documentFoldMap: new Map(),
     documentShowFullMap: new Map(),
     documentVisibilityLevelMap: new Map(),

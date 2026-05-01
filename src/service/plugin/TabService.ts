@@ -34,7 +34,7 @@ export class TabService {
                 if (!currentDocument) {
                     return;
                 }
-                // console.log("显示当前文档反链面板页签")
+                // console.log("显示当前文档反链管家")
 
                 const docTitleElement = currentDocument.querySelector(".protyle-title");
                 let docTitle = currentDocument.querySelector("div.protyle-title__input").textContent;
@@ -45,7 +45,7 @@ export class TabService {
 
 
 
-        // 用来修复反链面板页签新窗口打开时，没有初始化该页签ID，导致显示空白的问题 https://github.com/Misuzu2027/siyuan-backlink-manager/issues/23
+        // 用来修复反链管家新窗口打开时，没有初始化该页签ID，导致显示空白的问题 https://github.com/Misuzu2027/siyuan-backlink-manager/issues/23
         // 初始化时查看有没有销毁的ID，有的话初始化tab。
         // let destoryDocIdArray = CacheManager.ins.getAndRemoveBacklinkDestoryTabDocIdArray();
         // console.log("destoryDocIdArray ", destoryDocIdArray)

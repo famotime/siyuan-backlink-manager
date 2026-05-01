@@ -18,7 +18,7 @@ export class TopBarService {
         if (!EnvConfig.ins.isMobile) {
             EnvConfig.ins.plugin.addTopBar({
                 icon: CUSTOM_ICON_MAP.BacklinkPanelFilter.id,
-                title: "反链面板页签",
+                title: "反链管家",
                 position: "right",
                 callback: () => {
                     let currentDocument: HTMLDivElement = getActiveTab();
@@ -33,7 +33,7 @@ export class TopBarService {
                 }
             });
 
-            
+
         }
 
 

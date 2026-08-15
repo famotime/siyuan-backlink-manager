@@ -9,6 +9,7 @@ import {
     resolveSettingConfig,
     shouldPersistSettingConfig,
 } from "./setting-config-resolver.js";
+import { logError, logInfo } from "@/utils/logger";
 
 const SettingFileName = 'backlink-panel-setting.json';
 
@@ -42,15 +43,21 @@ export class SettingService {
             try {
                 listener(this._settingConfig, key, value);
             } catch (e) {
-                console.error("Setting listener error:", e);
+                logError("Setting listener error:", e);
             }
+        }
+    }
+
+    private syncDebugFlag() {
+        if (typeof globalThis !== "undefined") {
+            (globalThis as any).__BACKLINK_DEBUG__ = this._settingConfig.enableLogPrint === true;
         }
     }
 
     public async init() {
         let persistentConfig = await getPersistentConfig();
         this._settingConfig = getResolvedSettingConfig(persistentConfig);
-        // console.log("init this._settingConfig ", this._settingConfig)
+        this.syncDebugFlag();
 
         if (this._settingConfig.usePraentIdIdx) {
             this.createBlocksParentIdIdx();
@@ -66,7 +73,7 @@ export class SettingService {
     //         return this.settingConfig;
     //     }
     //     let defaultSettingConfig = getDefaultSettingConfig();
-    //     console.error(`反链面板 异常，返回默认设置: `, defaultSettingConfig);
+    //     logError(`反链面板 异常，返回默认设置: `, defaultSettingConfig);
     //     return defaultSettingConfig;
     // }
 
@@ -77,10 +84,11 @@ export class SettingService {
         }
 
         this._settingConfig[key] = newValue;
+        this.syncDebugFlag();
         let paramJson = JSON.stringify(this._settingConfig, setReplacer);
         let plugin = EnvConfig.ins.plugin;
         if (plugin) {
-            console.log(`反链面板 更新设置配置文件: ${paramJson}`);
+            logInfo(`反链面板 更新设置配置文件: ${paramJson}`);
             plugin.saveData(SettingFileName, paramJson);
         }
         this.notifyListeners(key, newValue);
@@ -96,8 +104,9 @@ export class SettingService {
             return;
         }
         let paramJson = JSON.stringify(settingConfigParam, setReplacer);
-        console.log(`反链面板 更新设置配置文件: ${paramJson}`);
         this._settingConfig = getResolvedSettingConfig(settingConfigParam);
+        this.syncDebugFlag();
+        logInfo(`反链面板 更新设置配置文件: ${paramJson}`);
         if (plugin) {
             plugin.saveData(SettingFileName, paramJson);
         }
@@ -125,13 +134,13 @@ async function getPersistentConfig(): Promise<SettingConfig> {
     }
     let loaded = await plugin.loadData(SettingFileName);
     if (loaded == null || loaded == undefined || loaded == '') {
-        console.info(`反链面板插件 没有配置文件，使用默认配置`);
+        logInfo(`反链面板插件 没有配置文件，使用默认配置`);
     } else {
         if (typeof loaded === 'string') {
             try {
                 loaded = JSON.parse(loaded);
             } catch (e) {
-                console.error(`Setting json parse error:`, e);
+                logError(`Setting json parse error:`, e);
             }
         }
         if (loaded && typeof loaded === 'object') {
@@ -141,7 +150,7 @@ async function getPersistentConfig(): Promise<SettingConfig> {
                     setKeyValue(settingConfig, key, loaded[key]);
                 }
             } catch (error_msg) {
-                console.log(`Setting load error: ${error_msg}`);
+                logError(`Setting load error: ${error_msg}`);
             }
         }
     }

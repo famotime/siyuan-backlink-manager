@@ -1,7 +1,9 @@
 
+import { logError } from "./logger";
+
 export function parseDateTimeInBlock(dateTimeString: string): Date | null {
     if (dateTimeString.length !== 14) {
-        console.error("Invalid date time string format. It should be 'yyyyMMddhhmmss'.");
+        logError("Invalid date time string format. It should be 'yyyyMMddhhmmss'.");
         return null;
     }
 
@@ -18,7 +20,7 @@ export function parseDateTimeInBlock(dateTimeString: string): Date | null {
 
 export function convertDateTimeInBlock(dateTimeString: string): string {
     if (dateTimeString.length !== 14) {
-        console.error("Invalid date time string format. It should be 'yyyyMMddhhmmss'.");
+        logError("Invalid date time string format. It should be 'yyyyMMddhhmmss'.");
         return null;
     }
     const year = dateTimeString.slice(0, 4);

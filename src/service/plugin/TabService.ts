@@ -6,6 +6,7 @@ import { CUSTOM_ICON_MAP } from "@/models/icon-constant";
 import { isStrBlank } from "@/utils/string-util";
 import { clearProtyleGutters, getActiveTab } from "@/utils/html-util";
 import { CacheManager } from "@/config/CacheManager";
+import { logWarn } from "@/utils/logger";
 import {
     attachBacklinkPanelScrollCleanup,
     buildBacklinkPanelPageProps,
@@ -98,7 +99,7 @@ export class TabService {
 
     public openBacklinkTab(docTitle: string, docId: string, focusBlockId: string) {
         if (isStrBlank(docTitle) || isStrBlank(docId)) {
-            console.log("反链管家插件 打开反链页签错误，参数缺失")
+            logWarn("反链管家插件 打开反链页签错误，参数缺失")
             return;
         }
 

@@ -16,6 +16,13 @@ export function getSettingTabArray(): TabProperty[] {
                     description: "隐藏反链块上方的面包屑导航，让显示更紧凑。",
                     tips: "",
                 }),
+                new ItemProperty({
+                    key: "enableLogPrint",
+                    type: "switch",
+                    name: "日志打印",
+                    description: "开启后在浏览器控制台输出调试日志，默认关闭。",
+                    tips: "",
+                }),
             ],
         })
     );

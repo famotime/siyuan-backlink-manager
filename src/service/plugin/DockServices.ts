@@ -4,6 +4,7 @@ import Instance from "@/utils/Instance";
 import BacklinkPanelDockSvelte from "@/components/dock/backlink-filter-panel-dock.svelte";
 import { SettingService } from "@/service/setting/SettingService";
 import { clearProtyleGutters } from "@/utils/html-util";
+import { logWarn } from "@/utils/logger";
 import {
     attachBacklinkPanelScrollCleanup,
 } from "./backlink-panel-host.js";
@@ -26,7 +27,7 @@ export class DockService {
 
 function addBacklinkPanelDock() {
     if (!EnvConfig.ins || !EnvConfig.ins.plugin) {
-        console.log("添加反链面板 dock 失败。")
+        logWarn("添加反链面板 dock 失败。")
         return;
     }
     let dockDisplay = SettingService.ins.SettingConfig.dockDisplay;

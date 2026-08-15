@@ -93,16 +93,17 @@ import {
     buildValidBacklinkRenderNodes,
 } from "./backlink-data-pipeline.js";
 import { buildBacklinkFetchStageResult } from "./backlink-data-fetch-stage.js";
+import { isLogEnabled, logInfo } from "@/utils/logger";
 
 function shouldLogBacklinkDebug() {
-    return globalThis.__BACKLINK_DEBUG__ === true;
+    return isLogEnabled();
 }
 
 function logBacklinkDebug(...args: any[]) {
     if (!shouldLogBacklinkDebug()) {
         return;
     }
-    console.log(...args);
+    logInfo(...args);
 }
 
 export async function getBacklinkPanelRenderData(

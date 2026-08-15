@@ -33,6 +33,7 @@ test("shouldPersistSettingConfig only persists changed config payloads", () => {
 test("createDefaultSettingConfig includes backlink context budget defaults", () => {
   const current = createDefaultSettingConfig();
 
+  assert.equal(current.enableLogPrint, false);
   assert.equal(current.backlinkContextPreset, "balanced");
   assert.equal(current.backlinkContextMaxVisibleFragments, 6);
   assert.equal(current.backlinkContextMaxVisibleChars, 240);

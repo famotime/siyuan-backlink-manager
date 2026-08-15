@@ -1,5 +1,6 @@
 import { isArrayEmpty } from "./array-util";
 import { isStrBlank } from "./string-util";
+import { logInfo } from "./logger";
 
 export const escapeAttr = (html: string) => {
     return html.replace(/"/g, "&quot;").replace(/'/g, "&apos;");
@@ -18,7 +19,7 @@ export async function highlightElementTextByCss(
     // If the CSS Custom Highlight API is not supported,
     // display a message and bail-out.
     if (!CSS.highlights) {
-        console.log("CSS Custom Highlight API not supported.");
+        logInfo("CSS Custom Highlight API not supported.");
         return;
     }
 

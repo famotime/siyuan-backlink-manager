@@ -32,6 +32,7 @@ const DEFAULT_SETTING_CONFIG = {
   pageSize: 8,
   backlinkBlockSortMethod: "modifiedDesc",
   hideBacklinkProtyleBreadcrumb: false,
+  enableLogPrint: false,
   defaultExpandedListItemLevel: 0,
   backlinkContextPreset: "balanced",
   backlinkContextMaxVisibleFragments: 6,

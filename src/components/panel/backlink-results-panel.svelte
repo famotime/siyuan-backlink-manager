@@ -2,7 +2,6 @@
     import { EnvConfig } from "@/config/EnvConfig";
     import {
         BACKLINK_BLOCK_SORT_METHOD_ELEMENT,
-        RELATED_DEF_BLOCK_TYPE_ELEMENT,
     } from "@/models/backlink-constant";
     import { isArrayNotEmpty } from "@/utils/array-util";
     import {
@@ -71,25 +70,12 @@
         {/if}
     </div>
     {#if panelBacklinkViewExpand && queryParams}
-        <div class="fn__flex" style="padding: 5px 15px; maragin:0px;">
-            <select
-                class="b3-select fn__flex-center ariaLabel"
-                bind:value={queryParams.backlinkCurDocDefBlockType}
-                on:change={updateRenderData}
-                style="flex: 0.5;"
-                aria-label="当前文档定义块类型"
-            >
-                {#each RELATED_DEF_BLOCK_TYPE_ELEMENT() as element}
-                    <option value={element.value} selected={element.value == queryParams.backlinkCurDocDefBlockType}>
-                        {element.name}
-                    </option>
-                {/each}
-            </select>
-            <span class="fn__space"></span>
+        <div class="fn__flex" style="padding: 5px 15px; margin: 0px; gap: 8px;">
             <select
                 class="b3-select fn__flex-center"
                 bind:value={queryParams.backlinkBlockSortMethod}
                 on:change={updateRenderData}
+                style="flex: 0 0 auto;"
             >
                 {#each BACKLINK_BLOCK_SORT_METHOD_ELEMENT() as element}
                     <option value={element.value} selected={element.value == queryParams.backlinkBlockSortMethod}>
@@ -97,9 +83,9 @@
                     </option>
                 {/each}
             </select>
-            <span class="fn__space"></span>
             <input
-                class="b3-text-field fn__size200"
+                class="b3-text-field fn__flex-1"
+                placeholder="搜索反链内容关键字..."
                 on:input={handleBacklinkKeywordInput}
                 bind:value={queryParams.backlinkKeywordStr}
             />
@@ -112,7 +98,6 @@
             >
                 <svg><use xlink:href="#iconExpand"></use></svg>
             </span>
-            <span class="fn__space"></span>
             <span
                 class="block__icon b3-tooltips b3-tooltips__sw"
                 aria-label="折叠所有文档"

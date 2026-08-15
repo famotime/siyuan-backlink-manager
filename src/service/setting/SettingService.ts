@@ -102,28 +102,31 @@ async function getPersistentConfig(): Promise<SettingConfig> {
     }
     let loaded = await plugin.loadData(SettingFileName);
     if (loaded == null || loaded == undefined || loaded == '') {
-        console.info(`反链面板插件 没有配置文件，使用默认配置`)
+        console.info(`反链面板插件 没有配置文件，使用默认配置`);
     } else {
-        //如果有配置文件，则使用配置文件
-        // console.info(`读入配置文件: ${SettingFileName}`)
         if (typeof loaded === 'string') {
-            loaded = JSON.parse(loaded);
-        }
-        try {
-            settingConfig = new SettingConfig();
-            for (let key in loaded) {
-                setKeyValue(settingConfig, key, loaded[key]);
+            try {
+                loaded = JSON.parse(loaded);
+            } catch (e) {
+                console.error(`Setting json parse error:`, e);
             }
-        } catch (error_msg) {
-            console.log(`Setting load error: ${error_msg}`);
+        }
+        if (loaded && typeof loaded === 'object') {
+            try {
+                settingConfig = new SettingConfig();
+                for (let key in loaded) {
+                    setKeyValue(settingConfig, key, loaded[key]);
+                }
+            } catch (error_msg) {
+                console.log(`Setting load error: ${error_msg}`);
+            }
         }
     }
     return settingConfig;
 }
 
-function setKeyValue(settingConfig, key: any, value: any) {
+function setKeyValue(settingConfig: any, key: any, value: any) {
     if (!(key in settingConfig)) {
-        console.error(`"${key}" is not a setting`);
         return;
     }
     settingConfig[key] = value;

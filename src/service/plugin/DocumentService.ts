@@ -6,7 +6,7 @@ import { Menu } from "siyuan";
 import { CUSTOM_ICON_MAP } from "@/models/icon-constant";
 import { BacklinkFilterPanelAttributeService, DOCUMENT_BOTTOM_SHOW_BACKLINK_FILTER_PANEL_ATTRIBUTE_KEY } from "@/service/setting/BacklinkPanelFilterCriteriaService";
 import { clearProtyleGutters, hasClosestByClassName, hasClosestById } from "@/utils/html-util";
-import { generateGetDefBlockArraySql } from "../backlink/backlink-sql";
+import { generateGetDocHasBacklinksSql } from "../backlink/backlink-sql";
 import { sql } from "@/utils/api";
 import { isArrayEmpty } from "@/utils/array-util";
 import { NewNodeID } from "@/utils/siyuan-util";
@@ -126,10 +126,10 @@ async function getDocumentBottomBacklinkPanelDisplay(docuemntContentElement: HTM
     let documentBottomDisplay = SettingService.ins.SettingConfig.documentBottomDisplay;
 
     if (documentBottomDisplay) {
-        let getDefBlockArraySql = generateGetDefBlockArraySql({ rootId: rootId });
-        let curDocDefBlockArray: DefBlock[] = await sql(getDefBlockArraySql);
-        if (isArrayEmpty(curDocDefBlockArray)) {
-            documentBottomDisplay = false;;
+        let hasBacklinksSql = generateGetDocHasBacklinksSql(rootId);
+        let backlinkCountResult = await sql(hasBacklinksSql);
+        if (!backlinkCountResult || !backlinkCountResult[0] || !backlinkCountResult[0].count) {
+            documentBottomDisplay = false;
         }
     }
     let docProtyleElement = null;

@@ -28,7 +28,7 @@ export async function buildBacklinkPanelData(paramObj, deps) {
     removeMarkdownRefBlockStyle,
   } = deps;
 
-  const curDocDefBlockIdArray = getBlockIds(paramObj.curDocDefBlockArray);
+  const curDocDefBlockIdArray = [paramObj.rootId, ...getBlockIds(paramObj.curDocDefBlockArray)].filter(Boolean);
   const backlinkBlockMap = {};
   const relatedDefBlockCountMap = new Map();
   const backlinkDocumentCountMap = new Map();

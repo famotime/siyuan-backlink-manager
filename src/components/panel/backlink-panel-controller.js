@@ -8,10 +8,6 @@ import {
   getTurnPageBacklinkPanelRenderData,
 } from "@/service/backlink/backlink-data";
 import {
-  defBlockArrayTypeAndKeywordFilter,
-  defBlockArraySort,
-} from "@/service/backlink/backlink-def-blocks.js";
-import {
   isArrayEmpty,
   isArrayNotEmpty,
   isSetEmpty,
@@ -73,12 +69,7 @@ import {
   syncBacklinkDocumentProtyleState,
 } from "./backlink-protyle-rendering.js";
 import {
-  applySavedPanelCriteria,
-  clonePanelQueryParamsForSave,
   resetBacklinkQueryParameters,
-  resetFilterQueryParameters,
-  toggleRelatedDefBlockCondition,
-  toggleRelatedDocumentCondition,
 } from "./backlink-panel-query-params.js";
 import { createBacklinkPanelActionHandlers } from "./backlink-panel-controller-actions.js";
 import { createBacklinkPanelBulkActions } from "./backlink-panel-controller-bulk.js";
@@ -606,9 +597,6 @@ export function createBacklinkPanelController(state) {
 
   const panelDataCoordinator = createBacklinkPanelDataCoordinator({
     state,
-    defBlockArrayTypeAndKeywordFilter,
-    defBlockArraySort,
-    getBatchBlockIdIndex,
     getBacklinkPanelRenderData,
     getTurnPageBacklinkPanelRenderData,
     mergeTurnPageBacklinkPanelRenderData,
@@ -649,63 +637,16 @@ export function createBacklinkPanelController(state) {
   const panelActionHandlers = createBacklinkPanelActionHandlers({
     state,
     BacklinkFilterPanelAttributeService,
-    resetFilterQueryParameters,
     resetBacklinkQueryParameters,
-    toggleRelatedDefBlockCondition,
-    toggleRelatedDocumentCondition,
-    clonePanelQueryParamsForSave,
-    applySavedPanelCriteria,
-    isStrBlank,
     updateRenderData,
-    refreshFilterDisplayData,
   });
-
-  function resetFilterQueryParametersToDefault() {
-    return panelActionHandlers.resetFilterQueryParametersToDefault();
-  }
 
   function resetBacklinkQueryParametersToDefault() {
     return panelActionHandlers.resetBacklinkQueryParametersToDefault();
   }
 
-  function handleRelatedDefBlockClick(event, defBlock) {
-    return panelActionHandlers.handleRelatedDefBlockClick(event, defBlock);
-  }
-
-  function handleRelatedDefBlockContextmenu(_event, defBlock) {
-    return panelActionHandlers.handleRelatedDefBlockContextmenu(_event, defBlock);
-  }
-
-  function handleRelatedDocBlockClick(event, defBlock) {
-    return panelActionHandlers.handleRelatedDocBlockClick(event, defBlock);
-  }
-
-  function handleRelatedDocBlockContextmenu(_event, defBlock) {
-    return panelActionHandlers.handleRelatedDocBlockContextmenu(_event, defBlock);
-  }
-
-  function handleCriteriaConfirm() {
-    return panelActionHandlers.handleCriteriaConfirm();
-  }
-
-  function handleCriteriaCancel() {
-    return panelActionHandlers.handleCriteriaCancel();
-  }
-
-  function handleSavedPanelCriteriaClick(name) {
-    return panelActionHandlers.handleSavedPanelCriteriaClick(name);
-  }
-
-  function handleSavedPanelCriteriaDeleteClick(name) {
-    return panelActionHandlers.handleSavedPanelCriteriaDeleteClick(name);
-  }
-
   function handleBacklinkKeywordInput() {
     return panelActionHandlers.handleBacklinkKeywordInput();
-  }
-
-  function handleFilterPanelInput() {
-    return panelActionHandlers.handleFilterPanelInput();
   }
 
   return {
@@ -728,19 +669,9 @@ export function createBacklinkPanelController(state) {
     collapseAllBacklinkListItemNode,
     setAllBacklinkDocumentContextVisibilityLevel,
     stepAllBacklinkDocumentContextVisibilityLevel,
-    resetFilterQueryParametersToDefault,
     resetBacklinkQueryParametersToDefault,
     refreshBacklinkPanelToCurrentMainDocument,
     refreshBacklinkDocumentGroupById,
-    handleRelatedDefBlockClick,
-    handleRelatedDefBlockContextmenu,
-    handleRelatedDocBlockClick,
-    handleRelatedDocBlockContextmenu,
-    handleCriteriaConfirm,
-    handleCriteriaCancel,
-    handleSavedPanelCriteriaClick,
-    handleSavedPanelCriteriaDeleteClick,
     handleBacklinkKeywordInput,
-    handleFilterPanelInput,
   };
 }

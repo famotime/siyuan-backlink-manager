@@ -2,6 +2,10 @@ function escapeRegExp(value = "") {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function removeMarkTags(value = "") {
+  return value.replace(/<\/?mark>/g, "");
+}
+
 export function extractNestedNodeDomById(dom = "", blockId = "") {
   if (!dom || !blockId) {
     return "";
@@ -128,51 +132,83 @@ export function getBacklinkNodeSortComparator(blockSortMethod, deps = {}) {
   switch (blockSortMethod) {
     case "documentAlphabeticAsc":
       return (a, b) => {
-        let result = a.documentBlock.content
+        let result = (a.documentBlock?.content || "")
           .replace("<mark>", "")
           .replace("</mark>", "")
           .localeCompare(
-            b.documentBlock.content.replace("<mark>", "").replace("</mark>", ""),
+            (b.documentBlock?.content || "").replace("<mark>", "").replace("</mark>", ""),
             undefined,
             { sensitivity: "base", usage: "sort", numeric: true },
           );
         if (result === 0) {
-          result = a.block.content
+          result = (a.block?.content || "")
             .replace("<mark>", "")
             .replace("</mark>", "")
             .localeCompare(
-              b.block.content.replace("<mark>", "").replace("</mark>", ""),
+              (b.block?.content || "").replace("<mark>", "").replace("</mark>", ""),
               undefined,
               { sensitivity: "base", usage: "sort", numeric: true },
             );
         }
         if (result === 0) {
-          result = Number(a.block.created) - Number(b.block.created);
+          result = Number(a.block?.created || 0) - Number(b.block?.created || 0);
         }
         return result;
       };
     case "documentAlphabeticDesc":
       return (a, b) => {
-        let result = b.documentBlock.content
+        let result = (b.documentBlock?.content || "")
           .replace("<mark>", "")
           .replace("</mark>", "")
           .localeCompare(
-            a.documentBlock.content.replace("<mark>", "").replace("</mark>", ""),
+            (a.documentBlock?.content || "").replace("<mark>", "").replace("</mark>", ""),
             undefined,
             { sensitivity: "base", usage: "sort", numeric: true },
           );
         if (result === 0) {
-          result = b.block.content
+          result = (b.block?.content || "")
             .replace("<mark>", "")
             .replace("</mark>", "")
             .localeCompare(
-              a.block.content.replace("<mark>", "").replace("</mark>", ""),
+              (a.block?.content || "").replace("<mark>", "").replace("</mark>", ""),
               undefined,
               { sensitivity: "base", usage: "sort", numeric: true },
             );
         }
         if (result === 0) {
-          result = Number(b.block.created) - Number(a.block.created);
+          result = Number(b.block?.created || 0) - Number(a.block?.created || 0);
+        }
+        return result;
+      };
+    case "modifiedAsc":
+      return (a, b) => Number(a.block?.updated || 0) - Number(b.block?.updated || 0);
+    case "modifiedDesc":
+      return (a, b) => Number(b.block?.updated || 0) - Number(a.block?.updated || 0);
+    case "createdAsc":
+      return (a, b) => Number(a.block?.created || 0) - Number(b.block?.created || 0);
+    case "createdDesc":
+      return (a, b) => Number(b.block?.created || 0) - Number(a.block?.created || 0);
+    case "alphabeticAsc":
+      return (a, b) => {
+        let result = removeMarkTags(a.block?.content || "").localeCompare(
+          removeMarkTags(b.block?.content || ""),
+          undefined,
+          { sensitivity: "base", usage: "sort", numeric: true }
+        );
+        if (result === 0) {
+          result = Number(b.block?.updated || 0) - Number(a.block?.updated || 0);
+        }
+        return result;
+      };
+    case "alphabeticDesc":
+      return (a, b) => {
+        let result = removeMarkTags(b.block?.content || "").localeCompare(
+          removeMarkTags(a.block?.content || ""),
+          undefined,
+          { sensitivity: "base", usage: "sort", numeric: true }
+        );
+        if (result === 0) {
+          result = Number(b.block?.updated || 0) - Number(a.block?.updated || 0);
         }
         return result;
       };
@@ -181,7 +217,7 @@ export function getBacklinkNodeSortComparator(blockSortMethod, deps = {}) {
       if (blockSortFun) {
         return (a, b) => blockSortFun(a.block, b.block);
       }
-      return null;
+      return (a, b) => Number(b.block?.updated || 0) - Number(a.block?.updated || 0);
     }
   }
 }

@@ -3,7 +3,6 @@ import {
     generateGetBacklinkBlockArraySql,
     generateGetBacklinkListItemBlockArraySql,
     generateGetChildBlockArraySql,
-    generateGetDefBlockArraySql,
     generateGetHeadlineChildDefBlockArraySql,
     generateGetListItemChildBlockArraySql,
     generateGetListItemtSubMarkdownArraySql,
@@ -19,14 +18,14 @@ import {
     IBacklinkFilterPanelDataQueryParams,
     IBacklinkPanelRenderData,
     IPanelRenderBacklinkQueryParams,
-    ListItemTreeNode
+    ListItemTreeNode,
 } from "@/models/backlink-model";
 import {
     countOccurrences,
     isStrBlank,
     isStrNotBlank,
     longestCommonSubstring,
-    matchKeywords
+    matchKeywords,
 } from "@/utils/string-util";
 import { intersectionSet, isArrayEmpty, isArrayNotEmpty, isSetEmpty, isSetNotEmpty } from "@/utils/array-util";
 import { CacheManager } from "@/config/CacheManager";
@@ -36,10 +35,8 @@ import { getQueryStrByBlock, NewNodeID } from "@/utils/siyuan-util";
 import { buildBacklinkDocumentRenderState } from "./backlink-document-pagination.js";
 import {
     filterBacklinkDocumentBlocks,
-    filterExistingDefBlocks,
     sanitizeBacklinkRenderQueryParams,
 } from "./backlink-filtering.js";
-import { getDefBlockSortFun } from "./backlink-def-blocks.js";
 import {
     getMarkdownAnchorTextArray,
     getRefBlockId,
@@ -101,22 +98,21 @@ function shouldLogBacklinkDebug() {
     return globalThis.__BACKLINK_DEBUG__ === true;
 }
 
-function logBacklinkDebug(...args) {
+function logBacklinkDebug(...args: any[]) {
     if (!shouldLogBacklinkDebug()) {
         return;
     }
     console.log(...args);
 }
 
-
 export async function getBacklinkPanelRenderData(
     backlinkPanelData: IBacklinkFilterPanelData,
     queryParams: IPanelRenderBacklinkQueryParams,
 ): Promise<IBacklinkPanelRenderData> {
-    const startTime = performance.now(); // 记录开始时间
+    const startTime = performance.now();
 
     if (!backlinkPanelData || !queryParams) {
-        return
+        return;
     }
     let pageSize = SettingService.ins.SettingConfig.pageSize;
     let rootId = backlinkPanelData.rootId;
@@ -151,7 +147,6 @@ export async function getBacklinkPanelRenderData(
                 backlinkBlockNodeArraySort(
                     backlinkBlockNodeArrayArg,
                     blockSortMethod,
-                    { getDefBlockSortFun },
                 ),
             applyBacklinkContextVisibilityToNodes,
             applyBacklinkContextBudgetToNodes,
@@ -221,16 +216,6 @@ export async function getBacklinkPanelRenderData(
     const backlinkDataArray = fetchStageResult.backlinkDataArray;
     const usedCache = fetchStageResult.usedCache;
 
-    let filterCurDocDefBlockArray = filterExistingDefBlocks(
-        backlinkPanelData.curDocDefBlockArray,
-        validBacklinkBlockNodeArray,
-        queryParams,
-    );
-    let filterRelatedDefBlockArray = filterExistingDefBlocks(
-        backlinkPanelData.relatedDefBlockArray,
-        validBacklinkBlockNodeArray,
-        queryParams,
-    );
     let filterBacklinkDocumentArray = filterBacklinkDocumentBlocks(
         backlinkPanelData.backlinkDocumentArray,
         validBacklinkBlockNodeArray,
@@ -239,41 +224,35 @@ export async function getBacklinkPanelRenderData(
 
     queryParams.pageNum = pagination.pageNum;
 
-
     const backlinkPanelRenderDataResult: IBacklinkPanelRenderData = buildBacklinkPanelRenderDataResult({
         rootId,
         backlinkDataArray,
         pagination,
         validBacklinkBlockNodeArray,
-        filterCurDocDefBlockArray,
-        filterRelatedDefBlockArray,
+        filterCurDocDefBlockArray: [],
+        filterRelatedDefBlockArray: [],
         filterBacklinkDocumentArray,
         pageSize,
         usedCache,
     });
 
-    const endTime = performance.now(); // 记录结束时间
-    const executionTime = endTime - startTime; // 计算时间差
-    logBacklinkDebug(
-        `反链面板 生成渲染数据 消耗时间 : ${executionTime} ms `,
-        // `, backlinkPanelRenderDataResult `, backlinkPanelRenderDataResult,
-    );
+    const endTime = performance.now();
+    const executionTime = endTime - startTime;
+    logBacklinkDebug(`反链面板 生成渲染数据 消耗时间 : ${executionTime} ms `);
 
     return backlinkPanelRenderDataResult;
 }
-
 
 export async function getTurnPageBacklinkPanelRenderData(
     rootId: string,
     validBacklinkBlockNodeArray: IBacklinkBlockNode[],
     queryParams: IPanelRenderBacklinkQueryParams,
 ): Promise<IBacklinkPanelRenderData> {
-    const startTime = performance.now(); // 记录开始时间
+    const startTime = performance.now();
     let pageSize = SettingService.ins.SettingConfig.pageSize;
     backlinkBlockNodeArraySort(
         validBacklinkBlockNodeArray,
         queryParams.backlinkBlockSortMethod,
-        { getDefBlockSortFun },
     );
     let pagination = buildBacklinkDocumentRenderState(validBacklinkBlockNodeArray);
     const fetchStageResult = await buildBacklinkFetchStageResult({
@@ -350,69 +329,30 @@ export async function getTurnPageBacklinkPanelRenderData(
         pageSize,
         usedCache,
     });
-    const endTime = performance.now(); // 记录结束时间
-    const executionTime = endTime - startTime; // 计算时间差
-    logBacklinkDebug(
-        `反链面板 翻页 消耗时间 : ${executionTime} ms `,
-        // `, backlinkPanelRenderDataResult `, backlinkPanelRenderDataResult,
-    );
+    const endTime = performance.now();
+    const executionTime = endTime - startTime;
+    logBacklinkDebug(`反链面板 翻页 消耗时间 : ${executionTime} ms `);
 
     return backlinkPanelRenderDataResult;
 }
+
 export async function getBacklinkPanelData(
     queryParams: IBacklinkFilterPanelDataQueryParams
 ): Promise<IBacklinkFilterPanelData> {
-    const startTime = performance.now(); // 记录开始时间
+    const startTime = performance.now();
     let rootId = queryParams.rootId;
-    let focusBlockId = queryParams.focusBlockId;
-    let queryCurDocDefBlockRange = queryParams.queryCurDocDefBlockRange;
 
     let cacheResult = CacheManager.ins.getBacklinkPanelBaseData(rootId);
-
     if (cacheResult) {
         cacheResult.userCache = true;
         return cacheResult;
     }
 
-
-    let getDefBlockArraySql = generateGetDefBlockArraySql({ rootId, focusBlockId, queryCurDocDefBlockRange });
-    let curDocDefBlockArray: DefBlock[] = await sql(getDefBlockArraySql);
-    if (isArrayEmpty(curDocDefBlockArray)) {
-        let result: IBacklinkFilterPanelData = {
-            rootId: rootId,
-            backlinkBlockNodeArray: [],
-            curDocDefBlockArray: [],
-            relatedDefBlockArray: [],
-            backlinkDocumentArray: [],
-        }
-        return result;
-    }
-    // let docRefDefBlockIdArray: string[] = [];
-    // for (const defBlock of curDocDefBlockArray) {
-    //     if (defBlock.root_id != rootId && defBlock.refBlockId) {
-    //         docRefDefBlockIdArray.push(defBlock.refBlockId);
-    //     }
-    // }
-    // if (isArrayNotEmpty(docRefDefBlockIdArray)) {
-    //     let getBlockArraySql = generateGetBlockArraySql(docRefDefBlockIdArray);
-    //     let curRefBlockArray: DefBlock[] = await sql(getBlockArraySql);
-    //     for (const tempBlock of curRefBlockArray) {
-    //         let refBlockId = tempBlock.id;
-    //         for (const defBlock of curDocDefBlockArray) {
-    //             if (defBlock.refBlockId == refBlockId) {
-    //                 defBlock.refBlockType = tempBlock.type;
-    //             }
-    //         }
-    //     }
-    // }
-
-
-    let defBlockIds = getBlockIds(curDocDefBlockArray);
     let backlinkBlockQueryParams: IBacklinkBlockQueryParams = {
+        rootId: rootId,
         queryParentDefBlock: queryParams.queryParentDefBlock,
         querrChildDefBlockForListItem: queryParams.querrChildDefBlockForListItem,
         queryChildDefBlockForHeadline: queryParams.queryChildDefBlockForHeadline,
-        defBlockIds: defBlockIds
     };
 
     let backlinkBlockArray: BacklinkBlock[] = await getBacklinkBlockArray(
@@ -423,18 +363,20 @@ export async function getBacklinkPanelData(
             sql,
         },
     );
+
+    if (isArrayEmpty(backlinkBlockArray)) {
+        let result: IBacklinkFilterPanelData = {
+            rootId: rootId,
+            backlinkBlockNodeArray: [],
+            curDocDefBlockArray: [],
+            relatedDefBlockArray: [],
+            backlinkDocumentArray: [],
+        };
+        return result;
+    }
+
     backlinkBlockQueryParams.backlinkBlocks = backlinkBlockArray;
     backlinkBlockQueryParams.backlinkBlockIds = getBlockIds(backlinkBlockArray);
-
-    // let [
-    //     backlinkParentBlockArray,
-    //     headlinkBacklinkChildBlockArray,
-    //     listItemBacklinkChildBlockArray
-    // ] = await Promise.all([
-    //     getParentBlockArray(backlinkBlockQueryParams),
-    //     getHeadlineChildBlockArray(backlinkBlockQueryParams),
-    //     getListItemChildBlockArray(backlinkBlockQueryParams)
-    // ]);
 
     let backlinkParentBlockArray: BacklinkParentBlock[] = await getParentBlockArray(
         backlinkBlockQueryParams,
@@ -476,11 +418,10 @@ export async function getBacklinkPanelData(
         },
     );
 
-
     let backlinkPanelData: IBacklinkFilterPanelData = await buildBacklinkPanelData(
         {
             rootId,
-            curDocDefBlockArray,
+            curDocDefBlockArray: [],
             backlinkBlockArray,
             headlinkBacklinkChildBlockArray,
             listItemBacklinkChildBlockArray,
@@ -494,8 +435,8 @@ export async function getBacklinkPanelData(
             collectListItemTreeNodes,
             collectParentBlocks,
             collectSiblingBlocks,
-            getBacklinkEmbedBlockInfo: (backlinkBlock, curDocDefBlockArray) =>
-                getBacklinkEmbedBlockInfo(backlinkBlock, curDocDefBlockArray, {
+            getBacklinkEmbedBlockInfo: (backlinkBlock, curDocDefBlockArrayArg) =>
+                getBacklinkEmbedBlockInfo(backlinkBlock, curDocDefBlockArrayArg, {
                     sql,
                     generateGetChildBlockArraySql,
                     getQueryStrByBlock,
@@ -524,12 +465,10 @@ export async function getBacklinkPanelData(
         },
     );
 
-    const endTime = performance.now(); // 记录结束时间
-    const executionTime = endTime - startTime; // 计算时间差
-    logBacklinkDebug(
-        `反链面板 获取和处理数据 消耗时间 : ${executionTime} ms `,
-        // `, 数据 : backlinkPanelData `, backlinkPanelData
-    );
+    const endTime = performance.now();
+    const executionTime = endTime - startTime;
+    logBacklinkDebug(`反链面板 获取和处理数据 消耗时间 : ${executionTime} ms `);
+
     let cacheAfterResponseMs = SettingService.ins.SettingConfig.cacheAfterResponseMs;
     let cacheExpirationTime = SettingService.ins.SettingConfig.cacheExpirationTime;
 
@@ -538,10 +477,10 @@ export async function getBacklinkPanelData(
         && executionTime > cacheAfterResponseMs) {
         CacheManager.ins.setBacklinkPanelBaseData(rootId, backlinkPanelData, cacheExpirationTime);
     }
-    // console.log(" blockTreeNodeArray : ", backlinkPanelData)
 
     return backlinkPanelData;
 }
+
 function updateMaxValueMap(map: Map<string, string>, key: string, value: string) {
     if (!value) {
         return;

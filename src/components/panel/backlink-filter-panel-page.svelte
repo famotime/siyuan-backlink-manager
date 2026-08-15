@@ -2,23 +2,19 @@
     import type { Custom } from "siyuan";
     import { onDestroy, onMount } from "svelte";
     import { SettingService } from "@/service/setting/SettingService";
-    import { getBlockTypeIconHref } from "@/utils/icon-util";
     import {
         createBacklinkDocumentViewState,
     } from "./backlink-document-view-state.js";
-    import { buildDefBlockAriaLabel } from "./backlink-panel-formatting.js";
     import { createBacklinkPanelController } from "./backlink-panel-controller.js";
-    import BacklinkFilterPanelControls from "./backlink-filter-panel-controls.svelte";
     import BacklinkResultsPanel from "./backlink-results-panel.svelte";
     import "./backlink-filter-panel-page.css";
 
     export let rootId: string;
-    export let focusBlockId: string;
+    export let focusBlockId: string = "";
     export let currentTab: Custom;
     export let panelBacklinkViewExpand = true;
 
     let backlinkPanelAreaElement: HTMLDivElement;
-    let filterPanelStickyElement: HTMLDivElement;
     let previousRootId: string;
     let previousFocusBlockId: string;
     let backlinkULElement: HTMLElement;
@@ -31,23 +27,16 @@
     let clickCount = 0;
     let clickTimeoutId: NodeJS.Timeout;
     let inputChangeTimeoutId: NodeJS.Timeout;
-    let queryCurDocDefBlockRange = "";
     const backlinkDocumentViewState = createBacklinkDocumentViewState();
     let backlinkProtyleItemFoldMap = new Map<string, Set<string>>();
     let backlinkProtyleHeadingExpandMap = new Map<string, boolean>();
     let backlinkDocumentEditorMap = new Map();
     let backlinkDocumentGroupArray = [];
-    let panelFilterViewExpand = false;
-    let showFilterPanel = SettingService.ins.SettingConfig.enableFilterPanel;
     let displayHintPanelBaseDataCacheUsage = false;
     let displayHintBacklinkBlockCacheUsage = false;
     let hideBacklinkProtyleBreadcrumb = false;
-    let showSaveCriteriaInputBox = false;
-    let saveCriteriaInputText = "";
     let backlinkGlobalContextVisibilityLevel =
         backlinkDocumentViewState.globalContextVisibilityLevel;
-    let filterPanelResizeObserver: ResizeObserver;
-    let observedFilterPanelStickyElement: HTMLDivElement;
 
     const state = {
         get rootId() {
@@ -137,12 +126,6 @@
         set inputChangeTimeoutId(value) {
             inputChangeTimeoutId = value;
         },
-        get queryCurDocDefBlockRange() {
-            return queryCurDocDefBlockRange;
-        },
-        set queryCurDocDefBlockRange(value) {
-            queryCurDocDefBlockRange = value;
-        },
         get backlinkDocumentViewState() {
             return backlinkDocumentViewState;
         },
@@ -183,12 +166,6 @@
         set backlinkDocumentGroupArray(value) {
             backlinkDocumentGroupArray = value;
         },
-        get panelFilterViewExpand() {
-            return panelFilterViewExpand;
-        },
-        set panelFilterViewExpand(value) {
-            panelFilterViewExpand = value;
-        },
         get panelBacklinkViewExpand() {
             return panelBacklinkViewExpand;
         },
@@ -213,68 +190,19 @@
         set hideBacklinkProtyleBreadcrumb(value) {
             hideBacklinkProtyleBreadcrumb = value;
         },
-        get showSaveCriteriaInputBox() {
-            return showSaveCriteriaInputBox;
-        },
-        set showSaveCriteriaInputBox(value) {
-            showSaveCriteriaInputBox = value;
-        },
-        get saveCriteriaInputText() {
-            return saveCriteriaInputText;
-        },
-        set saveCriteriaInputText(value) {
-            saveCriteriaInputText = value;
-        },
     };
 
     const controller = createBacklinkPanelController(state);
 
-    function updateFilterPanelStickyOffset() {
-        if (!backlinkPanelAreaElement) {
-            return;
-        }
-        const stickyOffset = filterPanelStickyElement?.offsetHeight || 0;
-        backlinkPanelAreaElement.style.setProperty(
-            "--backlink-filter-panel-offset",
-            `${stickyOffset}px`,
-        );
-    }
-
-    function syncFilterPanelStickyObserver() {
-        if (!filterPanelResizeObserver) {
-            updateFilterPanelStickyOffset();
-            return;
-        }
-        if (observedFilterPanelStickyElement === filterPanelStickyElement) {
-            updateFilterPanelStickyOffset();
-            return;
-        }
-        if (observedFilterPanelStickyElement) {
-            filterPanelResizeObserver.unobserve(observedFilterPanelStickyElement);
-        }
-        observedFilterPanelStickyElement = filterPanelStickyElement;
-        if (observedFilterPanelStickyElement) {
-            filterPanelResizeObserver.observe(observedFilterPanelStickyElement);
-        }
-        updateFilterPanelStickyOffset();
-    }
-
-    $: if (rootId !== previousRootId || focusBlockId !== previousFocusBlockId) {
+    $: if (rootId !== previousRootId) {
         controller.initBaseData();
     }
     $: controller.updateLastCriteria();
-    $: syncFilterPanelStickyObserver();
 
     onMount(() => {
         doubleClickTimeout =
             SettingService.ins.SettingConfig.doubleClickTimeout || 0;
-        if (typeof ResizeObserver !== "undefined") {
-            filterPanelResizeObserver = new ResizeObserver(() => {
-                updateFilterPanelStickyOffset();
-            });
-        }
-        syncFilterPanelStickyObserver();
-        if (rootId !== previousRootId || focusBlockId !== previousFocusBlockId) {
+        if (rootId !== previousRootId) {
             controller.initBaseData();
         }
         controller.initEvent();
@@ -282,24 +210,8 @@
 
     onDestroy(() => {
         controller.destroyEvent?.();
-        filterPanelResizeObserver?.disconnect();
         controller.clearBacklinkProtyleList();
     });
-
-    function getDefBlockAriaLabel(defBlock: DefBlock, showContent = false) {
-        return buildDefBlockAriaLabel(
-            defBlock,
-            window.siyuan.languages,
-            showContent,
-        );
-    }
-
-    function getBlockTypeIconHrefByBlock(block: Block) {
-        if (!block) {
-            return "";
-        }
-        return getBlockTypeIconHref(block.type, block.subtype);
-    }
 </script>
 
 <div class="backlink-panel__area" bind:this={backlinkPanelAreaElement}>
@@ -308,34 +220,6 @@
     {/if}
     {#if displayHintPanelBaseDataCacheUsage}
         <p style="padding: 10px 20px;">此次面板使用了缓存数据</p>
-    {/if}
-
-    {#if showFilterPanel}
-        <BacklinkFilterPanelControls
-            bind:panelFilterViewExpand
-            bind:stickyElement={filterPanelStickyElement}
-            bind:queryCurDocDefBlockRange
-            bind:showSaveCriteriaInputBox
-            bind:saveCriteriaInputText
-            {backlinkFilterPanelRenderData}
-            {queryParams}
-            {savedQueryParamMap}
-            initBaseData={controller.initBaseData}
-            refreshFilterDisplayData={controller.refreshFilterDisplayData}
-            resetFilterQueryParametersToDefault={controller.resetFilterQueryParametersToDefault}
-            clearCacheAndRefresh={controller.clearCacheAndRefresh}
-            handleFilterPanelInput={controller.handleFilterPanelInput}
-            handleRelatedDefBlockClick={controller.handleRelatedDefBlockClick}
-            handleRelatedDefBlockContextmenu={controller.handleRelatedDefBlockContextmenu}
-            handleRelatedDocBlockClick={controller.handleRelatedDocBlockClick}
-            handleRelatedDocBlockContextmenu={controller.handleRelatedDocBlockContextmenu}
-            handleSavedPanelCriteriaClick={controller.handleSavedPanelCriteriaClick}
-            handleSavedPanelCriteriaDeleteClick={controller.handleSavedPanelCriteriaDeleteClick}
-            handleCriteriaCancel={controller.handleCriteriaCancel}
-            handleCriteriaConfirm={controller.handleCriteriaConfirm}
-            {getDefBlockAriaLabel}
-            {getBlockTypeIconHrefByBlock}
-        />
     {/if}
 
     <BacklinkResultsPanel

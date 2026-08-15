@@ -197,10 +197,11 @@ export async function getBatchBacklinkDoc({
   for (const [index, node] of backlinkBlockNodeArray.entries()) {
     const backlinkRootId = node.block.root_id;
     const backlinkContent = node.block.content;
-    const defId = intersectionSet(
-      node.includeCurBlockDefBlockIds,
-      node.includeDirectDefBlockIds,
-    )[0];
+    const defId =
+      intersectionSet(
+        node.includeCurBlockDefBlockIds,
+        node.includeDirectDefBlockIds,
+      )[0] || curRootId;
     const mapKey = `${defId}<->${backlinkRootId}`;
     let keyword = defIdRefTreeIdKeywordMap.get(mapKey);
     if (keyword === undefined) {
@@ -289,61 +290,17 @@ export function isBacklinkBlockValid(queryParams, backlinkBlockNode, deps) {
   } = deps;
   const keywordStr = queryParams.backlinkKeywordStr;
 
-  const includeRelatedDefBlockIds = queryParams.includeRelatedDefBlockIds;
-  const excludeRelatedDefBlockIds = queryParams.excludeRelatedDefBlockIds;
   const includeDocumentIds = queryParams.includeDocumentIds;
   const excludeDocumentIds = queryParams.excludeDocumentIds;
-  const backlinkCurDocDefBlockType = queryParams.backlinkCurDocDefBlockType;
 
   const backlinkBlockInfo = backlinkBlockNode.block;
-  const backlinkDirectDefBlockIds = backlinkBlockNode.includeDirectDefBlockIds;
-  const backlinkRelatedDefBlockIds = backlinkBlockNode.includeRelatedDefBlockIds;
-  const backlinkParentDefBlockIds = backlinkBlockNode.includeParentDefBlockIds;
   const parentListItemTreeNode = backlinkBlockNode.parentListItemTreeNode;
-  const dynamicAnchorMap = backlinkBlockNode.dynamicAnchorMap;
-  const staticAnchorMap = backlinkBlockNode.staticAnchorMap;
 
   if (isSetNotEmpty(includeDocumentIds) && !includeDocumentIds.has(backlinkBlockInfo.root_id)) {
     return false;
   }
   if (isSetNotEmpty(excludeDocumentIds) && excludeDocumentIds.has(backlinkBlockInfo.root_id)) {
     return false;
-  }
-
-  if (isSetNotEmpty(excludeRelatedDefBlockIds)) {
-    if (parentListItemTreeNode) {
-      const excludeItemIdArray = parentListItemTreeNode.resetExcludeItemIdArray(
-        [...backlinkParentDefBlockIds],
-        Array.from(excludeRelatedDefBlockIds),
-      );
-      if (excludeItemIdArray.includes(parentListItemTreeNode.id)) {
-        return false;
-      }
-    } else {
-      for (const defBlockId of excludeRelatedDefBlockIds) {
-        if (backlinkRelatedDefBlockIds.has(defBlockId)) {
-          return false;
-        }
-      }
-    }
-  }
-
-  if (isSetNotEmpty(includeRelatedDefBlockIds)) {
-    if (parentListItemTreeNode) {
-      const includeItemIdArray = parentListItemTreeNode.resetIncludeItemIdArray(
-        [...backlinkParentDefBlockIds],
-        Array.from(includeRelatedDefBlockIds),
-      );
-      if (!includeItemIdArray.includes(parentListItemTreeNode.id)) {
-        return false;
-      }
-    } else {
-      for (const defBlockId of includeRelatedDefBlockIds) {
-        if (!backlinkRelatedDefBlockIds.has(defBlockId)) {
-          return false;
-        }
-      }
-    }
   }
 
   if (keywordStr) {
@@ -414,30 +371,6 @@ export function isBacklinkBlockValid(queryParams, backlinkBlockNode, deps) {
         return false;
       }
     }
-  }
-
-  if (backlinkCurDocDefBlockType === "dynamicAnchorText") {
-    if (dynamicAnchorMap.size <= 0) {
-      return false;
-    }
-    for (const blockId of dynamicAnchorMap.keys()) {
-      if (backlinkDirectDefBlockIds.has(blockId)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  if (backlinkCurDocDefBlockType === "staticAnchorText") {
-    if (staticAnchorMap.size <= 0) {
-      return false;
-    }
-    for (const blockId of staticAnchorMap.keys()) {
-      if (backlinkDirectDefBlockIds.has(blockId)) {
-        return true;
-      }
-    }
-    return false;
   }
 
   return true;

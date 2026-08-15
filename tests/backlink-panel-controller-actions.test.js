@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-test("backlink panel controller delegates query mutation and criteria actions to an extracted action helper", () => {
+test("backlink panel controller delegates query mutation and keyword actions to an extracted action helper", () => {
   const source = readFileSync(
     new URL("../src/components/panel/backlink-panel-controller.js", import.meta.url),
     "utf8",
@@ -14,8 +14,8 @@ test("backlink panel controller delegates query mutation and criteria actions to
   );
   assert.match(
     source,
-    /const panelActionHandlers = createBacklinkPanelActionHandlers\(\s*\{[\s\S]*state,[\s\S]*updateRenderData,[\s\S]*refreshFilterDisplayData,[\s\S]*\}\s*\);/,
+    /const panelActionHandlers = createBacklinkPanelActionHandlers\(\s*\{[\s\S]*state,[\s\S]*updateRenderData,[\s\S]*\}\s*\);/,
   );
-  assert.match(source, /return panelActionHandlers\.resetFilterQueryParametersToDefault\(\);/);
+  assert.match(source, /return panelActionHandlers\.resetBacklinkQueryParametersToDefault\(\);/);
   assert.match(source, /return panelActionHandlers\.handleBacklinkKeywordInput\(\);/);
 });

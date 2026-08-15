@@ -403,3 +403,43 @@ test("isBacklinkBlockValid matches keywords from context fragments when availabl
   assert.equal(backlinkBlockNode.contextBundle.primaryMatchSourceType, "sibling_prev");
   assert.equal(backlinkBlockNode.contextBundle.matchSummaryList.length, 1);
 });
+
+test("getBatchBacklinkDoc falls back defId to curRootId when definition block intersection is empty", async () => {
+  const requestedQueries = [];
+  const result = await getBatchBacklinkDoc({
+    curRootId: "doc-root-123",
+    backlinkBlockNodeArray: [
+      {
+        block: { id: "block-1", root_id: "ref-doc-1", content: "text", parent_id: "p-1" },
+        includeCurBlockDefBlockIds: new Set(),
+        includeDirectDefBlockIds: new Set(),
+        contextBundle: null,
+      },
+    ],
+    deps: {
+      intersectionSet: (a, b) => [],
+      longestCommonSubstring: (a, b) => a,
+      getBacklinkDocByApiOrCache: async (curRootId, defId, refTreeId, keyword, containChildren) => {
+        requestedQueries.push({ curRootId, defId, refTreeId });
+        return {
+          backlinks: [
+            {
+              id: "block-1",
+              dom: '<div data-node-id="block-1">text</div>',
+            },
+          ],
+          usedCache: false,
+        };
+      },
+      getBacklinkBlockId: (dom) => "block-1",
+      extractTargetBacklinkDom: () => null,
+      triggerIncompleteBacklinkFetch: () => {},
+    },
+  });
+
+  assert.equal(requestedQueries.length, 1);
+  assert.equal(requestedQueries[0].defId, "doc-root-123");
+  assert.equal(requestedQueries[0].refTreeId, "ref-doc-1");
+  assert.equal(result.backlinks.length, 1);
+});
+

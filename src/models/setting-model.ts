@@ -4,7 +4,7 @@ export type BacklinkContextPreset = "compact" | "balanced" | "expanded";
 
 export class SettingConfig {
     /* 插件设置 */
-    dockDisplay: Boolean;
+    dockDisplay: boolean;
     // 文档底部显示反链面板
     documentBottomDisplay: boolean;
     // 闪卡底部显示反链面板
@@ -19,22 +19,7 @@ export class SettingConfig {
     doubleClickTimeout: number;
 
     // 文档底部反链面板宽度
-    documentBottomBacklinkPaddingWidth: number
-
-
-
-    /* 筛选面板 */
-    enableFilterPanel: boolean;
-    filterPanelViewExpand: boolean;
-    queryParentDefBlock: boolean;
-    querrChildDefBlockForListItem: boolean;
-    queryChildDefBlockForHeadline: boolean;
-    filterPanelCurDocDefBlockSortMethod: BlockSortMethod;
-    filterPanelRelatedDefBlockSortMethod: BlockSortMethod;
-    filterPanelBacklinkDocumentSortMethod: BlockSortMethod;
-    // 默认选中查看块
-    defaultSelectedViewBlock: boolean;
-
+    documentBottomBacklinkPaddingWidth: number;
 
     /* 反链面板 */
     docBottomBacklinkPanelViewExpand: boolean;
@@ -47,12 +32,7 @@ export class SettingConfig {
     backlinkContextMaxVisibleChars: number;
     backlinkContextMaxDepth: number;
     backlinkContextMaxExpandedNodes: number;
-    // queryAllContentUnderHeadline: boolean;
-
-
-
 }
-
 
 interface ITabProperty {
     key: string;
@@ -60,7 +40,6 @@ interface ITabProperty {
     props: Array<ItemProperty>;
     iconKey?: string;
 }
-
 
 export class TabProperty {
     key: string;
@@ -77,9 +56,7 @@ export class TabProperty {
             this.iconKey = "setting";
         }
         this.props = props;
-
     }
-
 }
 
 export interface IOption {
@@ -87,9 +64,6 @@ export interface IOption {
     desc?: string;
     value: string;
 }
-
-
-
 
 export class ItemProperty {
     key: string;
@@ -103,7 +77,6 @@ export class ItemProperty {
     btndo?: () => void;
     options?: IOption[];
 
-
     constructor({ key, type, name, description, tips, min, max, btndo, options }: ItemProperty) {
         this.key = key;
         this.type = type;
@@ -115,5 +88,4 @@ export class ItemProperty {
         this.description = description;
         this.tips = tips;
     }
-
 }

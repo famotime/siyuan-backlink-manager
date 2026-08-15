@@ -21,13 +21,6 @@ export function createBacklinkPanelInitCoordinator({
 
     state.backlinkFilterPanelBaseData = await getBacklinkPanelData({
       rootId: state.rootId,
-      focusBlockId: state.focusBlockId,
-      queryParentDefBlock: settingConfig.queryParentDefBlock,
-      querrChildDefBlockForListItem:
-        settingConfig.querrChildDefBlockForListItem,
-      queryChildDefBlockForHeadline:
-        settingConfig.queryChildDefBlockForHeadline,
-      queryCurDocDefBlockRange: state.queryCurDocDefBlockRange,
     });
     state.displayHintPanelBaseDataCacheUsage = Boolean(
       state.backlinkFilterPanelBaseData?.userCache,
@@ -52,8 +45,6 @@ export function createBacklinkPanelInitCoordinator({
     }
 
     state.previousRootId = state.rootId;
-    state.previousFocusBlockId = state.focusBlockId;
-    const settingConfig = SettingService.ins.SettingConfig;
     await loadBacklinkPanelBaseData();
 
     const defaultPanelCriteria =
@@ -61,38 +52,9 @@ export function createBacklinkPanelInitCoordinator({
 
     if (!initStrategy.reuseExistingQueryParams) {
       state.queryParams = defaultPanelCriteria.queryParams;
-      state.panelFilterViewExpand =
-        defaultPanelCriteria.backlinkPanelFilterViewExpand;
       state.queryParams.pageNum = 1;
     } else {
       state.queryParams = state.queryParams;
-      state.panelFilterViewExpand = state.panelFilterViewExpand;
-    }
-
-    state.savedQueryParamMap =
-      await BacklinkFilterPanelAttributeService.ins.getPanelSavedCriteriaMap(
-        state.rootId,
-      );
-
-    if (
-      settingConfig.defaultSelectedViewBlock &&
-      initStrategy.applyDefaultSelectedViewBlock
-    ) {
-      const selectBlockId = state.rootId;
-      let viewBlockExistBacklink = false;
-      state.backlinkFilterPanelBaseData.curDocDefBlockArray.forEach((item) => {
-        if (item.id === selectBlockId) {
-          viewBlockExistBacklink = true;
-        }
-      });
-
-      if (viewBlockExistBacklink) {
-        state.queryParams.includeRelatedDefBlockIds = new Set();
-        state.queryParams.excludeRelatedDefBlockIds = new Set();
-        state.queryParams.includeDocumentIds = new Set();
-        state.queryParams.excludeDocumentIds = new Set();
-        state.queryParams.includeRelatedDefBlockIds.add(selectBlockId);
-      }
     }
 
     await updateRenderData();
@@ -107,7 +69,7 @@ export function createBacklinkPanelInitCoordinator({
     const nextRootId = resolveBacklinkPanelRefreshRootId({
       currentTab: state.currentTab,
       fallbackRootId: state.rootId,
-      fallbackLastViewedDocId: envConfig.lastViewedDocId,
+      fallbackLastViewedDocId: envConfig?.lastViewedDocId,
     });
     if (!nextRootId) {
       return;

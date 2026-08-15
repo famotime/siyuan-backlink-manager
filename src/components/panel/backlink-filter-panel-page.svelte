@@ -23,9 +23,6 @@
     let queryParams;
     let savedQueryParamMap: Map<string, any>;
     let defalutEditors = [];
-    let doubleClickTimeout = 0;
-    let clickCount = 0;
-    let clickTimeoutId: NodeJS.Timeout;
     let inputChangeTimeoutId: NodeJS.Timeout;
     const backlinkDocumentViewState = createBacklinkDocumentViewState();
     let backlinkProtyleItemFoldMap = new Map<string, Set<string>>();
@@ -101,24 +98,6 @@
         },
         set defalutEditors(value) {
             defalutEditors = value;
-        },
-        get doubleClickTimeout() {
-            return doubleClickTimeout;
-        },
-        set doubleClickTimeout(value) {
-            doubleClickTimeout = value;
-        },
-        get clickCount() {
-            return clickCount;
-        },
-        set clickCount(value) {
-            clickCount = value;
-        },
-        get clickTimeoutId() {
-            return clickTimeoutId;
-        },
-        set clickTimeoutId(value) {
-            clickTimeoutId = value;
         },
         get inputChangeTimeoutId() {
             return inputChangeTimeoutId;
@@ -200,8 +179,6 @@
     $: controller.updateLastCriteria();
 
     onMount(() => {
-        doubleClickTimeout =
-            SettingService.ins.SettingConfig.doubleClickTimeout || 0;
         if (rootId !== previousRootId) {
             controller.initBaseData();
         }

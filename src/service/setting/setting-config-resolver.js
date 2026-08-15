@@ -27,7 +27,6 @@ const DEFAULT_SETTING_CONFIG = {
   cacheAfterResponseMs: -1,
   cacheExpirationTime: 5 * 60,
   usePraentIdIdx: false,
-  doubleClickTimeout: 0,
   documentBottomBacklinkPaddingWidth: null,
   docBottomBacklinkPanelViewExpand: true,
   pageSize: 8,

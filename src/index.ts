@@ -20,7 +20,6 @@ export default class PluginSample extends Plugin {
     async onload() {
         EnvConfig.ins.init(this);
         await SettingService.ins.init()
-        DocumentService.ins.init();
         DockService.ins.init();
         TabService.ins.init();
         TopBarService.ins.init();
@@ -53,7 +52,6 @@ export default class PluginSample extends Plugin {
     }
 
     async onunload() {
-        DocumentService.ins.destory();
     }
 
     uninstall() {

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
+import { CUSTOM_ICON_MAP } from "../src/models/icon-constant.ts";
 import { renderIcon } from "../src/utils/svg-icon.ts";
 import {
   buildBacklinkTooltipClass,
@@ -18,6 +19,13 @@ test("renderIcon 输出统一 bl-icon class 与 symbol 引用", () => {
   assert.match(html, /width="var\(--bl-icon-size\)"/);
   assert.match(html, /<use xlink:href="#iconBlRefresh"><\/use>/);
   assert.match(html, /aria-hidden="true"/);
+});
+
+test("CUSTOM_ICON_MAP 中 chevron 箭头 path 定义正确", () => {
+  assert.match(CUSTOM_ICON_MAP.BlChevronLeft.source, /d="M15 18l-6-6 6-6"/);
+  assert.match(CUSTOM_ICON_MAP.BlChevronRight.source, /d="M9 18l6-6-6-6"/);
+  assert.match(CUSTOM_ICON_MAP.BlChevronUp.source, /d="M18 15l-6-6-6 6"/);
+  assert.match(CUSTOM_ICON_MAP.BlChevronDown.source, /d="M6 9l6 6 6-6"/);
 });
 
 test("renderIcon 支持数字与自定义尺寸", () => {

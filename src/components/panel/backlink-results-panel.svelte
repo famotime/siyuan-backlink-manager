@@ -131,7 +131,7 @@
             <div class="backlink-toolbar-actions">
                 <span class="backlink-sort-icon">{@html renderIcon("iconContentSort", 14)}</span>
                 <select
-                    class="b3-select backlink-sort-select"
+                    class="b3-select fn__flex-center backlink-sort-select"
                     bind:value={queryParams.backlinkBlockSortMethod}
                     on:change={updateRenderData}
                 >

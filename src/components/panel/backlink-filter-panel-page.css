@@ -83,6 +83,12 @@
     margin: 0;
 }
 
+.backlink-panel__area input,
+.backlink-panel__area select,
+.backlink-panel__area button {
+    font-family: inherit;
+}
+
 .backlink-panel__area .backlink-search-input-wrap {
     position: relative;
     display: flex;
@@ -96,8 +102,17 @@
     padding-left: 26px;
     padding-right: 24px;
     height: var(--bl-control-height);
+    line-height: calc(var(--bl-control-height) - 2px);
+    font: inherit;
     font-size: var(--bl-font-s);
+    color: var(--b3-theme-on-surface);
     box-sizing: border-box;
+}
+
+.backlink-panel__area .backlink-search-input::placeholder {
+    color: var(--b3-theme-on-surface-light);
+    font: inherit;
+    font-size: var(--bl-font-s);
 }
 
 .backlink-panel__area .backlink-search-icon {
@@ -153,8 +168,21 @@
 .backlink-panel__area .backlink-sort-select {
     max-width: 135px;
     height: var(--bl-control-height);
+    line-height: 18px;
+    font: inherit;
     font-size: var(--bl-font-s);
-    padding: 0 20px 0 6px;
+    font-weight: 400;
+    color: var(--b3-theme-on-surface);
+    padding: 4px 20px 4px 8px;
+    box-sizing: border-box;
+    vertical-align: middle;
+}
+
+.backlink-panel__area .backlink-sort-select option {
+    font: inherit;
+    font-size: var(--bl-font-s);
+    background-color: var(--b3-theme-surface);
+    color: var(--b3-theme-on-surface);
 }
 
 /* ==========================================================================

@@ -422,8 +422,9 @@
 .backlink-panel__area .backlink-breadcrumb__item {
     cursor: default;
     color: var(--b3-theme-on-surface-light);
-    padding: 1px 4px;
-    border-radius: 4px;
+    padding: 0;
+    border: none;
+    background: transparent;
     transition: var(--backlink-transition);
     user-select: none;
     display: inline-flex;
@@ -435,7 +436,7 @@
 .backlink-panel__area .backlink-breadcrumb-row .backlink-breadcrumb__item + .backlink-breadcrumb__item::before {
     content: ">";
     display: inline-block;
-    margin-right: 4px;
+    margin: 0 4px;
     opacity: 0.45;
     font-size: 10px;
     font-weight: bold;
@@ -451,16 +452,15 @@
 
 .backlink-panel__area .backlink-breadcrumb__item--clickable:hover {
     color: var(--b3-theme-primary);
-    background-color: var(--b3-list-icon-hover);
 }
 
-/* 选中的路径层次 / 当前所在层级高亮标识 */
+/* 选中的路径层次 / 当前所在层级高亮标识（仅高亮文字，不带边框与底色） */
 .backlink-panel__area .backlink-breadcrumb__item--current,
 .backlink-panel__area .backlink-breadcrumb__item--selected,
 .backlink-panel__area .backlink-breadcrumb__item.active {
     color: var(--b3-theme-primary);
-    background-color: var(--backlink-chip-primary-surface);
-    border: 1px solid var(--backlink-chip-primary-border);
+    background: transparent;
+    border: none;
     font-weight: 600;
 }
 

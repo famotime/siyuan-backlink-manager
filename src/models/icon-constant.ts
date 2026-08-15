@@ -3,9 +3,15 @@ export const CUSTOM_ICON_MAP =
 {
     BacklinkPanelFilter: {
         id: "iconBacklinkPanelFilter",
-        source: `<symbol id="iconBacklinkPanelFilter" viewBox="0 0 48 48">
-<path d="M24 12V4H40V12" stroke="#333" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M40 36V44H24V36" stroke="#333" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 24L4 24" stroke="#333" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M32 34V14" stroke="#333" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 16L4 24L12 32" stroke="#333" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-    </symbol>`
+        source: `<symbol id="iconBacklinkPanelFilter" viewBox="0 0 24 24">
+<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M9 15H7a3 3 0 0 1 0-6h2"/>
+<path d="M15 9h2a3 3 0 0 1 0 6h-2"/>
+<line x1="8" y1="12" x2="16" y2="12"/>
+<polyline points="6 6 12 3 18 6"/>
+<polyline points="6 18 12 21 18 18"/>
+</g>
+</symbol>`
     },
     LiElementExpand: {
         id: "iconLiElementExpand",

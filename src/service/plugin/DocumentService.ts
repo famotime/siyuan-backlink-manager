@@ -3,6 +3,7 @@ import BacklinkFilterPanelPageSvelte from "@/components/panel/backlink-filter-pa
 import { SettingService } from "@/service/setting/SettingService";
 import Instance from "@/utils/Instance";
 import { Menu } from "siyuan";
+import { CUSTOM_ICON_MAP } from "@/models/icon-constant";
 import { BacklinkFilterPanelAttributeService, DOCUMENT_BOTTOM_SHOW_BACKLINK_FILTER_PANEL_ATTRIBUTE_KEY } from "@/service/setting/BacklinkPanelFilterCriteriaService";
 import { clearProtyleGutters, hasClosestByClassName, hasClosestById } from "@/utils/html-util";
 import { generateGetDefBlockArraySql } from "../backlink/backlink-sql";
@@ -296,7 +297,7 @@ function hadnleClickEditorTitleIcon(e) {
 
 
     (e.detail.menu as Menu).addItem({
-        icon: "BacklinkPanelFilter",
+        icon: CUSTOM_ICON_MAP.BacklinkPanelFilter.id,
         type: "submenu",
         label: "反链管家",
         submenu: getDocumentBlockIconMenus(e)

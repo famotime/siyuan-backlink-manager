@@ -2,12 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-test("backlink results panel renders the global context control row beside the summary", () => {
+test("backlink results panel renders document count summary and global context control row in separate rows", () => {
   const source = readFileSync(
     new URL("../src/components/panel/backlink-results-panel.svelte", import.meta.url),
     "utf8",
   );
 
+  assert.match(source, /backlink-results-summary-row/);
+  assert.match(source, /backlink-results-global-context-row/);
   assert.match(
     source,
     /backlink-context-control-row backlink-context-control-row--global/,
@@ -16,3 +18,20 @@ test("backlink results panel renders the global context control row beside the s
   assert.match(source, /setAllBacklinkDocumentContextVisibilityLevel/);
   assert.match(source, /backlinkGlobalContextVisibilityLevel/);
 });
+
+test("context state group keeps nowrap styles to prevent breaking into multiple lines", () => {
+  const css = readFileSync(
+    new URL("../src/components/panel/backlink-filter-panel-page.css", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    css,
+    /\.backlink-panel__area\s+\.backlink-context-state-group\s*\{[\s\S]*?flex-wrap:\s*nowrap;[\s\S]*?white-space:\s*nowrap;[\s\S]*?\}/,
+  );
+  assert.match(
+    css,
+    /\.backlink-panel__area\s+\.backlink-context-control-row--global\s*\{[\s\S]*?flex-wrap:\s*nowrap;[\s\S]*?\}/,
+  );
+});
+

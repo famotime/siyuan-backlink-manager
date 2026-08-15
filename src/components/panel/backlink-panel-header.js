@@ -10,6 +10,12 @@ const BACKLINK_CONTEXT_LEVEL_LABELS = {
   extended: "扩展",
   full: "全文",
 };
+const BACKLINK_CONTEXT_LEVEL_TOOLTIPS = {
+  core: "核心层：仅展示直接引用的反链块",
+  nearby: "近邻层：展示前后相邻段落及父级结构",
+  extended: "扩展层：展示所在章节的完整上下文",
+  full: "全文层：展示来源文档的全部正文",
+};
 
 export { BACKLINK_CONTEXT_LEVEL_ORDER };
 
@@ -24,6 +30,10 @@ export function getBacklinkSummaryText(i18n = {}, documentCount = 0) {
 
 export function getBacklinkContextLevelLabel(level = "core") {
   return BACKLINK_CONTEXT_LEVEL_LABELS[level] || BACKLINK_CONTEXT_LEVEL_LABELS.core;
+}
+
+export function getBacklinkContextLevelTooltip(level = "core") {
+  return BACKLINK_CONTEXT_LEVEL_TOOLTIPS[level] || BACKLINK_CONTEXT_LEVEL_TOOLTIPS.core;
 }
 
 export function getNextBacklinkContextLevel(level = "core") {

@@ -62,12 +62,23 @@ div.backlink-panel__area .hide-breadcrumb .backlink-breadcrumb-row,
 /* 文档底部样式 */
 div.backlink-panel-document-bottom__area {
     padding: 8px 48px;
-
 }
-
-
 
 /* 手机端样式 */
 div.document-panel-plugin-mobile.backlink-panel-document-bottom__area {
     padding: 8px 10px;
 }
+
+/* 显式线框图标全局防御（确保各区域 SVG 图标不被思源 fill 覆盖） */
+div.backlink-panel__area,
+div.backlink-panel-document-bottom__area {
+    svg.b3-icon--wireframe,
+    .b3-icon--wireframe,
+    .block__icon svg,
+    .backlink-nav-btn svg,
+    .backlink-context-step-button svg {
+        fill: none !important;
+        stroke: currentColor;
+    }
+}
+

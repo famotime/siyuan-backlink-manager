@@ -1,6 +1,7 @@
 import {
   BACKLINK_CONTEXT_LEVEL_ORDER,
   getBacklinkContextLevelLabel,
+  getBacklinkContextLevelTooltip,
 } from "./backlink-panel-header.js";
 const BACKLINK_DOCUMENT_TITLE_TOOLTIP =
   "左键在主窗口打开文档，右键在右侧打开文档";
@@ -190,7 +191,8 @@ function buildBacklinkContextStateGroupHtml(contextVisibilityLevel = "core") {
   return BACKLINK_CONTEXT_LEVEL_ORDER.map((level) => {
     const isActive = level === contextVisibilityLevel;
     const activeClass = isActive ? " active" : "";
-    return `<button type="button" class="backlink-chip backlink-chip--flat backlink-context-state${activeClass}" data-context-level="${level}" aria-pressed="${isActive}">${getBacklinkContextLevelLabel(level)}</button>`;
+    const tooltip = getBacklinkContextLevelTooltip(level);
+    return `<button type="button" class="backlink-chip backlink-chip--flat backlink-context-state${activeClass} ariaLabel" data-context-level="${level}" aria-pressed="${isActive}" aria-label="${tooltip}">${getBacklinkContextLevelLabel(level)}</button>`;
   }).join("");
 }
 
@@ -204,11 +206,11 @@ function buildBacklinkContextControlRowHtml(contextControlState = {}) {
   return `
 <div class="backlink-context-control-row" data-context-level="${normalizedState.levelLabel}">
 <button type="button" class="block__icon ariaLabel backlink-context-step-button previous" aria-label="切换到上一个上下文层级"${previousDisabledAttr}>
-<svg><use xlink:href="#iconLeft"></use></svg>
+<svg style="fill:none!important;"><use xlink:href="#iconLeft"></use></svg>
 </button>
 <div class="backlink-context-state-group">${buildBacklinkContextStateGroupHtml(normalizedState.contextVisibilityLevel)}</div>
 <button type="button" class="block__icon ariaLabel backlink-context-step-button next" aria-label="切换到下一个上下文层级"${nextDisabledAttr}>
-<svg><use xlink:href="#iconRight"></use></svg>
+<svg style="fill:none!important;"><use xlink:href="#iconRight"></use></svg>
 </button>
 <span class="b3-list-item__meta backlink-context-budget-hint">${normalizedState.budgetHint}</span>
 </div>`;
@@ -226,17 +228,17 @@ export function buildBacklinkDocumentListItemHtml({
   return `
 <div class="backlink-document-header-row">
 <div class="backlink-document-title-row">
-<span style="padding-left: 4px;margin-right: 2px" class="b3-list-item__toggle b3-list-item__toggle--hl">
-<svg class="b3-list-item__arrow b3-list-item__arrow--open"><use xlink:href="#iconRight"></use></svg>
+<span style="padding-left: 4px;margin-right: 2px" class="b3-list-item__toggle b3-list-item__toggle--hl" aria-label="展开/折叠文档">
+<svg class="b3-list-item__arrow b3-list-item__arrow--open" style="fill:none!important;"><use xlink:href="#iconRight"></use></svg>
 </span>
-<svg class="b3-list-item__graphic popover__block"><use xlink:href="#iconFile"></use></svg>
+<svg class="b3-list-item__graphic popover__block" style="fill:none!important;"><use xlink:href="#iconFile"></use></svg>
 <span class="b3-list-item__text ariaLabel"  aria-label="${truncatedAriaText}" title="${BACKLINK_DOCUMENT_TITLE_TOOLTIP}"  >
 ${documentName}
 </span>
 <span class="backlink-document-nav-group">
-<svg class="b3-list-item__graphic counter ariaLabel backlink-nav-button previous-backlink-icon" aria-label="上一个反链块"><use xlink:href="#iconLeft"></use></svg>
+<svg class="b3-list-item__graphic counter ariaLabel backlink-nav-button previous-backlink-icon" style="fill:none!important;" aria-label="上一个反链块"><use xlink:href="#iconLeft"></use></svg>
 <span class="b3-list-item__meta backlink-nav-progress">${progressText}</span>
-<svg class="b3-list-item__graphic counter ariaLabel backlink-nav-button next-backlink-icon" aria-label="下一个反链块"><use xlink:href="#iconRight"></use></svg>
+<svg class="b3-list-item__graphic counter ariaLabel backlink-nav-button next-backlink-icon" style="fill:none!important;" aria-label="下一个反链块"><use xlink:href="#iconRight"></use></svg>
 </span>
 </div>
 ${buildBacklinkContextControlRowHtml(contextControlState)}

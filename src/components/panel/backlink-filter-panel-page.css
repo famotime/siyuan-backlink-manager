@@ -1,38 +1,55 @@
 .backlink-panel__area {
-    --backlink-chip-radius: 999px;
-    --backlink-chip-flat-radius: 999px;
-    --backlink-chip-height: 20px;
+    --backlink-chip-radius: 6px;
+    --backlink-chip-flat-radius: 6px;
+    --backlink-chip-height: 22px;
     --backlink-chip-flat-height: 18px;
     --backlink-chip-padding-inline: 7px;
-    --backlink-chip-flat-padding-inline: 5px;
-    --backlink-chip-gap: 4px;
-    --backlink-chip-border-color: rgba(128, 128, 128, 0.18);
+    --backlink-chip-flat-padding-inline: 6px;
+    --backlink-chip-gap: 3px;
+    --backlink-chip-border-color: var(--b3-border-color);
     --backlink-chip-surface: var(--b3-theme-surface);
     --backlink-chip-surface-hover: var(--b3-list-icon-hover);
-    --backlink-chip-primary-surface: rgba(26, 188, 156, 0.12);
-    --backlink-chip-primary-border: rgba(26, 188, 156, 0.24);
+    --backlink-chip-primary-surface: color-mix(in srgb, var(--b3-theme-primary) 12%, transparent);
+    --backlink-chip-primary-border: color-mix(in srgb, var(--b3-theme-primary) 28%, transparent);
+    --backlink-btn-size: 22px;
+    --backlink-btn-radius: 6px;
+    --backlink-transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.backlink-panel__area .backlink-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--backlink-chip-gap);
-    min-height: var(--backlink-chip-height);
-    padding: 0 var(--backlink-chip-padding-inline);
-    border-radius: var(--backlink-chip-radius);
-    line-height: 1.15;
-    box-sizing: border-box;
+/* ==========================================================================
+   显式线框图标防护层（强制 fill: none !important 防御思源全局 fill 污染）
+   ========================================================================== */
+.backlink-panel__area svg.b3-icon--wireframe,
+.backlink-panel__area .block__icon svg,
+.backlink-panel__area .backlink-nav-btn svg,
+.backlink-panel__area .backlink-context-step-button svg,
+.backlink-panel__area .b3-list-item__arrow,
+.backlink-panel__area .backlink-search-icon,
+.backlink-panel__area .backlink-search-clear svg,
+.backlink-panel__area .previous-backlink-icon,
+.backlink-panel__area .next-backlink-icon {
+    fill: none !important;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
 }
 
-.backlink-panel__area .backlink-chip--flat {
-    min-height: var(--backlink-chip-flat-height);
-    padding: 0 var(--backlink-chip-flat-padding-inline);
-    border-radius: var(--backlink-chip-flat-radius);
+.backlink-panel__area .block__icon svg,
+.backlink-panel__area .backlink-context-step-button svg {
+    width: 14px;
+    height: 14px;
+}
+
+.backlink-panel__area .block__logoicon {
+    width: 16px;
+    height: 16px;
 }
 
 .backlink-panel__area .b3-list-item__graphic {
     margin: 1px 0 0;
-    height: 11px;
+    height: 14px;
+    width: 14px;
     padding: 0;
 }
 
@@ -43,6 +60,9 @@
     flex-shrink: 1;
 }
 
+/* ==========================================================================
+   面板标题栏
+   ========================================================================== */
 .backlink-panel__area .panel__title {
     cursor: pointer;
     border: 0;
@@ -52,13 +72,12 @@
     padding: 2px 10px;
     display: flex;
     align-items: center;
-    border-radius: 10px;
-    transition:
-        var(--b3-transition),
-        opacity 0.3s cubic-bezier(0, 0, 0.2, 1) 0ms;
+    border-radius: 8px;
+    transition: var(--backlink-transition);
     line-height: 14px;
-    min-height: 25px;
-    height: 30px;
+    min-height: 28px;
+    height: 32px;
+    gap: 4px;
 }
 
 .backlink-panel__area .backlink-panel__title:hover {
@@ -66,21 +85,130 @@
     background-color: var(--b3-list-icon-hover);
 }
 
-.backlink-panel__area select {
-    padding-right: 23px;
+/* ==========================================================================
+   工具栏弹性与响应式设计
+   ========================================================================== */
+.backlink-panel__area .backlink-toolbar-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    margin: 0;
 }
 
-.backlink-panel__area input {
+.backlink-panel__area .backlink-search-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 1 1 120px;
+    min-width: 100px;
+}
+
+.backlink-panel__area .backlink-search-input {
     width: 100%;
+    padding-left: 26px;
+    padding-right: 24px;
+    height: 26px;
+    font-size: 12px;
+    box-sizing: border-box;
 }
 
-.backlink-panel__area .block__icon {
+.backlink-panel__area .backlink-search-icon {
+    position: absolute;
+    left: 7px;
+    width: 13px;
+    height: 13px;
+    color: var(--b3-theme-on-surface-light);
+    pointer-events: none;
+}
+
+.backlink-panel__area .backlink-search-clear {
+    position: absolute;
+    right: 4px;
+    background: transparent;
+    border: none;
+    padding: 2px;
+    margin: 0;
+    cursor: pointer;
+    color: var(--b3-theme-on-surface-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: var(--backlink-transition);
+}
+
+.backlink-panel__area .backlink-search-clear svg {
+    width: 12px;
+    height: 12px;
+}
+
+.backlink-panel__area .backlink-search-clear:hover {
+    color: var(--b3-theme-on-surface);
+    background-color: var(--b3-list-icon-hover);
+}
+
+.backlink-panel__area .backlink-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+}
+
+.backlink-panel__area .backlink-sort-select {
+    max-width: 135px;
+    height: 26px;
+    font-size: 12px;
+    padding: 0 20px 0 6px;
+}
+
+/* ==========================================================================
+   按钮热区与微交互
+   ========================================================================== */
+.backlink-panel__area .block__icon,
+.backlink-panel__area .backlink-nav-btn,
+.backlink-panel__area .backlink-context-step-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--backlink-btn-size);
+    height: var(--backlink-btn-size);
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: transparent;
+    border-radius: var(--backlink-btn-radius);
+    cursor: pointer;
+    color: var(--b3-theme-on-surface);
+    transition: var(--backlink-transition);
+    flex-shrink: 0;
     opacity: 1;
+}
+
+.backlink-panel__area .block__icon:hover:not(:disabled):not(.disabled),
+.backlink-panel__area .backlink-nav-btn:hover:not(:disabled):not(.disabled),
+.backlink-panel__area .backlink-context-step-button:hover:not(:disabled):not(.disabled) {
+    background-color: var(--b3-list-icon-hover);
+    color: var(--b3-theme-primary);
+}
+
+.backlink-panel__area .block__icon:disabled,
+.backlink-panel__area .block__icon.disabled,
+.backlink-panel__area .backlink-nav-btn:disabled,
+.backlink-panel__area .backlink-nav-btn.disabled,
+.backlink-panel__area .backlink-context-step-button:disabled,
+.backlink-panel__area .backlink-context-step-button.disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
 }
 
 .backlink-panel__area .backlink-nav-progress {
     min-width: 2.75em;
     text-align: center;
+    font-size: 12px;
+    color: var(--b3-theme-on-surface-light);
+    user-select: none;
 }
 
 .backlink-panel__area .backlink-context-source,
@@ -140,6 +268,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    cursor: pointer;
 }
 
 .backlink-panel__area .backlink-document-nav-group {
@@ -151,12 +280,24 @@
     white-space: nowrap;
 }
 
+.backlink-panel__area .backlink-nav-button {
+    cursor: pointer;
+}
+
+.backlink-panel__area .backlink-nav-button.disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+/* ==========================================================================
+   重构分段胶囊控制器（Segmented Control）
+   ========================================================================== */
 .backlink-panel__area .backlink-context-control-row {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin: 4px 0 0 26px;
-    padding: 4px 0 0;
+    gap: 4px;
+    margin: 4px 0 0 24px;
+    padding: 2px 0 0;
     width: auto;
     min-width: 0;
 }
@@ -164,58 +305,78 @@
 .backlink-panel__area .backlink-results-summary-row {
     display: flex;
     align-items: center;
-    gap: 6px;
-    overflow: auto;
-    color: var(--b3-theme-on-background);
+    padding: 4px 14px 2px;
+    overflow: hidden;
+    color: var(--b3-theme-on-surface-light);
+    font-size: 12px;
+    line-height: 18px;
+}
+
+.backlink-panel__area .backlink-results-summary-text {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.backlink-panel__area .backlink-results-global-context-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 14px 6px;
+    min-height: 26px;
 }
 
 .backlink-panel__area .backlink-context-control-row--global {
     margin: 0;
-    margin-left: auto;
     padding: 0;
+    flex-shrink: 0;
     flex-wrap: nowrap;
-    justify-content: flex-end;
-}
-
-.backlink-panel__area .backlink-context-step-button {
-    display: inline-flex;
-    align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
-    border-radius: 999px;
-}
-
-.backlink-panel__area .backlink-context-step-button svg {
-    width: 12px;
-    height: 12px;
 }
 
 .backlink-panel__area .backlink-context-state-group {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    flex-wrap: wrap;
+    padding: 2px;
+    background-color: var(--b3-theme-surface-lighter, rgba(128, 128, 128, 0.08));
+    border-radius: 6px;
+    gap: 2px;
+    border: 1px solid var(--b3-border-color);
+    box-sizing: border-box;
+    flex-wrap: nowrap;
+    white-space: nowrap;
 }
 
 .backlink-panel__area .backlink-context-state {
     appearance: none;
+    border: none;
+    outline: none;
     cursor: pointer;
     font: inherit;
-    height: 14px;
-    min-height: 14px;
-    padding: 0 3px;
-    line-height: 1;
-    font-size: 12px;
+    font-size: 11px;
+    line-height: 18px;
+    height: 18px;
+    min-height: 18px;
+    padding: 0 7px;
+    border-radius: 4px;
     color: var(--b3-theme-on-surface-light);
-    background: var(--backlink-chip-surface);
-    border: 1px solid var(--backlink-chip-border-color);
+    background: transparent;
+    font-weight: 400;
+    transition: var(--backlink-transition);
+    user-select: none;
+    white-space: nowrap;
+    box-sizing: border-box;
+}
+
+.backlink-panel__area .backlink-context-state:hover:not(.active) {
+    color: var(--b3-theme-on-surface);
+    background-color: var(--b3-list-icon-hover);
 }
 
 .backlink-panel__area .backlink-context-state.active {
     color: var(--b3-theme-primary);
-    background: var(--backlink-chip-primary-surface);
-    border-color: var(--backlink-chip-primary-border);
+    background-color: var(--b3-theme-surface);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    font-weight: 600;
 }
 
 .backlink-panel__area .backlink-context-budget-hint {
@@ -227,14 +388,11 @@
     white-space: nowrap;
     vertical-align: middle;
     font-size: 11px;
+    color: var(--b3-theme-warning);
 }
 
 .backlink-panel__area .backlink-context-budget-hint:empty {
     display: none;
-}
-
-.backlink-panel__area .backlink-context-budget-hint {
-    color: var(--b3-theme-warning);
 }
 
 .backlink-panel__area .list-item__document-name.backlink-hide .backlink-context-control-row,
@@ -245,7 +403,7 @@
 }
 
 .backlink-panel__area .backlink-breadcrumb-row {
-    margin: 4px 0 0 26px;
+    margin: 4px 0 0 24px;
     min-width: 0;
     overflow-x: auto;
     overflow-y: hidden;
@@ -266,11 +424,11 @@
 
 @media (max-width: 640px) {
     .backlink-panel__area .backlink-context-control-row {
-        margin-left: 20px;
+        margin-left: 18px;
     }
 
     .backlink-panel__area .backlink-breadcrumb-row {
-        margin-left: 20px;
+        margin-left: 18px;
     }
 }
 
@@ -280,15 +438,6 @@
     gap: 2px;
 }
 
-.backlink-panel__area .backlink-nav-button {
-    cursor: pointer;
-}
-
-.backlink-panel__area .backlink-nav-button.disabled {
-    opacity: 0.38;
-    cursor: default;
-}
-
 .backlink-panel__area .backlink-panel__header {
     position: sticky;
     top: 0;
@@ -296,7 +445,7 @@
     padding: 0;
     z-index: 3;
     background-color: var(--b3-theme-surface);
-    border-radius: 10px;
+    border-radius: 8px;
     box-shadow: 0 1px 0 var(--b3-border-color);
 }
 

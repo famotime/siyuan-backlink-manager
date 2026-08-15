@@ -568,3 +568,22 @@ test("createBacklinkDocumentListItemElement wires toggle and navigation events",
     "breadcrumb:heading-1",
   ]);
 });
+
+test("buildBacklinkDocumentListItemHtml marks the last breadcrumb item as current level", () => {
+  const html = buildBacklinkDocumentListItemHtml({
+    documentName: "Document A",
+    breadcrumbItems: [
+      { id: "heading-1", label: "二、Skills", clickable: true },
+      { id: "heading-2", label: "1. Skills 是什么？", clickable: true },
+    ],
+  });
+
+  assert.match(
+    html,
+    /data-node-id="heading-1"/,
+  );
+  assert.match(
+    html,
+    /backlink-breadcrumb__item--clickable backlink-breadcrumb__item--current" data-node-id="heading-2"/,
+  );
+});

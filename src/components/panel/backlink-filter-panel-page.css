@@ -408,6 +408,11 @@
     overflow-x: auto;
     overflow-y: hidden;
     white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 11px;
+    line-height: 18px;
 }
 
 .backlink-panel__area .backlink-breadcrumb-row:empty {
@@ -416,10 +421,47 @@
 
 .backlink-panel__area .backlink-breadcrumb__item {
     cursor: default;
+    color: var(--b3-theme-on-surface-light);
+    padding: 1px 4px;
+    border-radius: 4px;
+    transition: var(--backlink-transition);
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
 }
 
+/* 面包屑路径层级之间的 " > " 间隔 */
+.backlink-panel__area .backlink-breadcrumb-row .backlink-breadcrumb__item + .backlink-breadcrumb__item::before {
+    content: ">";
+    display: inline-block;
+    margin-right: 4px;
+    opacity: 0.45;
+    font-size: 10px;
+    font-weight: bold;
+    color: var(--b3-theme-on-surface-light);
+    user-select: none;
+    pointer-events: none;
+}
+
+/* 可点击层级悬停态 */
 .backlink-panel__area .backlink-breadcrumb__item--clickable {
     cursor: pointer;
+}
+
+.backlink-panel__area .backlink-breadcrumb__item--clickable:hover {
+    color: var(--b3-theme-primary);
+    background-color: var(--b3-list-icon-hover);
+}
+
+/* 选中的路径层次 / 当前所在层级高亮标识 */
+.backlink-panel__area .backlink-breadcrumb__item--current,
+.backlink-panel__area .backlink-breadcrumb__item--selected,
+.backlink-panel__area .backlink-breadcrumb__item.active {
+    color: var(--b3-theme-primary);
+    background-color: var(--backlink-chip-primary-surface);
+    border: 1px solid var(--backlink-chip-primary-border);
+    font-weight: 600;
 }
 
 @media (max-width: 640px) {

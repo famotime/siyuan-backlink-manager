@@ -175,14 +175,19 @@ export function buildBacklinkBreadcrumbItems(activeBacklink = null) {
 }
 
 function buildBacklinkBreadcrumbItemsHtml(breadcrumbItems = []) {
+  const count = breadcrumbItems.length;
   return breadcrumbItems
-    .map((item) => {
+    .map((item, index) => {
+      const isLast = index === count - 1;
       const clickableClass = item.clickable
         ? " backlink-breadcrumb__item--clickable"
         : "";
+      const currentClass = isLast
+        ? " backlink-breadcrumb__item--current"
+        : "";
       const nodeIdAttr =
         item.clickable && item.id ? ` data-node-id="${item.id}"` : "";
-      return `<span class="protyle-breadcrumb__item backlink-breadcrumb__item${clickableClass}"${nodeIdAttr}>${item.label}</span>`;
+      return `<span class="protyle-breadcrumb__item backlink-breadcrumb__item${clickableClass}${currentClass}"${nodeIdAttr}>${item.label}</span>`;
     })
     .join("");
 }
@@ -450,6 +455,19 @@ export function createBacklinkDocumentListItemElement({
       }
       event.preventDefault();
       event.stopPropagation();
+      documentLiElement
+        .querySelectorAll?.(".backlink-breadcrumb__item")
+        ?.forEach?.((el) =>
+          el.classList?.remove?.(
+            "backlink-breadcrumb__item--selected",
+            "backlink-breadcrumb__item--current",
+            "active",
+          ),
+        );
+      breadcrumbItem.classList?.add?.(
+        "backlink-breadcrumb__item--selected",
+        "active",
+      );
       onBreadcrumbNavigate?.(documentLiElement, blockId);
     });
 

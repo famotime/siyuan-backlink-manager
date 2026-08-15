@@ -31,9 +31,11 @@
     let backlinkDocumentGroupArray = [];
     let displayHintPanelBaseDataCacheUsage = false;
     let displayHintBacklinkBlockCacheUsage = false;
-    let hideBacklinkProtyleBreadcrumb = false;
+    let hideBacklinkProtyleBreadcrumb =
+        SettingService.ins.SettingConfig?.hideBacklinkProtyleBreadcrumb ?? false;
     let backlinkGlobalContextVisibilityLevel =
         backlinkDocumentViewState.globalContextVisibilityLevel;
+    let unsubscribeSetting: (() => void) | null = null;
 
     const state = {
         get rootId() {
@@ -179,6 +181,14 @@
     $: controller.updateLastCriteria();
 
     onMount(() => {
+        hideBacklinkProtyleBreadcrumb =
+            SettingService.ins.SettingConfig?.hideBacklinkProtyleBreadcrumb ?? false;
+        unsubscribeSetting = SettingService.ins.addListener((config) => {
+            hideBacklinkProtyleBreadcrumb =
+                config.hideBacklinkProtyleBreadcrumb ?? false;
+            state.hideBacklinkProtyleBreadcrumb = hideBacklinkProtyleBreadcrumb;
+        });
+
         if (rootId !== previousRootId) {
             controller.initBaseData();
         }
@@ -186,6 +196,7 @@
     });
 
     onDestroy(() => {
+        unsubscribeSetting?.();
         controller.destroyEvent?.();
         controller.clearBacklinkProtyleList();
     });

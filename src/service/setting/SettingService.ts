@@ -24,6 +24,29 @@ export class SettingService {
         return this._settingConfig;
     }
 
+    private _listeners: Set<(config: SettingConfig, key?: string, value?: any) => void> = new Set();
+
+    public addListener(callback: (config: SettingConfig, key?: string, value?: any) => void) {
+        this._listeners.add(callback);
+        return () => {
+            this._listeners.delete(callback);
+        };
+    }
+
+    public removeListener(callback: (config: SettingConfig, key?: string, value?: any) => void) {
+        this._listeners.delete(callback);
+    }
+
+    private notifyListeners(key?: string, value?: any) {
+        for (const listener of this._listeners) {
+            try {
+                listener(this._settingConfig, key, value);
+            } catch (e) {
+                console.error("Setting listener error:", e);
+            }
+        }
+    }
+
     public async init() {
         let persistentConfig = await getPersistentConfig();
         this._settingConfig = getResolvedSettingConfig(persistentConfig);
@@ -32,6 +55,7 @@ export class SettingService {
         if (this._settingConfig.usePraentIdIdx) {
             this.createBlocksParentIdIdx();
         }
+        this.notifyListeners();
     }
 
     // public async getSettingConfig(): Promise<SettingConfig> {
@@ -55,11 +79,11 @@ export class SettingService {
         this._settingConfig[key] = newValue;
         let paramJson = JSON.stringify(this._settingConfig, setReplacer);
         let plugin = EnvConfig.ins.plugin;
-        if (!plugin) {
-            return;
+        if (plugin) {
+            console.log(`反链面板 更新设置配置文件: ${paramJson}`);
+            plugin.saveData(SettingFileName, paramJson);
         }
-        console.log(`反链面板 更新设置配置文件: ${paramJson}`);
-        plugin.saveData(SettingFileName, paramJson);
+        this.notifyListeners(key, newValue);
     }
 
     public async updateSettingCofnigValue(key: string, newValue: any) {
@@ -68,17 +92,16 @@ export class SettingService {
 
     public async updateSettingConfig(settingConfigParam: SettingConfig) {
         let plugin = EnvConfig.ins.plugin;
-        if (!plugin) {
-            return;
-        }
-
         if (!shouldPersistSettingConfig(this._settingConfig, settingConfigParam)) {
             return;
         }
         let paramJson = JSON.stringify(settingConfigParam, setReplacer);
         console.log(`反链面板 更新设置配置文件: ${paramJson}`);
         this._settingConfig = getResolvedSettingConfig(settingConfigParam);
-        plugin.saveData(SettingFileName, paramJson);
+        if (plugin) {
+            plugin.saveData(SettingFileName, paramJson);
+        }
+        this.notifyListeners();
     }
 
     public async updateSettingCofnig(settingConfigParam: SettingConfig) {

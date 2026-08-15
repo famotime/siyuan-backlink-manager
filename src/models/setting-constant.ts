@@ -13,7 +13,7 @@ export function getSettingTabArray(): TabProperty[] {
                     key: "hideBacklinkProtyleBreadcrumb",
                     type: "switch",
                     name: "隐藏面包屑",
-                    description: "隐藏反链块上方的思源路径面包屑导航，让侧栏显示更加紧凑。",
+                    description: "隐藏反链块上方的面包屑导航，让显示更紧凑。",
                     tips: "",
                 }),
             ],

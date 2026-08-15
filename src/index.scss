@@ -39,8 +39,13 @@ div.backlink-panel__area .block__icon--show.block__icon.disabled {
 }
 
 
-div.backlink-panel__area .hide-breadcrumb .protyle-breadcrumb__bar.protyle-breadcrumb__bar--nowrap {
-    display: none;
+div.backlink-panel__area .hide-breadcrumb .protyle-breadcrumb__bar,
+div.backlink-panel__area .hide-breadcrumb .backlink-breadcrumb-row,
+.backlink-panel-document-bottom__area .hide-breadcrumb .backlink-breadcrumb-row,
+.backlink-panel-document-bottom__area .hide-breadcrumb .protyle-breadcrumb__bar,
+.hide-breadcrumb .backlink-breadcrumb-row,
+.hide-breadcrumb .protyle-breadcrumb__bar {
+    display: none !important;
 }
 
 

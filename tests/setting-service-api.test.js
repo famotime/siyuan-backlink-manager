@@ -23,3 +23,14 @@ test("SettingService legacy typoed APIs delegate to the correctly spelled method
   assert.match(source, /public async updateSettingCofnigValue\(key: string, newValue: any\)\s*\{\s*return this\.updateSettingConfigValue\(key, newValue\);/);
   assert.match(source, /public async updateSettingCofnig\(settingConfigParam: SettingConfig\)\s*\{\s*return this\.updateSettingConfig\(settingConfigParam\);/);
 });
+
+test("SettingService provides listener subscription APIs for config synchronization", () => {
+  const source = readFileSync(
+    new URL("../src/service/setting/SettingService.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /public addListener\(callback: \(config: SettingConfig/);
+  assert.match(source, /public removeListener\(callback: \(config: SettingConfig/);
+});
+

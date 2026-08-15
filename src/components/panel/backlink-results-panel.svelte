@@ -28,6 +28,31 @@
     export let collapseAllBacklinkDocument;
     export let collapseAllBacklinkListItemNode;
 
+    let isAllExpanded = true;
+
+    $: if (backlinkFilterPanelRenderData) {
+        isAllExpanded = true;
+    }
+
+    function toggleAllBacklinkDocuments() {
+        if (isAllExpanded) {
+            collapseAllBacklinkDocument?.();
+            isAllExpanded = false;
+        } else {
+            expandAllBacklinkDocument?.();
+            isAllExpanded = true;
+        }
+    }
+
+    function handleToggleContextMenu(event) {
+        event.preventDefault();
+        if (isAllExpanded) {
+            collapseAllBacklinkListItemNode?.();
+        } else {
+            expandAllBacklinkListItemNode?.();
+        }
+    }
+
     function handleKeyDownDefault() {}
 </script>
 
@@ -71,6 +96,13 @@
     </div>
     {#if panelBacklinkViewExpand && queryParams}
         <div class="fn__flex" style="padding: 5px 15px; margin: 0px; gap: 8px;">
+            <input
+                class="b3-text-field fn__flex-1"
+                style="min-width: 0;"
+                placeholder="搜索关键词..."
+                on:input={handleBacklinkKeywordInput}
+                bind:value={queryParams.backlinkKeywordStr}
+            />
             <select
                 class="b3-select fn__flex-center"
                 bind:value={queryParams.backlinkBlockSortMethod}
@@ -83,29 +115,14 @@
                     </option>
                 {/each}
             </select>
-            <input
-                class="b3-text-field fn__flex-1"
-                placeholder="搜索反链内容关键字..."
-                on:input={handleBacklinkKeywordInput}
-                bind:value={queryParams.backlinkKeywordStr}
-            />
             <span
                 class="block__icon b3-tooltips b3-tooltips__sw"
-                aria-label="展开所有文档"
-                on:click={expandAllBacklinkDocument}
-                on:contextmenu={expandAllBacklinkListItemNode}
+                aria-label={isAllExpanded ? "折叠所有文档" : "展开所有文档"}
+                on:click={toggleAllBacklinkDocuments}
+                on:contextmenu={handleToggleContextMenu}
                 on:keydown={handleKeyDownDefault}
             >
-                <svg><use xlink:href="#iconExpand"></use></svg>
-            </span>
-            <span
-                class="block__icon b3-tooltips b3-tooltips__sw"
-                aria-label="折叠所有文档"
-                on:click={collapseAllBacklinkDocument}
-                on:contextmenu={collapseAllBacklinkListItemNode}
-                on:keydown={handleKeyDownDefault}
-            >
-                <svg><use xlink:href="#iconContract"></use></svg>
+                <svg><use xlink:href={isAllExpanded ? "#iconContract" : "#iconExpand"}></use></svg>
             </span>
         </div>
     {/if}

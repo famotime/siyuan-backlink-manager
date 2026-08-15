@@ -1,0 +1,46 @@
+/* ==========================================================================
+   反链面板设计 Token 层
+   - 面板内新增样式只允许引用 token，禁止字面量 px 颜色/字号
+   - 颜色全部引用思源变量（--b3-theme-*），不新增 hex
+   - 保留旧 --backlink-* 变量作为兼容层，统一引用新 token
+   ========================================================================== */
+.backlink-panel__area {
+    /* 尺寸体系：以思源 block__icon 为基准 */
+    --bl-control-height: 28px; /* 所有可点控件最小高度（原 22px） */
+    --bl-icon-size: 16px;      /* 面板内图标统一基准（原 14px 混用） */
+    --bl-chip-height: 26px;    /* 上下文 chip 高度（原约 21px） */
+    --bl-radius-s: 6px;
+    --bl-radius-m: 10px;
+
+    /* 字号阶梯（4 档，消灭 10px） */
+    --bl-font-xs: 11px; /* 辅助信息（面包屑、进度） */
+    --bl-font-s: 12px;  /* 正文辅助（摘要、输入框） */
+    --bl-font-m: 13px;  /* 正文 */
+    --bl-font-l: 15px;  /* 卡片标题 */
+
+    /* 间距阶梯：4px 基网 */
+    --bl-space-1: 4px;
+    --bl-space-2: 8px;
+    --bl-space-3: 12px;
+    --bl-space-4: 16px;
+
+    /* 选中态浅色底：基于思源主题色派生，随明暗主题切换 */
+    --bl-active-bg: color-mix(in srgb, var(--b3-theme-primary) 12%, transparent);
+
+    /* 兼容层：旧 --backlink-* 变量引用新 token，供存量 CSS 继续消费 */
+    --backlink-chip-radius: var(--bl-radius-s);
+    --backlink-chip-flat-radius: var(--bl-radius-s);
+    --backlink-chip-height: var(--bl-chip-height);
+    --backlink-chip-flat-height: var(--bl-chip-height);
+    --backlink-chip-padding-inline: 7px;
+    --backlink-chip-flat-padding-inline: 6px;
+    --backlink-chip-gap: 3px;
+    --backlink-chip-border-color: var(--b3-border-color);
+    --backlink-chip-surface: var(--b3-theme-surface);
+    --backlink-chip-surface-hover: var(--b3-list-icon-hover);
+    --backlink-chip-primary-surface: var(--bl-active-bg);
+    --backlink-chip-primary-border: color-mix(in srgb, var(--b3-theme-primary) 28%, transparent);
+    --backlink-btn-size: var(--bl-control-height);
+    --backlink-btn-radius: var(--bl-radius-s);
+    --backlink-transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}

@@ -179,7 +179,7 @@ test("buildBacklinkDocumentListItemHtml renders title aria text and progress tex
   assert.match(html, /aria-label="A{100}"/);
   assert.match(
     html,
-    /title="左键在主窗口打开文档，右键在右侧打开文档"/,
+    /title="左键打开，右键右侧打开"/,
   );
   assert.match(html, /backlink-document-header-row/);
   assert.match(html, /backlink-document-title-row/);
@@ -294,7 +294,7 @@ test("updateBacklinkDocumentLiNavigation updates progress text, aria label, brea
   assert.equal(textElement.attrs["aria-label"], "content");
   assert.equal(
     textElement.attrs.title,
-    "左键在主窗口打开文档，右键在右侧打开文档",
+    "左键打开，右键右侧打开",
   );
   assert.match(breadcrumbElement.innerHTML, /protyle-breadcrumb__item/);
   assert.match(breadcrumbElement.innerHTML, /data-node-id="heading-1"/);

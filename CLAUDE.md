@@ -1,149 +1,58 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+SiYuan Note Plugin: Filterable Backlink Panel (思源笔记反向链接管理插件)
 
-## Project Overview
-
-This is a SiYuan Note plugin that provides a filterable backlink panel. It organizes backlinks by source document and supports multiple filtering criteria (definition blocks, source documents, keywords, sorting). The plugin can display backlinks in three locations: document bottom, dock panel, or independent tab.
-
-## Build and Development Commands
+## Quick Start & Essential Commands
 
 ```bash
-# Install dependencies
-npm install
-
-# Development mode with hot reload
-npm run dev
-
-# Production build (outputs to dist/ and creates package.zip)
-npm run build
-
-# Create symbolic link to SiYuan plugin directory for development
-npm run make-link
-
-# Build and install to SiYuan workspace
-npm run make-install
-
-# Run all tests
-node --test tests/*.test.js
-
-# Run specific test file
-node --test tests/backlink-panel-query-params.test.js
+npm install                     # 安装依赖
+npm run dev                     # 开发监听构建 (输出至 dev/)
+npm run build                   # 生产打包 (输出 dist/ 并生成 package.zip)
+npm run make-link               # 建立 dev/ 到思源插件目录的软链接
+npm run make-install            # 编译并复制到思源插件工作区
+node --test tests/*.test.js     # 运行全部测试 (Node.js 内置 test runner)
+node --test tests/<name>.test.js # 运行指定单测文件
 ```
 
-## Development Setup
+`.env` 配置文件需设置 `VITE_SIYUAN_WORKSPACE_PATH`（指向本地思源工作区路径）。
 
-1. Configure `.env` file with your SiYuan workspace path:
-   ```
-   VITE_SIYUAN_WORKSPACE_PATH=D:/your-siyuan-workspace
-   ```
+## Architecture Overview
 
-2. Use `npm run make-link` to create a symbolic link from `dev/` to your SiYuan plugins directory for live development
+### 1. Service Layer & Lifecycle (`src/index.ts`)
+- **Plugin Lifecycle**: `index.ts` 统一管理生命周期与事件监听（如 `switch-protyle`, `loaded-protyle-static`）。
+- **Core Host Services** (`src/service/plugin/`):
+  - `DocumentService.ts`: 文档底部反链区域管理、Protyle 挂载与焦点位置同步。
+  - `DockServices.ts`: 侧边栏 Dock 面板容器。
+  - `TabService.ts`: 独立 Tab 页签承载。
+  - `TopBarService.ts`: 顶栏图标入口。
+- **Settings** (`src/service/setting/`):
+  - `SettingService.ts`: 插件全局配置读写、变更发布订阅。
+  - `BacklinkPanelFilterCriteriaService.ts`: 过滤与排序偏好持久化。
 
-3. The build system uses Vite with:
-   - Svelte for UI components
-   - TypeScript/JavaScript mixed codebase
-   - SCSS for styling
-   - Watch mode outputs to `dev/` with livereload
-   - Production mode outputs to `dist/` with zip packaging
+### 2. Backlink Data Pipeline (`src/service/backlink/`)
+- **SQL & Data Loading** (`backlink-sql.ts`, `backlink-query-loaders.js`): 从思源 SQLite 检索反链引用块、层级结构与兄弟/子孙块数据。
+- **Base Builder & Collectors** (`backlink-panel-base-data-builder.js`, `backlink-panel-data-collectors.js`): 规范化文档节点与反链块结构。
+- **Source Window & Context** (`backlink-source-window*.js`, `backlink-context*.js`, `backlink-context-budget.js`):
+  - 核心管线：按源文档真实顺序（Block Index / Kramdown 顺序）组织上下文块。
+  - 分区渲染：区分 Core（核心命中块）与 Extended（扩展上下文），保证连续文本不截断。
+  - 预算约束：基于 `Context Budget` 控制最大上下文块数量。
+- **Filtering & Render Data** (`backlink-filtering.js`, `backlink-render-data.js`, `backlink-data.ts`):
+  - 关键字多词匹配、逻辑过滤、排序与最终 UI 渲染数据生成。
 
-## Architecture
+### 3. UI Layer & Controllers (`src/components/`)
+- **Svelte Views**:
+  - `panel/backlink-filter-panel-page.svelte`: 主面板骨架与生命周期。
+  - `panel/backlink-results-panel.svelte`: 结果列表、面包屑导航与块容器。
+  - `dock/backlink-filter-panel-dock.svelte`: 侧边栏宿主视图。
+  - `setting/setting-page.svelte`: 设置弹窗。
+- **Controllers & DOM** (`src/components/panel/`):
+  - `backlink-panel-controller*.js`: 面板事件委派、折叠/展开、刷新与跨实例导航。
+  - `backlink-protyle-dom.js` / `backlink-protyle-rendering.js`: 思源 Protyle 编辑器实例的生命周期、DOM 剪裁与渲染后处理。
 
-### Plugin Lifecycle (src/index.ts)
+## Key Development Rules & Guidelines
 
-Entry point that initializes services in order:
-1. `EnvConfig` - Environment and plugin instance
-2. `SettingService` - User settings and saved filter criteria
-3. `DocumentService` - Document-level backlink panel management
-4. `DockService` - Dock panel integration
-5. `TabService` - Independent tab management
-6. `TopBarService` - Top bar button
-
-### Core Data Flow
-
-**Backlink data pipeline** (`src/service/backlink/`):
-
-1. **Query preparation** (`backlink-query-loaders.js`) - Loads raw backlink blocks, parent blocks, sibling blocks, headline children, list item children from SQL
-2. **Base data building** (`backlink-panel-base-data-builder.js`) - Materializes documents, definition blocks, anchor texts, creates `IBacklinkBlockNode` structures
-3. **Data collection** (`backlink-panel-data-collectors.js`) - Collects backlink blocks, headline children, list item subtrees, parent blocks, sibling blocks
-4. **Context assembly** (`backlink-context.js`, `backlink-context-budget.js`) - Applies context visibility rules and budget constraints
-5. **Source window** (`backlink-source-window.js`) - Attaches ordered context blocks around each backlink
-6. **Data assembly** (`backlink-panel-data-assembly.js`) - Assembles final `IBacklinkFilterPanelData`
-7. **Filtering** (`backlink-filtering.js`) - Applies user filter criteria
-8. **Pagination** (`backlink-document-pagination.js`) - Paginates by source document
-9. **Render data** (`backlink-render-data.js`) - Validates and prepares `IBacklinkPanelRenderData` for UI
-
-**Main orchestrator**: `src/service/backlink/backlink-data.ts` (now under 500 lines after refactoring)
-
-### UI Components (src/components/)
-
-**Panel structure** (Svelte):
-- `backlink-filter-panel-page.svelte` - Main container (291 lines), state management and lifecycle
-- `backlink-filter-panel-controls.svelte` - Filter controls UI
-- `backlink-results-panel.svelte` - Results display area
-- `backlink-filter-panel-page.css` - Shared panel styles
-
-**Panel controllers** (JavaScript):
-- `backlink-panel-controller.js` - Main interaction logic
-- `backlink-panel-query-params.js` - Filter condition reset, include/exclude toggle, saved criteria restoration
-- `backlink-document-row.js` - Document row creation and list collapse/expand
-- `backlink-protyle-dom.js` - Backlink trimming and Protyle DOM manipulation
-- `backlink-protyle-rendering.js` - Protyle post-creation processing
-
-### Key Modules
-
-**SQL queries** (`src/service/backlink/backlink-sql.ts`) - Generates SQL for fetching blocks, definition blocks, backlinks, siblings, list items
-
-**Markdown processing** (`src/service/backlink/backlink-markdown.js`) - Parses markdown references, extracts anchor text, handles search syntax
-
-**Definition blocks** (`src/service/backlink/backlink-def-blocks.js`) - Sorts and filters definition blocks
-
-**Settings** (`src/service/setting/`) - Manages plugin settings and saved filter criteria
-
-## Code Organization Principles
-
-The codebase follows a strict separation of concerns after recent refactoring:
-
-- **Service layer** handles data fetching, transformation, and business logic
-- **Component layer** handles UI rendering and user interaction
-- **Utility layer** provides reusable helpers
-- Large files (>500 lines) have been systematically decomposed into focused modules
-- Each module has corresponding test coverage in `tests/`
-
-## Testing
-
-Tests use Node.js built-in test runner. All test files follow the pattern `tests/*.test.js` and test corresponding modules in `src/`.
-
-Key test areas:
-- Data pipeline stages (query loaders, base data builder, collectors, assembly)
-- Filtering and pagination logic
-- Context budget and visibility rules
-- UI controller forwarding and state management
-- Protyle DOM manipulation and rendering
-
-## Important Notes
-
-- The plugin uses SiYuan's `Protyle` editor component for rendering backlink content
-- Backlink context display supports configurable budget constraints to limit context block count
-- The codebase mixes TypeScript (`.ts`) and JavaScript (`.js`) - new service logic uses `.js` for easier testing
-- Definition blocks are special blocks that define terms/concepts and are used for filtering
-- The plugin supports both desktop and mobile SiYuan environments
-
-## gstack
-
-Use the `/browse` skill from gstack for all web browsing. Never use `mcp__claude-in-chrome__*` tools.
-
-Available skills:
-- `/plan-ceo-review` - CEO/founder-mode plan review
-- `/plan-eng-review` - Engineering plan review
-- `/plan-design-review` - Designer's eye plan review
-- `/design-consultation` - Design system creation
-- `/review` - Pre-landing PR code review
-- `/ship` - Ship workflow (test, review, PR)
-- `/browse` - Headless browser for web browsing and QA
-- `/qa` - QA test and fix bugs
-- `/qa-only` - QA report only (no fixes)
-- `/qa-design-review` - Visual design audit
-- `/setup-browser-cookies` - Import browser cookies for authenticated testing
-- `/retro` - Weekly engineering retrospective
-- `/document-release` - Post-ship documentation update
+1. **模块化与轻量化**: 保持单一职责，避免巨型单文件，复杂交互按 Controller / Helper 细分并提供测试。
+2. **测试优先**: 业务逻辑与数据管线全面使用 `node:test` + `assert/strict` 进行单测验证（单测位于 `tests/*.test.js`）。
+3. **语言与注释**: 交流与新增/修改的代码注释使用【简体中文】。
+4. **日志规范**: 使用 `src/utils/logger.ts`，受插件设置中调试日志开关统一控制，禁止随意使用 `console.log`。
+5. **多语言与配置**: UI 文本及设置项变动需同步更新 `public/i18n/` 及 `plugin.json`。

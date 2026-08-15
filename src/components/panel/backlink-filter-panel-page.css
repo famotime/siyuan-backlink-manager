@@ -1,25 +1,11 @@
-.backlink-panel__area {
-    --backlink-chip-radius: 6px;
-    --backlink-chip-flat-radius: 6px;
-    --backlink-chip-height: 22px;
-    --backlink-chip-flat-height: 18px;
-    --backlink-chip-padding-inline: 7px;
-    --backlink-chip-flat-padding-inline: 6px;
-    --backlink-chip-gap: 3px;
-    --backlink-chip-border-color: var(--b3-border-color);
-    --backlink-chip-surface: var(--b3-theme-surface);
-    --backlink-chip-surface-hover: var(--b3-list-icon-hover);
-    --backlink-chip-primary-surface: color-mix(in srgb, var(--b3-theme-primary) 12%, transparent);
-    --backlink-chip-primary-border: color-mix(in srgb, var(--b3-theme-primary) 28%, transparent);
-    --backlink-btn-size: 22px;
-    --backlink-btn-radius: 6px;
-    --backlink-transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
-}
+/* Token 定义已迁移至 src/styles/tokens.scss（由 index.scss 引入），
+   本文件只消费 --bl-* 与兼容层 --backlink-* 变量。 */
 
 /* ==========================================================================
    显式线框图标防护层（强制 fill: none !important 防御思源全局 fill 污染）
    ========================================================================== */
 .backlink-panel__area svg.b3-icon--wireframe,
+.backlink-panel__area svg.bl-icon,
 .backlink-panel__area .block__icon svg,
 .backlink-panel__area .backlink-nav-btn svg,
 .backlink-panel__area .backlink-context-step-button svg,
@@ -37,8 +23,8 @@
 
 .backlink-panel__area .block__icon svg,
 .backlink-panel__area .backlink-context-step-button svg {
-    width: 14px;
-    height: 14px;
+    width: var(--bl-icon-size);
+    height: var(--bl-icon-size);
 }
 
 .backlink-panel__area .block__logoicon {
@@ -109,18 +95,26 @@
     width: 100%;
     padding-left: 26px;
     padding-right: 24px;
-    height: 26px;
-    font-size: 12px;
+    height: var(--bl-control-height);
+    font-size: var(--bl-font-s);
     box-sizing: border-box;
 }
 
 .backlink-panel__area .backlink-search-icon {
     position: absolute;
     left: 7px;
-    width: 13px;
-    height: 13px;
+    display: inline-flex;
+    align-items: center;
     color: var(--b3-theme-on-surface-light);
     pointer-events: none;
+}
+
+/* 排序 select 前导线框图标 */
+.backlink-panel__area .backlink-sort-icon {
+    display: inline-flex;
+    align-items: center;
+    color: var(--b3-theme-on-surface-light);
+    flex-shrink: 0;
 }
 
 .backlink-panel__area .backlink-search-clear {
@@ -158,8 +152,8 @@
 
 .backlink-panel__area .backlink-sort-select {
     max-width: 135px;
-    height: 26px;
-    font-size: 12px;
+    height: var(--bl-control-height);
+    font-size: var(--bl-font-s);
     padding: 0 20px 0 6px;
 }
 
@@ -206,7 +200,7 @@
 .backlink-panel__area .backlink-nav-progress {
     min-width: 2.75em;
     text-align: center;
-    font-size: 12px;
+    font-size: var(--bl-font-s);
     color: var(--b3-theme-on-surface-light);
     user-select: none;
 }
@@ -229,7 +223,7 @@
 
 .backlink-panel__area .backlink-context-source {
     margin-left: 6px;
-    font-size: 11px;
+    font-size: var(--bl-font-xs);
     color: var(--b3-theme-primary);
     background: var(--backlink-chip-primary-surface);
     border: 1px solid var(--backlink-chip-primary-border);
@@ -237,7 +231,7 @@
 
 .backlink-panel__area .backlink-context-summary {
     max-width: 14em;
-    font-size: 11px;
+    font-size: var(--bl-font-xs);
     color: var(--b3-theme-on-surface-light);
 }
 
@@ -282,6 +276,12 @@
 
 .backlink-panel__area .backlink-nav-button {
     cursor: pointer;
+    /* 视觉图标 16px，通过 padding 将点击热区扩展到 28px，负 margin 保持布局不变 */
+    box-sizing: content-box;
+    width: var(--bl-icon-size);
+    height: var(--bl-icon-size);
+    padding: calc((var(--bl-control-height) - var(--bl-icon-size)) / 2);
+    margin: calc((var(--bl-icon-size) - var(--bl-control-height)) / 2);
 }
 
 .backlink-panel__area .backlink-nav-button.disabled {
@@ -296,10 +296,19 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    margin: 4px 0 0 24px;
+    /* 卡片内切换条缩进一级（12px），视觉上从属于文档卡片 */
+    margin: 4px 0 0 var(--bl-space-3);
     padding: 2px 0 0;
     width: auto;
     min-width: 0;
+}
+
+/* 全局切换条前缀标签：与卡片内切换条形成视觉区分 */
+.backlink-panel__area .backlink-context-global-label {
+    font-size: var(--bl-font-xs);
+    color: var(--b3-theme-on-surface-light);
+    user-select: none;
+    flex-shrink: 0;
 }
 
 .backlink-panel__area .backlink-results-summary-row {
@@ -308,7 +317,7 @@
     padding: 4px 14px 2px;
     overflow: hidden;
     color: var(--b3-theme-on-surface-light);
-    font-size: 12px;
+    font-size: var(--bl-font-s);
     line-height: 18px;
 }
 
@@ -321,6 +330,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: var(--bl-space-2);
     padding: 2px 14px 6px;
     min-height: 26px;
 }
@@ -352,12 +362,12 @@
     outline: none;
     cursor: pointer;
     font: inherit;
-    font-size: 11px;
-    line-height: 18px;
-    height: 18px;
-    min-height: 18px;
-    padding: 0 7px;
-    border-radius: 4px;
+    font-size: var(--bl-font-s);
+    line-height: var(--bl-chip-height);
+    height: var(--bl-chip-height);
+    min-height: var(--bl-chip-height);
+    padding: 0 var(--bl-space-2);
+    border-radius: var(--bl-radius-s);
     color: var(--b3-theme-on-surface-light);
     background: transparent;
     font-weight: 400;
@@ -387,7 +397,7 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     vertical-align: middle;
-    font-size: 11px;
+    font-size: var(--bl-font-xs);
     color: var(--b3-theme-warning);
 }
 
@@ -411,7 +421,7 @@
     display: flex;
     align-items: center;
     gap: 2px;
-    font-size: 11px;
+    font-size: var(--bl-font-xs);
     line-height: 18px;
 }
 
@@ -438,7 +448,7 @@
     display: inline-block;
     margin: 0 4px;
     opacity: 0.45;
-    font-size: 10px;
+    font-size: var(--bl-font-xs);
     font-weight: bold;
     color: var(--b3-theme-on-surface-light);
     user-select: none;
@@ -466,11 +476,75 @@
 
 @media (max-width: 640px) {
     .backlink-panel__area .backlink-context-control-row {
-        margin-left: 18px;
+        margin-left: var(--bl-space-2);
     }
 
     .backlink-panel__area .backlink-breadcrumb-row {
         margin-left: 18px;
+    }
+}
+
+/* 统一渲染的线框图标 */
+.backlink-panel__area svg.bl-icon {
+    display: block;
+    flex-shrink: 0;
+}
+
+/* ==========================================================================
+   空态与加载骨架屏
+   ========================================================================== */
+.backlink-panel__area .backlink-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--bl-space-2);
+    padding: var(--bl-space-4) var(--bl-space-3);
+    margin: var(--bl-space-4) var(--bl-space-3);
+    color: var(--b3-theme-on-surface-light);
+    text-align: center;
+}
+
+.backlink-panel__area .backlink-empty-state svg.bl-icon {
+    color: var(--b3-theme-on-surface-light);
+    opacity: 0.5;
+}
+
+.backlink-panel__area .backlink-empty-state__title {
+    font-size: var(--bl-font-m);
+    color: var(--b3-theme-on-surface);
+}
+
+.backlink-panel__area .backlink-empty-state__hint {
+    font-size: var(--bl-font-xs);
+    color: var(--b3-theme-on-surface-light);
+}
+
+.backlink-panel__area .backlink-skeleton-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--bl-space-2);
+    padding: var(--bl-space-2) var(--bl-space-3);
+}
+
+.backlink-panel__area .backlink-skeleton-card {
+    height: 56px;
+    border-radius: var(--bl-radius-m);
+    background: linear-gradient(
+        90deg,
+        var(--b3-theme-surface) 25%,
+        var(--b3-list-icon-hover) 50%,
+        var(--b3-theme-surface) 75%
+    );
+    background-size: 200% 100%;
+    animation: backlink-skeleton-shimmer 1.4s ease infinite;
+}
+
+@keyframes backlink-skeleton-shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
     }
 }
 

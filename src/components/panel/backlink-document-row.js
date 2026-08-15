@@ -3,8 +3,12 @@ import {
   getBacklinkContextLevelLabel,
   getBacklinkContextLevelTooltip,
 } from "./backlink-panel-header.js";
-const BACKLINK_DOCUMENT_TITLE_TOOLTIP =
-  "左键在主窗口打开文档，右键在右侧打开文档";
+import { renderIcon } from "../../utils/svg-icon.ts";
+import { buildBacklinkProgressTooltip } from "../../utils/tooltip.ts";
+// 单行短文案（≤12 字），详细交互说明不再塞入 tooltip
+const BACKLINK_DOCUMENT_TITLE_TOOLTIP = "左键打开，右键右侧打开";
+// 面包屑最大可见层级数：超过时折叠为「首级 › … › 末级」
+const BACKLINK_BREADCRUMB_MAX_VISIBLE = 3;
 
 function normalizeBacklinkContextControlState(contextControlState = {}) {
   const contextVisibilityLevel =
@@ -174,20 +178,55 @@ export function buildBacklinkBreadcrumbItems(activeBacklink = null) {
   return buildHeadingBreadcrumbItems(buildTopLevelBreadcrumbItems(blockPaths));
 }
 
+/**
+ * 面包屑层级折叠：超过 maxVisible 级时折叠为「首级 › … › 末级」，
+ * 中间折叠部分渲染为不可点击的省略项
+ */
+export function collapseBacklinkBreadcrumbItems(
+  breadcrumbItems = [],
+  maxVisible = BACKLINK_BREADCRUMB_MAX_VISIBLE,
+) {
+  if (!Array.isArray(breadcrumbItems) || breadcrumbItems.length <= maxVisible) {
+    return Array.isArray(breadcrumbItems) ? breadcrumbItems : [];
+  }
+  return [
+    breadcrumbItems[0],
+    { id: "", label: "…", clickable: false, ellipsis: true },
+    breadcrumbItems[breadcrumbItems.length - 1],
+  ];
+}
+
+/** 拼接面包屑完整路径文本，用于悬停 tooltip */
+export function buildBacklinkBreadcrumbFullPath(breadcrumbItems = []) {
+  return (breadcrumbItems || [])
+    .map((item) => item?.label || "")
+    .filter(Boolean)
+    .join(" › ");
+}
+
 function buildBacklinkBreadcrumbItemsHtml(breadcrumbItems = []) {
-  const count = breadcrumbItems.length;
-  return breadcrumbItems
+  const fullPath = buildBacklinkBreadcrumbFullPath(breadcrumbItems);
+  const visibleItems = collapseBacklinkBreadcrumbItems(breadcrumbItems);
+  const count = visibleItems.length;
+  return visibleItems
     .map((item, index) => {
       const isLast = index === count - 1;
-      const clickableClass = item.clickable
-        ? " backlink-breadcrumb__item--clickable"
+      const ellipsisClass = item.ellipsis
+        ? " backlink-breadcrumb__item--ellipsis"
         : "";
+      const clickableClass =
+        item.clickable && !item.ellipsis
+          ? " backlink-breadcrumb__item--clickable"
+          : "";
       const currentClass = isLast
         ? " backlink-breadcrumb__item--current"
         : "";
       const nodeIdAttr =
         item.clickable && item.id ? ` data-node-id="${item.id}"` : "";
-      return `<span class="protyle-breadcrumb__item backlink-breadcrumb__item${clickableClass}${currentClass}"${nodeIdAttr}>${item.label}</span>`;
+      // 末级悬停展示完整路径，弥补折叠后中间层级的信息缺失
+      const ariaAttr =
+        isLast && fullPath ? ` aria-label="${fullPath}" title="${fullPath}"` : "";
+      return `<span class="protyle-breadcrumb__item backlink-breadcrumb__item${ellipsisClass}${clickableClass}${currentClass}"${nodeIdAttr}${ariaAttr}>${item.label}</span>`;
     })
     .join("");
 }
@@ -211,11 +250,11 @@ function buildBacklinkContextControlRowHtml(contextControlState = {}) {
   return `
 <div class="backlink-context-control-row" data-context-level="${normalizedState.levelLabel}">
 <button type="button" class="block__icon ariaLabel backlink-context-step-button previous" aria-label="切换到上一个上下文层级"${previousDisabledAttr}>
-<svg style="fill:none!important;"><use xlink:href="#iconLeft"></use></svg>
+${renderIcon("iconBlChevronLeft")}
 </button>
 <div class="backlink-context-state-group">${buildBacklinkContextStateGroupHtml(normalizedState.contextVisibilityLevel)}</div>
 <button type="button" class="block__icon ariaLabel backlink-context-step-button next" aria-label="切换到下一个上下文层级"${nextDisabledAttr}>
-<svg style="fill:none!important;"><use xlink:href="#iconRight"></use></svg>
+${renderIcon("iconBlChevronRight")}
 </button>
 <span class="b3-list-item__meta backlink-context-budget-hint">${normalizedState.budgetHint}</span>
 </div>`;
@@ -229,25 +268,31 @@ export function buildBacklinkDocumentListItemHtml({
   contextControlState = {},
 } = {}) {
   const truncatedAriaText = docAriaText ? docAriaText.substring(0, 100) : "";
+  const progressTooltip = buildBacklinkProgressTooltip(progressText);
+  const progressAriaAttr = progressTooltip
+    ? ` aria-label="${progressTooltip}" title="${progressTooltip}"`
+    : "";
 
   return `
 <div class="backlink-document-header-row">
 <div class="backlink-document-title-row">
 <span style="padding-left: 4px;margin-right: 2px" class="b3-list-item__toggle b3-list-item__toggle--hl" aria-label="展开/折叠文档">
-<svg class="b3-list-item__arrow b3-list-item__arrow--open" style="fill:none!important;"><use xlink:href="#iconRight"></use></svg>
+<svg class="b3-list-item__arrow b3-list-item__arrow--open" style="fill:none!important;"><use xlink:href="#iconBlChevronRight"></use></svg>
 </span>
 <svg class="b3-list-item__graphic popover__block" style="fill:none!important;"><use xlink:href="#iconFile"></use></svg>
 <span class="b3-list-item__text ariaLabel"  aria-label="${truncatedAriaText}" title="${BACKLINK_DOCUMENT_TITLE_TOOLTIP}"  >
 ${documentName}
 </span>
 <span class="backlink-document-nav-group">
-<svg class="b3-list-item__graphic counter ariaLabel backlink-nav-button previous-backlink-icon" style="fill:none!important;" aria-label="上一个反链块"><use xlink:href="#iconLeft"></use></svg>
-<span class="b3-list-item__meta backlink-nav-progress">${progressText}</span>
-<svg class="b3-list-item__graphic counter ariaLabel backlink-nav-button next-backlink-icon" style="fill:none!important;" aria-label="下一个反链块"><use xlink:href="#iconRight"></use></svg>
+<svg class="b3-list-item__graphic counter ariaLabel backlink-nav-button previous-backlink-icon" style="fill:none!important;" aria-label="上一个反链块"><use xlink:href="#iconBlChevronLeft"></use></svg>
+<span class="b3-list-item__meta b3-tooltips b3-tooltips__s backlink-nav-progress"${progressAriaAttr}>${progressText}</span>
+<svg class="b3-list-item__graphic counter ariaLabel backlink-nav-button next-backlink-icon" style="fill:none!important;" aria-label="下一个反链块"><use xlink:href="#iconBlChevronRight"></use></svg>
 </span>
 </div>
 ${buildBacklinkContextControlRowHtml(contextControlState)}
-<div class="protyle-breadcrumb__bar protyle-breadcrumb__bar--nowrap backlink-breadcrumb-row">${buildBacklinkBreadcrumbItemsHtml(
+<div class="protyle-breadcrumb__bar protyle-breadcrumb__bar--nowrap backlink-breadcrumb-row" title="${buildBacklinkBreadcrumbFullPath(
+    breadcrumbItems,
+  )}">${buildBacklinkBreadcrumbItemsHtml(
     breadcrumbItems,
   )}</div>
 </div>
@@ -335,6 +380,14 @@ export function updateBacklinkDocumentLiNavigation(
   );
   if (progressElement) {
     progressElement.textContent = documentGroup.progressText;
+    // 同步补齐进度 tooltip（如 "第 1 条 / 共 3 条反链"）
+    const progressTooltip = buildBacklinkProgressTooltip(
+      documentGroup.progressText,
+    );
+    if (progressTooltip) {
+      progressElement.setAttribute?.("aria-label", progressTooltip);
+      progressElement.setAttribute?.("title", progressTooltip);
+    }
   }
   if (textElement) {
     textElement.setAttribute(
@@ -344,8 +397,14 @@ export function updateBacklinkDocumentLiNavigation(
     textElement.setAttribute("title", BACKLINK_DOCUMENT_TITLE_TOOLTIP);
   }
   if (breadcrumbElement) {
-    breadcrumbElement.innerHTML = buildBacklinkBreadcrumbItemsHtml(
-      buildBacklinkBreadcrumbItems(documentGroup.activeBacklink),
+    const breadcrumbItems = buildBacklinkBreadcrumbItems(
+      documentGroup.activeBacklink,
+    );
+    breadcrumbElement.innerHTML = buildBacklinkBreadcrumbItemsHtml(breadcrumbItems);
+    // 悬停展示完整路径
+    breadcrumbElement.setAttribute?.(
+      "title",
+      buildBacklinkBreadcrumbFullPath(breadcrumbItems),
     );
   }
   updateBacklinkContextControlRow(documentLiElement, contextControlState);

@@ -80,5 +80,10 @@
     "swapDocumentItemClickLogicTips": "When disabled, click to expand search results and double-click to open the document; when enabled, click to open the document and double-click to expand search results.",
     "allNotebooks": "All Notebooks",
     "specifyNotebook": "Specify Notebook",
-    "searchInTheCurrentDocument": "Search in the current document"
+    "searchInTheCurrentDocument": "Search in the current document",
+    "searchPlaceholder": "Search keywords, space-separated",
+    "globalContextPrefix": "Global",
+    "backlinkSummaryTooltip": "Current document is referenced by ${x} documents",
+    "emptyBacklinkTitle": "No backlinks for the current document",
+    "emptyBacklinkHint": "References to this document will appear here"
 }

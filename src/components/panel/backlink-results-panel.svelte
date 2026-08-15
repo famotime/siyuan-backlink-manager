@@ -4,6 +4,7 @@
         BACKLINK_BLOCK_SORT_METHOD_ELEMENT,
     } from "@/models/backlink-constant";
     import { isArrayNotEmpty } from "@/utils/array-util";
+    import { renderIcon } from "@/utils/svg-icon";
     import {
         BACKLINK_CONTEXT_LEVEL_ORDER,
         getBacklinkContextLevelLabel,
@@ -73,18 +74,7 @@
         on:keydown={handleKeyDownDefault}
     >
         <div class="block__logo fn__flex-center" style="font-weight: bold;">
-            <svg
-                class="block__logoicon b3-icon--wireframe"
-                style="fill: none !important;"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-            >
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-            </svg>
+            <span class="block__logoicon b3-icon--wireframe">{@html renderIcon("iconBlPanelLogo", 16)}</span>
             <span style="margin-left: 6px;">反链管家</span>
         </div>
         <span class="fn__flex-1"></span>
@@ -95,17 +85,7 @@
             on:click|stopPropagation={refreshBacklinkPanelToCurrentMainDocument}
             on:keydown={handleKeyDownDefault}
         >
-            <svg
-                style="fill: none !important;"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="1.75"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-            >
-                <path d="M21 12a9 9 0 1 1-2.64-6.36L21 8" />
-                <path d="M21 3v5h-5" />
-            </svg>
+            {@html renderIcon("iconBlRefresh")}
         </button>
         <button
             type="button"
@@ -114,66 +94,26 @@
             on:click|stopPropagation={resetBacklinkQueryParametersToDefault}
             on:keydown={handleKeyDownDefault}
         >
-            <svg
-                style="fill: none !important;"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="1.75"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-            >
-                <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
-                <path d="M21 3v5h-5" />
-                <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
-                <path d="M3 21v-5h5" />
-            </svg>
+            {@html renderIcon("iconResetInitialization")}
         </button>
         {#if panelBacklinkViewExpand}
             <span class="block__icon b3-tooltips b3-tooltips__sw" aria-label="折叠面板">
-                <svg
-                    style="fill: none !important;"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    stroke-width="1.75"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                >
-                    <path d="M18 15l-6-6-6 6" />
-                </svg>
+                {@html renderIcon("iconBlChevronUp")}
             </span>
         {:else}
             <span class="block__icon b3-tooltips b3-tooltips__sw" aria-label="展开面板">
-                <svg
-                    style="fill: none !important;"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    stroke-width="1.75"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                >
-                    <path d="M6 9l6 6 6-6" />
-                </svg>
+                {@html renderIcon("iconBlChevronDown")}
             </span>
         {/if}
     </div>
     {#if panelBacklinkViewExpand && queryParams}
         <div class="backlink-toolbar-row">
             <div class="backlink-search-input-wrap">
-                <svg
-                    class="backlink-search-icon"
-                    style="fill: none !important;"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    stroke-width="1.75"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                >
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="M21 21l-4.35-4.35" />
-                </svg>
+                <span class="backlink-search-icon">{@html renderIcon("iconBlSearch", 13)}</span>
                 <input
                     class="b3-text-field backlink-search-input"
-                    placeholder="搜索关键词..."
+                    placeholder={EnvConfig.ins.i18n.searchPlaceholder ||
+                        "搜索关键词，空格分隔多词"}
                     on:input={handleBacklinkKeywordInput}
                     bind:value={queryParams.backlinkKeywordStr}
                 />
@@ -184,20 +124,12 @@
                         aria-label="清空搜索内容"
                         on:click={clearKeywordSearch}
                     >
-                        <svg
-                            style="fill: none !important;"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                        >
-                            <path d="M18 6L6 18M6 6l12 12" />
-                        </svg>
+                        {@html renderIcon("iconBlClear", 12)}
                     </button>
                 {/if}
             </div>
             <div class="backlink-toolbar-actions">
+                <span class="backlink-sort-icon">{@html renderIcon("iconContentSort", 14)}</span>
                 <select
                     class="b3-select backlink-sort-select"
                     bind:value={queryParams.backlinkBlockSortMethod}
@@ -215,34 +147,31 @@
                 <button
                     type="button"
                     class="block__icon b3-tooltips b3-tooltips__sw"
-                    aria-label={isAllExpanded
-                        ? "左键：折叠所有文档\n右键：折叠列表项节点"
-                        : "左键：展开所有文档\n右键：展开列表项节点"}
+                    aria-label={isAllExpanded ? "折叠所有文档" : "展开所有文档"}
+                    title={isAllExpanded ? "右键：折叠列表项节点" : "右键：展开列表项节点"}
                     on:click={toggleAllBacklinkDocuments}
                     on:contextmenu={handleToggleContextMenu}
                     on:keydown={handleKeyDownDefault}
                 >
-                    <svg
-                        style="fill: none !important;"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="1.75"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                    >
-                        {#if isAllExpanded}
-                            <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7" />
-                        {:else}
-                            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
-                        {/if}
-                    </svg>
+                    {#if isAllExpanded}
+                        {@html renderIcon("iconBlCollapseAll")}
+                    {:else}
+                        {@html renderIcon("iconBlExpandAll")}
+                    {/if}
                 </button>
             </div>
         </div>
     {/if}
     {#if panelBacklinkViewExpand && backlinkFilterPanelRenderData && isArrayNotEmpty(backlinkFilterPanelRenderData.backlinkDataArray)}
         <div class="block__icons backlink-results-summary-row">
-            <span class="fn__flex-shrink ft__selectnone backlink-results-summary-text">
+            <span
+                class="fn__flex-shrink ft__selectnone b3-tooltips b3-tooltips__s backlink-results-summary-text"
+                aria-label={(EnvConfig.ins.i18n.backlinkSummaryTooltip ||
+                    "当前文档被 ${x} 篇文档引用").replace(
+                        "${x}",
+                        backlinkFilterPanelRenderData.backlinkDocumentCount,
+                    )}
+            >
                 {getBacklinkSummaryText(
                     EnvConfig.ins.i18n,
                     backlinkFilterPanelRenderData.backlinkDocumentCount,
@@ -250,23 +179,15 @@
             </span>
         </div>
         <div class="block__icons backlink-results-global-context-row">
+            <span class="backlink-context-global-label">{EnvConfig.ins.i18n.globalContextPrefix || "全局"}</span>
             <div class="backlink-context-control-row backlink-context-control-row--global">
                 <button
                     type="button"
                     class="block__icon ariaLabel backlink-context-step-button previous"
-                    aria-label="全部文档：切换到上一个上下文层级"
+                    aria-label="全部文档：上一个层级"
                     on:click={() => stepAllBacklinkDocumentContextVisibilityLevel("previous")}
                 >
-                    <svg
-                        style="fill: none !important;"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                    >
-                        <path d="M15 18l-6-6 6-6" />
-                    </svg>
+                    {@html renderIcon("iconBlChevronLeft")}
                 </button>
                 <div class="backlink-context-state-group">
                     {#each BACKLINK_CONTEXT_LEVEL_ORDER as level}
@@ -285,19 +206,10 @@
                 <button
                     type="button"
                     class="block__icon ariaLabel backlink-context-step-button next"
-                    aria-label="全部文档：切换到下一个上下文层级"
+                    aria-label="全部文档：下一个层级"
                     on:click={() => stepAllBacklinkDocumentContextVisibilityLevel("next")}
                 >
-                    <svg
-                        style="fill: none !important;"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                    >
-                        <path d="M9 18l6-6-6-6" />
-                    </svg>
+                    {@html renderIcon("iconBlChevronRight")}
                 </button>
             </div>
         </div>
@@ -310,6 +222,20 @@
             <div>此次查询使用了缓存数据</div>
         {/if}
         <div class="block__icons" style="display: none;"></div>
+        {#if backlinkFilterPanelRenderData && !isArrayNotEmpty(backlinkFilterPanelRenderData.backlinkDataArray)}
+            <!-- 空态：居中线框图标 + 主文案 + 辅助提示 -->
+            <div class="backlink-empty-state">
+                {@html renderIcon("iconBlEmptyLink", 32)}
+                <div class="backlink-empty-state__title">{EnvConfig.ins.i18n.emptyBacklinkTitle || "当前文档暂无反向链接"}</div>
+                <div class="backlink-empty-state__hint">{EnvConfig.ins.i18n.emptyBacklinkHint || "在其他文档中引用本文档后，将显示在这里"}</div>
+            </div>
+        {:else if !backlinkFilterPanelRenderData}
+            <!-- 加载态：骨架屏占位，避免布局跳动 -->
+            <div class="backlink-skeleton-list">
+                <div class="backlink-skeleton-card"></div>
+                <div class="backlink-skeleton-card"></div>
+            </div>
+        {/if}
         <div class="fn__flex-1">
             <ul
                 bind:this={backlinkULElement}

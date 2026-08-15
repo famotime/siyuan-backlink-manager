@@ -11,6 +11,7 @@ import {
   resolveBacklinkBlockNodeByContainer,
 } from "./backlink-render-data-dom.js";
 import { getBacklinkContextSourceRule } from "./backlink-context-rules.js";
+import { sanitizeBacklinkContent } from "./backlink-content-sanitize.js";
 import { getBacklinkSourceWindowByLevel } from "./backlink-source-window.js";
 
 export function formatBacklinkDocApiKeyword(keyword = "") {
@@ -258,7 +259,10 @@ export async function getBatchBacklinkDoc({
       continue;
     }
 
-    backlink.dom = (normalizedDom || backlink.dom).replace(/search-mark/g, "");
+    // 统一清洗渲染内容：剥离 HTML 注释、格式化 ISO 时间戳、压缩连续空行
+    backlink.dom = sanitizeBacklinkContent(
+      (normalizedDom || backlink.dom).replace(/search-mark/g, ""),
+    );
     backlink.backlinkBlock = backlinkBlockNode.block;
     backlink.contextBundle = backlinkBlockNode.contextBundle;
     backlinkDataMap.set(backlinkBlockId, backlink);

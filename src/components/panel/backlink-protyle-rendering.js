@@ -71,7 +71,10 @@ export function batchRenderBacklinkDocumentGroups({
   }
 
   for (const documentGroup of backlinkDocumentGroupArray) {
-    const documentLiElement = createDocumentListItemElement(documentGroup);
+    const cardElement = documentRef.createElement("li");
+    cardElement.classList?.add?.("backlink-card");
+
+    const documentLiElement = createDocumentListItemElement(documentGroup, cardElement);
     const bodyElement = documentRef.createElement("div");
     if (bodyElement.style) {
       bodyElement.style.minHeight = "auto";
@@ -92,7 +95,8 @@ export function batchRenderBacklinkDocumentGroups({
     bodyElement.append?.(editorElement);
     bodyElement.append?.(targetSectionContainer);
 
-    backlinkULElement.append(bodyElement);
+    cardElement.append?.(bodyElement);
+    backlinkULElement.append(cardElement);
     renderDocumentGroup(documentGroup, documentLiElement, editorElement);
   }
   return backlinkDocumentGroupArray;

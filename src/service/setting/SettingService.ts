@@ -11,7 +11,8 @@ import {
 } from "./setting-config-resolver.js";
 import { logError, logInfo } from "@/utils/logger";
 
-const SettingFileName = 'backlink-panel-setting.json';
+export const STORAGE_NAME = 'backlink-panel-setting.json';
+const SettingFileName = STORAGE_NAME;
 
 export class SettingService {
 

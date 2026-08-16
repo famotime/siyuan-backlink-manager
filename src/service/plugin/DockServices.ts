@@ -9,7 +9,21 @@ import {
     attachBacklinkPanelScrollCleanup,
 } from "./backlink-panel-host.js";
 
-const BACKLINK_PANEL_DOCK_TYPE = "backlink-panel-dock";
+export const BACKLINK_PANEL_DOCK_TYPE = "backlink-panel-dock";
+
+/**
+ * 默认 Dock 配置：将图标显示在侧栏右上角（RightTop），
+ * 避免在右下角（RightBottom）时与右上角面板上下切分、共享右侧栏面板。
+ */
+export const DEFAULT_BACKLINK_DOCK_CONFIG = {
+    position: "RightTop" as const,
+    size: { width: 300, height: 0 },
+    icon: CUSTOM_ICON_MAP.BacklinkPanelFilter.id,
+    title: "反链管家 Dock",
+    hotkey: "⌥⇧B",
+    show: false,
+};
+
 export class DockService {
 
     public static get ins(): DockService {
@@ -40,12 +54,7 @@ function addBacklinkPanelDock() {
     let detachScrollCleanup: () => void;
     let dockRet = plugin.addDock({
         config: {
-            position: "RightBottom",
-            size: { width: 300, height: 0 },
-            icon: CUSTOM_ICON_MAP.BacklinkPanelFilter.id,
-            title: "反链管家 Dock",
-            hotkey: "⌥⇧B",
-            show: false,
+            ...DEFAULT_BACKLINK_DOCK_CONFIG,
         },
         data: {},
         type: BACKLINK_PANEL_DOCK_TYPE,

@@ -87,5 +87,6 @@
     "emptyBacklinkTitle": "No backlinks for the current document",
     "emptyBacklinkHint": "References to this document will appear here",
     "targetBlockTooltip": "Click to navigate to referenced content",
-    "targetBlockDocDefaultTitle": "Document Title"
+    "targetBlockDocDefaultTitle": "Document Title",
+    "backlinkManager": "Backlink Manager"
 }

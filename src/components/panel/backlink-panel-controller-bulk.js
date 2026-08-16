@@ -77,7 +77,7 @@ export function createBacklinkPanelBulkActions({
 
   function expandAllBacklinkDocument() {
     const documentLiElementArray = state.backlinkULElement?.querySelectorAll(
-      "li.list-item__document-name",
+      ".list-item__document-name",
     );
     for (const documentLiElement of documentLiElementArray || []) {
       expandBacklinkDocument(documentLiElement);
@@ -94,7 +94,7 @@ export function createBacklinkPanelBulkActions({
 
   function collapseAllBacklinkDocument() {
     const documentLiElementArray = state.backlinkULElement?.querySelectorAll(
-      "li.list-item__document-name",
+      ".list-item__document-name",
     );
     for (const documentLiElement of documentLiElementArray || []) {
       collapseBacklinkDocument(documentLiElement);

@@ -1,11 +1,11 @@
 {
   "name": "siyuan-backlink-manager",
-  "version": "0.0.4",
+  "version": "0.9.0",
   "type": "module",
   "description": "SiYuan Note Plugin: Filterable Backlink Panel",
   "repository": "https://github.com/famotime/siyuan-backlink-manager",
   "homepage": "https://github.com/famotime/siyuan-backlink-manager",
-  "author": "Misuzu2027",
+  "author": "Quincy Zou",
   "license": "MIT",
   "scripts": {
     "make-link": "node  --no-warnings ./scripts/make_dev_link.js",

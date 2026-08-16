@@ -138,7 +138,7 @@ export function createBacklinkPanelNavigationActions({
     }
 
     const documentId = documentLiElement.getAttribute("data-node-id");
-    const editorElement = documentLiElement.nextElementSibling;
+    const editorElement = documentLiElement.nextElementSibling?.querySelector(".backlink-document-editor");
     if (!documentId || !editorElement) {
       return;
     }
@@ -192,7 +192,7 @@ export function createBacklinkPanelNavigationActions({
     }
 
     expandBacklinkDocument(documentLiElement);
-    const editorElement = documentLiElement.nextElementSibling;
+    const editorElement = documentLiElement.nextElementSibling?.querySelector(".backlink-document-editor");
     const editor = state.backlinkDocumentEditorMap?.get?.(documentId);
     const protyleContentElement =
       editor?.protyle?.contentElement || editorElement;

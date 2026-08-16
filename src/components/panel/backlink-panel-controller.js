@@ -424,7 +424,7 @@ export function createBacklinkPanelController(state) {
 
     return {
       documentLiElement: documentLiElement || null,
-      editorElement: documentLiElement?.nextElementSibling || null,
+      editorElement: documentLiElement?.nextElementSibling?.querySelector(".backlink-document-editor") || null,
     };
   }
 

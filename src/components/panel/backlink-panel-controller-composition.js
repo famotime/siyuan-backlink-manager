@@ -167,12 +167,12 @@ export function createBacklinkPanelRenderBindings({
         isArrayEmpty,
         documentRef,
         emptyContentText,
-        createDocumentListItemElement: (documentGroup) =>
+        createDocumentListItemElement: (documentGroup, wrapper) =>
           createBacklinkDocumentListItemElement({
             documentGroup,
             contextControlState: getBacklinkContextControlState(documentGroup),
             showReferencedTargetBlock: isShowTargetBlock,
-            parentElement: state.backlinkULElement,
+            parentElement: wrapper || state.backlinkULElement,
             documentRef,
             onMouseDown: mouseDownBacklinkDocumentLiElement,
             onDocumentClick: clickBacklinkDocumentLiElement,

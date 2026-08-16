@@ -26,7 +26,7 @@ export class TabService {
     public init() {
         EnvConfig.ins.plugin.addCommand({
             langKey: "showDocumentBacklinkPanelTab",
-            langText: "显示当前文反链管家页签",
+            langText: "显示当前文档反链管家页签",
             hotkey: "⌥⇧T",
             editorCallback: (protyle: any) => {
                 // console.log(protyle, "editorCallback");

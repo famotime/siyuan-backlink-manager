@@ -529,7 +529,7 @@ export function createBacklinkDocumentListItemElement({
   }
 
   const activeBacklink = documentGroup.activeBacklink;
-  const documentLiElement = documentRef.createElement("li");
+  const documentLiElement = documentRef.createElement("div");
   documentLiElement.classList.add(
     "b3-list-item",
     "b3-list-item--hide-action",

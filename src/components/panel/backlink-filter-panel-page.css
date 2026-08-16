@@ -258,33 +258,40 @@
     color: var(--b3-theme-on-surface-light);
 }
 
-.backlink-panel__area .list-item__document-name {
-    display: block;
+.backlink-panel__area .backlink-card {
+    margin-bottom: 12px;
+    border-radius: 10px;
     background-color: var(--b3-theme-surface);
     border: 1px solid var(--b3-border-color);
-    border-bottom: none;
-    border-top-left-radius: var(--bl-radius-m);
-    border-top-right-radius: var(--bl-radius-m);
-    padding: 6px 10px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    transition: var(--backlink-transition);
+    display: flex;
+    flex-direction: column;
+}
+
+.backlink-panel__area .backlink-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.backlink-panel__area .list-item__document-name {
+    display: block;
+    background-color: transparent;
+    border: none;
+    padding: 8px 12px 6px;
     transition: var(--backlink-transition);
 }
 
 .backlink-panel__area .list-item__document-name.backlink-hide {
-    border-bottom: 1px solid var(--b3-border-color);
-    border-bottom-left-radius: var(--bl-radius-m);
-    border-bottom-right-radius: var(--bl-radius-m);
-    margin-bottom: 10px;
+    border-bottom: none;
+    margin-bottom: 0;
 }
 
 .backlink-panel__area .backlink-document-body {
     display: flex;
     flex-direction: column;
-    background-color: var(--b3-theme-surface);
-    border: 1px solid var(--b3-border-color);
-    border-top: 1px dashed var(--b3-border-color);
-    border-bottom-left-radius: var(--bl-radius-m);
-    border-bottom-right-radius: var(--bl-radius-m);
-    margin-bottom: 12px;
+    background-color: transparent;
+    border: none;
+    border-top: 1px solid color-mix(in srgb, var(--b3-border-color) 70%, transparent);
     overflow: hidden;
     transition: var(--backlink-transition);
 }
@@ -308,9 +315,9 @@
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    padding: 4px 10px 10px;
-    background-color: color-mix(in srgb, var(--b3-theme-surface-lighter, rgba(128, 128, 128, 0.04)) 60%, transparent);
-    border-top: 1px solid var(--b3-border-color);
+    padding: 6px 12px 12px;
+    background-color: var(--b3-theme-background);
+    border-top: 1px dashed var(--b3-border-color);
 }
 
 .backlink-panel__area .backlink-target-connector {
@@ -354,7 +361,7 @@
 }
 
 .backlink-panel__area .backlink-target-card:hover {
-    background-color: var(--b3-list-icon-hover);
+    background-color: var(--b3-theme-surface);
     border-color: var(--b3-theme-primary);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 }

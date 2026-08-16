@@ -6,12 +6,13 @@ import "@/index.scss";
 
 import { EnvConfig } from "./config/EnvConfig";
 import { CUSTOM_ICON_MAP } from "./models/icon-constant";
-import { SettingService } from "./service/setting/SettingService";
+import { SettingService, STORAGE_NAME } from "./service/setting/SettingService";
 import { openSettingsDialog } from "./components/setting/setting-util";
 import { DocumentService } from "./service/plugin/DocumentService";
 import { DockService } from "./service/plugin/DockServices";
 import { TopBarService } from "./service/plugin/TopBarService";
 import { TabService } from "./service/plugin/TabService";
+import { logError } from "./utils/logger";
 
 
 export default class PluginSample extends Plugin {
@@ -23,6 +24,7 @@ export default class PluginSample extends Plugin {
         DockService.ins.init();
         TabService.ins.init();
         TopBarService.ins.init();
+        DocumentService.ins.init();
 
 
         // 图标的制作参见帮助文档
@@ -37,7 +39,6 @@ export default class PluginSample extends Plugin {
             EnvConfig.ins.lastViewedDocId = e.detail.protyle.block.rootID;
         })
         this.eventBus.on('loaded-protyle-static', (e: any) => {
-            // console.log("index loaded-protyle-static ")
             if (EnvConfig.ins.isMobile && !EnvConfig.ins.lastViewedDocId) {
                 EnvConfig.ins.lastViewedDocId = e.detail.protyle.block.rootID;
             }
@@ -52,10 +53,15 @@ export default class PluginSample extends Plugin {
     }
 
     async onunload() {
+        DocumentService.ins.destory();
     }
 
-    uninstall() {
-        // console.log("uninstall");
+    async uninstall() {
+        try {
+            await this.removeData(STORAGE_NAME);
+        } catch (e) {
+            logError(`[${this.name}] Failed to remove plugin data on uninstall:`, e);
+        }
     }
 
 

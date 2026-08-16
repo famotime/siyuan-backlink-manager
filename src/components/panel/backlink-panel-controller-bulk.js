@@ -48,7 +48,15 @@ export function createBacklinkPanelBulkActions({
       state.backlinkGlobalContextVisibilityLevel = normalizedLevel;
     }
 
-    for (const documentGroup of state.backlinkDocumentGroupArray || []) {
+    const documentGroups =
+      Array.isArray(state.backlinkDocumentGroupArray) &&
+      state.backlinkDocumentGroupArray.length > 0
+        ? [...state.backlinkDocumentGroupArray]
+        : (state.backlinkFilterPanelRenderData?.backlinkDocumentArray || []).map(
+            (doc) => ({ documentId: doc?.id, activeBacklink: null }),
+          );
+
+    for (const documentGroup of documentGroups) {
       const documentId = documentGroup?.documentId;
       if (!documentId) {
         continue;

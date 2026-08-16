@@ -414,17 +414,36 @@ export function createBacklinkPanelController(state) {
   });
 
   function findBacklinkDocumentRenderTargets(documentId) {
-    if (!documentId || !state.backlinkULElement?.querySelectorAll) {
+    if (!documentId || !state.backlinkULElement) {
       return { documentLiElement: null, editorElement: null };
     }
 
-    const documentLiElement = Array.from(
-      state.backlinkULElement.querySelectorAll("li.list-item__document-name"),
-    ).find((element) => element.getAttribute("data-node-id") === documentId);
+    const documentLiElement =
+      (typeof state.backlinkULElement.querySelector === "function"
+        ? state.backlinkULElement.querySelector(
+            `.list-item__document-name[data-node-id="${documentId}"]`,
+          )
+        : null) ||
+      (typeof state.backlinkULElement.querySelectorAll === "function"
+        ? Array.from(
+            state.backlinkULElement.querySelectorAll(".list-item__document-name"),
+          ).find((element) => element.getAttribute?.("data-node-id") === documentId)
+        : null) ||
+      null;
+
+    const editorElement =
+      documentLiElement?.closest?.(".backlink-card")?.querySelector?.(".backlink-document-editor") ||
+      documentLiElement?.nextElementSibling?.querySelector?.(".backlink-document-editor") ||
+      (typeof state.backlinkULElement.querySelector === "function"
+        ? state.backlinkULElement.querySelector(
+            `.backlink-document-editor[data-backlink-root-id="${documentId}"]`,
+          )
+        : null) ||
+      null;
 
     return {
       documentLiElement: documentLiElement || null,
-      editorElement: documentLiElement?.nextElementSibling?.querySelector(".backlink-document-editor") || null,
+      editorElement: editorElement || null,
     };
   }
 

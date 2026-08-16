@@ -138,7 +138,12 @@ export function createBacklinkPanelNavigationActions({
     }
 
     const documentId = documentLiElement.getAttribute("data-node-id");
-    const editorElement = documentLiElement.nextElementSibling?.querySelector(".backlink-document-editor");
+    const editorElement =
+      documentLiElement.closest?.(".backlink-card")?.querySelector?.(".backlink-document-editor") ||
+      documentLiElement.nextElementSibling?.querySelector?.(".backlink-document-editor") ||
+      state.backlinkULElement?.querySelector?.(
+        `.backlink-document-editor[data-backlink-root-id="${documentId}"]`,
+      );
     if (!documentId || !editorElement) {
       return;
     }
@@ -192,7 +197,12 @@ export function createBacklinkPanelNavigationActions({
     }
 
     expandBacklinkDocument(documentLiElement);
-    const editorElement = documentLiElement.nextElementSibling?.querySelector(".backlink-document-editor");
+    const editorElement =
+      documentLiElement.closest?.(".backlink-card")?.querySelector?.(".backlink-document-editor") ||
+      documentLiElement.nextElementSibling?.querySelector?.(".backlink-document-editor") ||
+      state.backlinkULElement?.querySelector?.(
+        `.backlink-document-editor[data-backlink-root-id="${documentId}"]`,
+      );
     const editor = state.backlinkDocumentEditorMap?.get?.(documentId);
     const protyleContentElement =
       editor?.protyle?.contentElement || editorElement;

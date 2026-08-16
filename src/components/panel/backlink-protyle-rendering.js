@@ -62,7 +62,9 @@ export function batchRenderBacklinkDocumentGroups({
   );
   if (isArrayEmpty(backlinkDocumentGroupArray)) {
     const pElement = documentRef.createElement("p");
-    pElement.style.padding = "5px 15px";
+    if (pElement.style) {
+      pElement.style.padding = "5px 15px";
+    }
     pElement.innerText = emptyContentText;
     backlinkULElement.append(pElement);
     return backlinkDocumentGroupArray;
@@ -70,11 +72,27 @@ export function batchRenderBacklinkDocumentGroups({
 
   for (const documentGroup of backlinkDocumentGroupArray) {
     const documentLiElement = createDocumentListItemElement(documentGroup);
-    const editorElement = documentRef.createElement("div");
-    editorElement.style.minHeight = "auto";
-    editorElement.setAttribute("data-backlink-root-id", documentGroup.documentId);
+    const bodyElement = documentRef.createElement("div");
+    if (bodyElement.style) {
+      bodyElement.style.minHeight = "auto";
+    }
+    bodyElement.setAttribute?.("data-backlink-root-id", documentGroup.documentId);
+    bodyElement.classList?.add?.("backlink-document-body");
 
-    backlinkULElement.append(editorElement);
+    const editorElement = documentRef.createElement("div");
+    editorElement.classList?.add?.("backlink-document-editor");
+    if (editorElement.style) {
+      editorElement.style.minHeight = "auto";
+    }
+    editorElement.setAttribute?.("data-backlink-root-id", documentGroup.documentId);
+
+    const targetSectionContainer = documentRef.createElement("div");
+    targetSectionContainer.classList?.add?.("backlink-target-section-container");
+
+    bodyElement.append?.(editorElement);
+    bodyElement.append?.(targetSectionContainer);
+
+    backlinkULElement.append(bodyElement);
     renderDocumentGroup(documentGroup, documentLiElement, editorElement);
   }
   return backlinkDocumentGroupArray;

@@ -108,6 +108,15 @@ export const CUSTOM_ICON_MAP = {
 </g>
 </symbol>`
     },
+    BlArrowDown: {
+        id: "iconBlArrowDown",
+        source: `<symbol id="iconBlArrowDown" viewBox="0 0 24 24">
+<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<line x1="12" y1="4" x2="12" y2="19"/>
+<polyline points="18 13 12 19 6 13"/>
+</g>
+</symbol>`
+    },
     BlChevronLeft: {
         id: "iconBlChevronLeft",
         source: `<symbol id="iconBlChevronLeft" viewBox="0 0 24 24">

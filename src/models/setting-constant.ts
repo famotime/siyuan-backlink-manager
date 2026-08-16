@@ -17,6 +17,13 @@ export function getSettingTabArray(): TabProperty[] {
                     tips: "",
                 }),
                 new ItemProperty({
+                    key: "showReferencedTargetBlock",
+                    type: "switch",
+                    name: "显示被引用目标块",
+                    description: "在反链内容下方显示被引用的块或文档标题卡片，点击可快速跳转定位。",
+                    tips: "",
+                }),
+                new ItemProperty({
                     key: "enableLogPrint",
                     type: "switch",
                     name: "日志打印",

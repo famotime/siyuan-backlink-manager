@@ -5,10 +5,93 @@ import {
 } from "./backlink-panel-header.js";
 import { renderIcon } from "../../utils/svg-icon.ts";
 import { buildBacklinkProgressTooltip } from "../../utils/tooltip.ts";
+import { getBlockTypeIconHref } from "../../utils/icon-util.ts";
 // 单行短文案（≤12 字），详细交互说明不再塞入 tooltip
 const BACKLINK_DOCUMENT_TITLE_TOOLTIP = "左键打开，右键右侧打开";
 // 面包屑最大可见层级数：超过时折叠为「首级 › … › 末级」
 const BACKLINK_BREADCRUMB_MAX_VISIBLE = 3;
+
+export function buildBacklinkTargetBlockItemHtml(targetBlock = {}) {
+  const blockId = String(targetBlock?.id || "").trim();
+  const rootId = String(targetBlock?.rootId || targetBlock?.root_id || "").trim();
+  const blockType = String(targetBlock?.type || "p").trim();
+  const blockSubType = String(targetBlock?.subType || targetBlock?.subtype || "").trim();
+  const rawContent = String(targetBlock?.content || "").trim();
+  const isDocument = blockType === "d";
+  const displayContent = rawContent || (isDocument ? "文档标题" : "被引用的块");
+  const iconHref = getBlockTypeIconHref?.(blockType, blockSubType) || "#iconFile";
+  const tooltipText = `${displayContent}（点击跳转定位）`;
+
+  return `<div class="backlink-target-card b3-tooltips b3-tooltips__s" data-target-block-id="${blockId}" data-target-root-id="${rootId}" data-target-type="${blockType}" aria-label="${tooltipText}" title="${tooltipText}"><svg class="b3-list-item__graphic backlink-target-card__icon" style="fill:none!important;"><use xlink:href="${iconHref}"></use></svg><span class="backlink-target-card__text">${displayContent}</span></div>`;
+}
+
+export function buildBacklinkTargetSectionHtml(
+  targetBlocks = [],
+  showReferencedTargetBlock = true,
+) {
+  if (!showReferencedTargetBlock) {
+    return "";
+  }
+
+  const items =
+    Array.isArray(targetBlocks) && targetBlocks.length > 0
+      ? targetBlocks
+      : [{ id: "", type: "d", subType: "", content: "文档标题" }];
+
+  const itemsHtml = items
+    .map((block) => buildBacklinkTargetBlockItemHtml(block))
+    .join("");
+
+  return `<div class="backlink-target-section"><div class="backlink-target-connector"><svg class="bl-icon backlink-target-arrow" width="14" height="14" style="fill:none!important;" aria-hidden="true"><use xlink:href="#iconBlChevronDown"></use></svg></div><div class="backlink-target-card-group">${itemsHtml}</div></div>`;
+}
+
+export function updateBacklinkTargetSection(
+  documentLiElement,
+  targetBlocks = [],
+  showReferencedTargetBlock = true,
+  onTargetBlockClick = null,
+) {
+  if (!documentLiElement) {
+    return;
+  }
+
+  const targetSectionContainer =
+    documentLiElement.nextElementSibling?.querySelector?.(
+      ".backlink-target-section-container",
+    ) ||
+    documentLiElement.querySelector?.(".backlink-target-section-container");
+
+  if (!targetSectionContainer) {
+    return;
+  }
+
+  targetSectionContainer.innerHTML = buildBacklinkTargetSectionHtml(
+    targetBlocks,
+    showReferencedTargetBlock,
+  );
+
+  const clickHandler = onTargetBlockClick || documentLiElement._onTargetBlockClick;
+  if (clickHandler) {
+    const targetCards = targetSectionContainer.querySelectorAll?.(
+      ".backlink-target-card",
+    );
+    if (targetCards) {
+      for (const card of targetCards) {
+        const blockId = card.getAttribute?.("data-target-block-id") || "";
+        const rootId = card.getAttribute?.("data-target-root-id") || "";
+        const blockType = card.getAttribute?.("data-target-type") || "";
+
+        card.addEventListener?.("click", (event) => {
+          clickHandler(event, blockId, rootId, blockType);
+        });
+
+        card.addEventListener?.("contextmenu", (event) => {
+          clickHandler(event, blockId, rootId, blockType);
+        });
+      }
+    }
+  }
+}
 
 function normalizeBacklinkContextControlState(contextControlState = {}) {
   const contextVisibilityLevel =
@@ -358,10 +441,18 @@ export function updateBacklinkDocumentLiNavigation(
   documentLiElement,
   documentGroup,
   contextControlState = {},
+  options = {},
 ) {
   if (!documentLiElement || !documentGroup || !documentGroup.activeBacklink) {
     return;
   }
+
+  const showReferencedTargetBlock =
+    options?.showReferencedTargetBlock ??
+    documentLiElement._showReferencedTargetBlock ??
+    true;
+  const onTargetBlockClick =
+    options?.onTargetBlockClick ?? documentLiElement._onTargetBlockClick;
 
   const progressElement = documentLiElement.querySelector(
     ".backlink-nav-progress",
@@ -408,6 +499,12 @@ export function updateBacklinkDocumentLiNavigation(
     );
   }
   updateBacklinkContextControlRow(documentLiElement, contextControlState);
+  updateBacklinkTargetSection(
+    documentLiElement,
+    documentGroup.activeBacklink?.targetBlocks,
+    showReferencedTargetBlock,
+    onTargetBlockClick,
+  );
   previousButton?.classList.toggle("disabled", disableNavigation);
   nextButton?.classList.toggle("disabled", disableNavigation);
 }
@@ -415,6 +512,7 @@ export function updateBacklinkDocumentLiNavigation(
 export function createBacklinkDocumentListItemElement({
   documentGroup,
   contextControlState = {},
+  showReferencedTargetBlock = true,
   parentElement,
   documentRef = globalThis.document,
   onDocumentClick,
@@ -424,6 +522,7 @@ export function createBacklinkDocumentListItemElement({
   onNavigate,
   onStepContextLevel,
   onBreadcrumbNavigate,
+  onTargetBlockClick,
 } = {}) {
   if (!documentGroup || !documentRef?.createElement) {
     return null;
@@ -441,6 +540,8 @@ export function createBacklinkDocumentListItemElement({
     "data-backlink-block-id",
     activeBacklink?.backlinkBlock?.id || "",
   );
+  documentLiElement._showReferencedTargetBlock = showReferencedTargetBlock;
+  documentLiElement._onTargetBlockClick = onTargetBlockClick;
   documentLiElement.innerHTML = buildBacklinkDocumentListItemHtml({
     documentName: documentGroup.documentName,
     docAriaText: activeBacklink?.backlinkBlock?.content,

@@ -33,6 +33,7 @@ const DEFAULT_SETTING_CONFIG = {
   backlinkBlockSortMethod: "modifiedDesc",
   hideBacklinkProtyleBreadcrumb: false,
   enableLogPrint: false,
+  showReferencedTargetBlock: true,
   defaultExpandedListItemLevel: 0,
   backlinkContextPreset: "balanced",
   backlinkContextMaxVisibleFragments: 6,

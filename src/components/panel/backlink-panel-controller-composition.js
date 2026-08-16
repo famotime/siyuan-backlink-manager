@@ -48,6 +48,8 @@ export function createBacklinkPanelRenderBindings({
   navigateBacklinkDocument,
   stepBacklinkDocumentContext,
   navigateBacklinkBreadcrumb,
+  handleTargetBlockClick,
+  showReferencedTargetBlock = () => true,
 } = {}) {
   function renderBacklinkDocumentGroup(
     documentGroup,
@@ -58,6 +60,11 @@ export function createBacklinkPanelRenderBindings({
     if (documentId) {
       detachDocumentGroupRefreshTracking(documentId);
     }
+
+    const isShowTargetBlock =
+      typeof showReferencedTargetBlock === "function"
+        ? showReferencedTargetBlock()
+        : Boolean(showReferencedTargetBlock);
 
     const editor = renderBacklinkDocumentGroupByHelper({
       documentGroup,
@@ -71,6 +78,10 @@ export function createBacklinkPanelRenderBindings({
             documentLiElementArg,
             documentGroupArg,
             getBacklinkContextControlState(documentGroupArg),
+            {
+              showReferencedTargetBlock: isShowTargetBlock,
+              onTargetBlockClick: handleTargetBlockClick,
+            },
           ),
         syncBacklinkDocumentProtyleState: (editorArg) =>
           syncBacklinkDocumentProtyleState(editorArg, {
@@ -141,6 +152,11 @@ export function createBacklinkPanelRenderBindings({
     backlinkDocumentArray,
     backlinkDataArray,
   ) {
+    const isShowTargetBlock =
+      typeof showReferencedTargetBlock === "function"
+        ? showReferencedTargetBlock()
+        : Boolean(showReferencedTargetBlock);
+
     state.backlinkDocumentGroupArray = batchRenderBacklinkDocumentGroups({
       backlinkDocumentArray,
       backlinkDataArray,
@@ -155,6 +171,7 @@ export function createBacklinkPanelRenderBindings({
           createBacklinkDocumentListItemElement({
             documentGroup,
             contextControlState: getBacklinkContextControlState(documentGroup),
+            showReferencedTargetBlock: isShowTargetBlock,
             parentElement: state.backlinkULElement,
             documentRef,
             onMouseDown: mouseDownBacklinkDocumentLiElement,
@@ -164,6 +181,7 @@ export function createBacklinkPanelRenderBindings({
             onNavigate: navigateBacklinkDocument,
             onStepContextLevel: stepBacklinkDocumentContext,
             onBreadcrumbNavigate: navigateBacklinkBreadcrumb,
+            onTargetBlockClick: handleTargetBlockClick,
           }),
         renderDocumentGroup: renderBacklinkDocumentGroup,
       },

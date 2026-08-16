@@ -178,12 +178,7 @@
     vertical-align: middle;
 }
 
-.backlink-panel__area .backlink-sort-select option {
-    font: inherit;
-    font-size: var(--bl-font-s);
-    background-color: var(--b3-theme-surface);
-    color: var(--b3-theme-on-surface);
-}
+
 
 /* ==========================================================================
    按钮热区与微交互
@@ -265,6 +260,125 @@
 
 .backlink-panel__area .list-item__document-name {
     display: block;
+    background-color: var(--b3-theme-surface);
+    border: 1px solid var(--b3-border-color);
+    border-bottom: none;
+    border-top-left-radius: var(--bl-radius-m);
+    border-top-right-radius: var(--bl-radius-m);
+    padding: 6px 10px;
+    transition: var(--backlink-transition);
+}
+
+.backlink-panel__area .list-item__document-name.backlink-hide {
+    border-bottom: 1px solid var(--b3-border-color);
+    border-bottom-left-radius: var(--bl-radius-m);
+    border-bottom-right-radius: var(--bl-radius-m);
+    margin-bottom: 10px;
+}
+
+.backlink-panel__area .backlink-document-body {
+    display: flex;
+    flex-direction: column;
+    background-color: var(--b3-theme-surface);
+    border: 1px solid var(--b3-border-color);
+    border-top: 1px dashed var(--b3-border-color);
+    border-bottom-left-radius: var(--bl-radius-m);
+    border-bottom-right-radius: var(--bl-radius-m);
+    margin-bottom: 12px;
+    overflow: hidden;
+    transition: var(--backlink-transition);
+}
+
+.backlink-panel__area .backlink-document-body.fn__none {
+    display: none !important;
+}
+
+.backlink-panel__area .backlink-document-editor {
+    min-height: auto;
+}
+
+/* ==========================================================================
+   被引用目标块与连接箭头区域
+   ========================================================================== */
+.backlink-panel__area .backlink-target-section-container {
+    width: 100%;
+}
+
+.backlink-panel__area .backlink-target-section {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 4px 10px 10px;
+    background-color: color-mix(in srgb, var(--b3-theme-surface-lighter, rgba(128, 128, 128, 0.04)) 60%, transparent);
+    border-top: 1px solid var(--b3-border-color);
+}
+
+.backlink-panel__area .backlink-target-connector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 4px 0 6px;
+    color: var(--b3-theme-on-surface-light);
+    user-select: none;
+}
+
+.backlink-panel__area .backlink-target-arrow {
+    width: 14px;
+    height: 14px;
+    opacity: 0.7;
+    color: var(--b3-theme-on-surface-light);
+    transition: var(--backlink-transition);
+}
+
+.backlink-panel__area .backlink-target-card-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.backlink-panel__area .backlink-target-card {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    min-height: 28px;
+    box-sizing: border-box;
+    border-radius: var(--bl-radius-s);
+    background-color: var(--b3-theme-surface);
+    border: 1px solid var(--b3-border-color);
+    cursor: pointer;
+    user-select: none;
+    transition: var(--backlink-transition);
+    overflow: hidden;
+}
+
+.backlink-panel__area .backlink-target-card:hover {
+    background-color: var(--b3-list-icon-hover);
+    border-color: var(--b3-theme-primary);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.backlink-panel__area .backlink-target-card__icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    color: var(--b3-theme-on-surface-light);
+    transition: var(--backlink-transition);
+}
+
+.backlink-panel__area .backlink-target-card:hover .backlink-target-card__icon {
+    color: var(--b3-theme-primary);
+}
+
+.backlink-panel__area .backlink-target-card__text {
+    flex: 1 1 auto;
+    font-size: var(--bl-font-s);
+    line-height: 18px;
+    color: var(--b3-theme-on-surface);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .backlink-panel__area .backlink-document-header-row {

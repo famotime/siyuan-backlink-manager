@@ -45,6 +45,7 @@ import {
     updateDynamicAnchorMap,
     updateStaticAnchorMap,
 } from "./backlink-markdown.js";
+import { resolveBacklinkTargetBlocks } from "./backlink-target-resolver.js";
 import {
     applyAnchorsToCurrentDocumentBlocks,
     attachDocumentBlocksToBacklinkNodes,
@@ -459,6 +460,7 @@ export async function getBacklinkPanelData(
             buildRelatedDefBlockArray,
             buildBacklinkDocumentArray,
             attachDocumentBlocksToBacklinkNodes,
+            resolveBacklinkTargetBlocks,
             hydrateBacklinkContextBundles,
             getQueryStrByBlock,
             getMarkdownAnchorTextArray,

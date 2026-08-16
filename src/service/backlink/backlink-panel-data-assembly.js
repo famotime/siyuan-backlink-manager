@@ -108,9 +108,13 @@ export async function buildBacklinkPanelData(paramObj, deps) {
       context: collectContext,
     });
   }
-
+  const blockIdQueryArray = [
+    paramObj.rootId,
+    ...relatedDefBlockCountMap.keys(),
+    ...backlinkDocumentCountMap.keys(),
+  ].filter(Boolean);
   const relatedDefBlockAndDocumentMap = await getBlockInfoMap(
-    [...relatedDefBlockCountMap.keys(), ...backlinkDocumentCountMap.keys()],
+    blockIdQueryArray,
     { generateGetBlockArraySql, sql },
   );
 
@@ -139,6 +143,16 @@ export async function buildBacklinkPanelData(paramObj, deps) {
     backlinkBlockMap,
     relatedDefBlockAndDocumentMap,
   );
+  if (deps.resolveBacklinkTargetBlocks) {
+    for (const node of Object.values(backlinkBlockMap)) {
+      node.targetBlocks = deps.resolveBacklinkTargetBlocks({
+        backlinkBlockNode: node,
+        curRootId: paramObj.rootId,
+        relatedDefBlockAndDocumentMap,
+        curDocDefBlockArray: paramObj.curDocDefBlockArray,
+      });
+    }
+  }
   if (hydrateBacklinkContextBundles) {
     hydrateBacklinkContextBundles(Object.values(backlinkBlockMap), {
       getQueryStrByBlock,

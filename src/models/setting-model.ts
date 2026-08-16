@@ -25,6 +25,7 @@ export class SettingConfig {
     backlinkBlockSortMethod: BlockSortMethod;
     hideBacklinkProtyleBreadcrumb: boolean;
     enableLogPrint: boolean;
+    showReferencedTargetBlock: boolean;
     defaultExpandedListItemLevel: number;
     backlinkContextPreset: BacklinkContextPreset;
     backlinkContextMaxVisibleFragments: number;

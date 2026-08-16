@@ -44,6 +44,7 @@ import {
   getBacklinkDocumentWndElementFromProtyle,
   getBacklinkDocumentWndElementFromTarget,
   mergeBacklinkDocumentOpenTargetIntoTabOptions,
+  navigateToOpenedDocumentBlock,
   resolveBacklinkDocumentCtrlLeftClickOpenAreaFromCache,
   resolveBacklinkDocumentOpenArea,
 } from "./backlink-document-open-target.js";
@@ -345,6 +346,10 @@ export function createBacklinkPanelController(state) {
       stepBacklinkDocumentContext(documentLiElement, direction),
     navigateBacklinkBreadcrumb: (documentLiElement, blockId) =>
       navigateBacklinkBreadcrumb(documentLiElement, blockId),
+    handleTargetBlockClick: (event, blockId, rootId, blockType) =>
+      panelOpenActions.handleTargetBlockClick(event, blockId, rootId, blockType),
+    showReferencedTargetBlock: () =>
+      SettingService.ins.SettingConfig.showReferencedTargetBlock !== false,
   });
 
   function renderBacklinkDocumentGroup(
@@ -570,8 +575,29 @@ export function createBacklinkPanelController(state) {
   }
 
   async function openBlockTab(rootId, blockId, options = {}) {
-    const zoomIn = await getBlockIsFolded(blockId);
-    const actions = getOpenTabActionByZoomIn(zoomIn);
+    const isDocument = options.isDocument || !blockId || blockId === rootId;
+    const openArea = options.openArea || "focus";
+
+    // 默认或 focus 模式下，如果文档已在编辑器中打开，则直接跳转定位，避免重复开 Tab
+    if (openArea === "focus") {
+      const navigated = navigateToOpenedDocumentBlock({
+        rootId,
+        blockId,
+        isDocument,
+        documentRef: document,
+        windowRef: window,
+        openTabFn: openTab,
+        app: EnvConfig.ins.app,
+      });
+      if (navigated) {
+        return;
+      }
+    }
+
+    const zoomIn = isDocument ? false : await getBlockIsFolded(blockId);
+    const actions = isDocument
+      ? [Constants.CB_GET_FOCUS, Constants.CB_GET_SCROLL]
+      : getOpenTabActionByZoomIn(zoomIn);
 
     if (EnvConfig.ins.isMobile) {
       openMobileFileById(EnvConfig.ins.app, blockId, actions);
@@ -583,7 +609,7 @@ export function createBacklinkPanelController(state) {
       actions,
       rootId,
       blockId,
-      openArea: options.openArea,
+      openArea,
     });
   }
 

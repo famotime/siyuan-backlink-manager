@@ -85,6 +85,7 @@
     "globalContextPrefix": "全局",
     "backlinkSummaryTooltip": "当前文档被 ${x} 篇文档引用",
     "emptyBacklinkTitle": "当前文档暂无反向链接",
-    "emptyBacklinkHint": "在其他文档中引用本文档后，将显示在这里"
-
+    "emptyBacklinkHint": "在其他文档中引用本文档后，将显示在这里",
+    "targetBlockTooltip": "点击定位到被引用的内容",
+    "targetBlockDocDefaultTitle": "文档标题"
 }

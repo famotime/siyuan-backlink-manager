@@ -265,6 +265,7 @@ export async function getBatchBacklinkDoc({
     );
     backlink.backlinkBlock = backlinkBlockNode.block;
     backlink.contextBundle = backlinkBlockNode.contextBundle;
+    backlink.targetBlocks = backlinkBlockNode.targetBlocks || [];
     backlinkDataMap.set(backlinkBlockId, backlink);
     if (backlinkBlockNode.parentListItemTreeNode) {
       backlink.includeChildListItemIdArray =

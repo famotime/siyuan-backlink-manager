@@ -132,6 +132,36 @@ export function createBacklinkPanelOpenActions({
     setPreClickOpenArea("focus");
   }
 
+  function handleTargetBlockClick(
+    event,
+    targetBlockId,
+    targetRootId,
+    targetType = "",
+  ) {
+    if (!targetBlockId && !targetRootId) {
+      return;
+    }
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    const rootId = targetRootId || state.rootId;
+    const isDocument =
+      targetType === "d" || !targetBlockId || targetBlockId === rootId;
+    const blockId = isDocument ? rootId : targetBlockId;
+    const isRightClick = event?.button === 2;
+    const isCtrlClick = Boolean(event?.ctrlKey);
+    const requestedOpenArea = (isRightClick || isCtrlClick) ? "right" : "focus";
+    const resolvedOpenArea = resolveBacklinkDocumentOpenArea(
+      requestedOpenArea,
+      getPreClickOpenArea(),
+    );
+
+    openBlockTab(rootId, blockId, {
+      openArea: resolvedOpenArea,
+      isDocument,
+    });
+    setPreClickOpenArea("focus");
+  }
+
   return {
     handleFocusIn,
     handleMouseDownCapture,
@@ -139,5 +169,6 @@ export function createBacklinkPanelOpenActions({
     clickBacklinkDocumentLiElement,
     mouseDownBacklinkDocumentLiElement,
     contextmenuBacklinkDocumentLiElement,
+    handleTargetBlockClick,
   };
 }

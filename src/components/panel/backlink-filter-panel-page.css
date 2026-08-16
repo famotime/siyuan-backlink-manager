@@ -267,10 +267,12 @@
     transition: var(--backlink-transition);
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .backlink-panel__area .backlink-card:hover {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border-color: var(--b3-theme-primary);
 }
 
 .backlink-panel__area .list-item__document-name {
@@ -460,19 +462,12 @@
     flex-shrink: 0;
 }
 
-.backlink-panel__area .backlink-results-summary-row {
-    display: flex;
-    align-items: center;
-    padding: 4px 14px 2px;
-    overflow: hidden;
-    color: var(--b3-theme-on-surface-light);
-    font-size: var(--bl-font-s);
-    line-height: 18px;
-}
-
 .backlink-panel__area .backlink-results-summary-text {
     flex-shrink: 0;
     white-space: nowrap;
+    color: var(--b3-theme-on-surface-light);
+    font-size: var(--bl-font-s);
+    margin-left: 2px;
 }
 
 .backlink-panel__area .backlink-results-global-context-row {
@@ -710,8 +705,10 @@
     padding: 0;
     z-index: 3;
     background-color: var(--b3-theme-surface);
-    border-radius: 8px;
-    box-shadow: 0 1px 0 var(--b3-border-color);
+    border-radius: 10px;
+    border: 1px solid var(--b3-border-color);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    margin-bottom: 12px;
 }
 
 .backlink-panel__area .backlink-results-panel__header {

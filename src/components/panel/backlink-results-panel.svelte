@@ -159,25 +159,25 @@
                         {@html renderIcon("iconBlExpandAll")}
                     {/if}
                 </button>
+                {#if backlinkFilterPanelRenderData && isArrayNotEmpty(backlinkFilterPanelRenderData.backlinkDataArray)}
+                    <span
+                        class="fn__flex-shrink ft__selectnone b3-tooltips b3-tooltips__sw backlink-results-summary-text"
+                        aria-label={(EnvConfig.ins.i18n.backlinkSummaryTooltip ||
+                            "当前文档被 ${x} 篇文档引用").replace(
+                                "${x}",
+                                backlinkFilterPanelRenderData.backlinkDocumentCount,
+                            )}
+                    >
+                        {getBacklinkSummaryText(
+                            EnvConfig.ins.i18n,
+                            backlinkFilterPanelRenderData.backlinkDocumentCount,
+                        )}
+                    </span>
+                {/if}
             </div>
         </div>
     {/if}
     {#if panelBacklinkViewExpand && backlinkFilterPanelRenderData && isArrayNotEmpty(backlinkFilterPanelRenderData.backlinkDataArray)}
-        <div class="block__icons backlink-results-summary-row">
-            <span
-                class="fn__flex-shrink ft__selectnone b3-tooltips b3-tooltips__s backlink-results-summary-text"
-                aria-label={(EnvConfig.ins.i18n.backlinkSummaryTooltip ||
-                    "当前文档被 ${x} 篇文档引用").replace(
-                        "${x}",
-                        backlinkFilterPanelRenderData.backlinkDocumentCount,
-                    )}
-            >
-                {getBacklinkSummaryText(
-                    EnvConfig.ins.i18n,
-                    backlinkFilterPanelRenderData.backlinkDocumentCount,
-                )}
-            </span>
-        </div>
         <div class="block__icons backlink-results-global-context-row">
             <span class="backlink-context-global-label">{EnvConfig.ins.i18n.globalContextPrefix || "全局"}</span>
             <div class="backlink-context-control-row backlink-context-control-row--global">

@@ -457,3 +457,32 @@ test("navigateToOpenedDocumentBlock finds tab via window.siyuan.layout.center an
   assert.equal(scrollBlockId, "block-target-in-virtual");
 });
 
+test("updateBacklinkTargetSection immediately clears HTML when showReferencedTargetBlock changes to false and restores it when true", () => {
+  const container = {
+    innerHTML: "initial",
+    querySelectorAll() {
+      return [];
+    },
+  };
+  const documentLiElement = {
+    nextElementSibling: {
+      querySelector(selector) {
+        return selector === ".backlink-target-section-container" ? container : null;
+      },
+    },
+  };
+
+  const targetBlocks = [
+    { id: "tb-1", type: "p", content: "Target Content" },
+  ];
+
+  // 1. 关闭显示：清空 innerHTML
+  updateBacklinkTargetSection(documentLiElement, targetBlocks, false);
+  assert.equal(container.innerHTML, "");
+
+  // 2. 开启显示：恢复目标块卡片 HTML
+  updateBacklinkTargetSection(documentLiElement, targetBlocks, true);
+  assert.match(container.innerHTML, /class="backlink-target-section"/);
+  assert.match(container.innerHTML, /Target Content/);
+});
+

@@ -202,7 +202,8 @@ export function createBacklinkPanelNavigationActions({
       documentLiElement.nextElementSibling?.querySelector?.(".backlink-document-editor") ||
       state.backlinkULElement?.querySelector?.(
         `.backlink-document-editor[data-backlink-root-id="${documentId}"]`,
-      );
+      ) ||
+      documentLiElement.nextElementSibling;
     const editor = state.backlinkDocumentEditorMap?.get?.(documentId);
     const protyleContentElement =
       editor?.protyle?.contentElement || editorElement;

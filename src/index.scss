@@ -47,7 +47,10 @@ div.backlink-panel__area .hide-breadcrumb .backlink-breadcrumb-row,
 .backlink-panel-document-bottom__area .hide-breadcrumb .backlink-breadcrumb-row,
 .backlink-panel-document-bottom__area .hide-breadcrumb .protyle-breadcrumb__bar,
 .hide-breadcrumb .backlink-breadcrumb-row,
-.hide-breadcrumb .protyle-breadcrumb__bar {
+.hide-breadcrumb .protyle-breadcrumb__bar,
+div.backlink-panel__area .hide-target-block .backlink-target-section-container,
+.backlink-panel-document-bottom__area .hide-target-block .backlink-target-section-container,
+.hide-target-block .backlink-target-section-container {
     display: none !important;
 }
 

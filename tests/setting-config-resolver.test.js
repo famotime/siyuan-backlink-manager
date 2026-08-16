@@ -34,6 +34,8 @@ test("createDefaultSettingConfig includes backlink context budget defaults", () 
   const current = createDefaultSettingConfig();
 
   assert.equal(current.enableLogPrint, false);
+  assert.equal(current.showBacklinkProtyleBreadcrumb, false);
+  assert.equal(current.showReferencedTargetBlock, true);
   assert.equal(current.backlinkContextPreset, "balanced");
   assert.equal(current.backlinkContextMaxVisibleFragments, 6);
   assert.equal(current.backlinkContextMaxVisibleChars, 240);
@@ -76,4 +78,12 @@ test("resolveSettingConfig applies explicit preset defaults but preserves advanc
   assert.equal(resolved.backlinkContextMaxVisibleFragments, 4);
   assert.equal(resolved.backlinkContextMaxVisibleChars, 500);
   assert.equal(resolved.queryParentDefBlock, true);
+});
+
+test("resolveSettingConfig smoothly migrates legacy hideBacklinkProtyleBreadcrumb config", () => {
+  const resolvedFromHideTrue = resolveSettingConfig({ hideBacklinkProtyleBreadcrumb: true });
+  assert.equal(resolvedFromHideTrue.showBacklinkProtyleBreadcrumb, false);
+
+  const resolvedFromHideFalse = resolveSettingConfig({ hideBacklinkProtyleBreadcrumb: false });
+  assert.equal(resolvedFromHideFalse.showBacklinkProtyleBreadcrumb, true);
 });

@@ -31,7 +31,7 @@ const DEFAULT_SETTING_CONFIG = {
   docBottomBacklinkPanelViewExpand: true,
   pageSize: 8,
   backlinkBlockSortMethod: "modifiedDesc",
-  hideBacklinkProtyleBreadcrumb: false,
+  showBacklinkProtyleBreadcrumb: false,
   enableLogPrint: false,
   showReferencedTargetBlock: true,
   defaultExpandedListItemLevel: 0,
@@ -49,10 +49,22 @@ export function createDefaultSettingConfig() {
 export function resolveSettingConfig(persistentConfig = {}) {
   const normalizedPersistentConfig = persistentConfig || {};
   const resolvedPreset = resolveBacklinkContextPreset(normalizedPersistentConfig);
+  let showBacklinkProtyleBreadcrumb =
+    normalizedPersistentConfig.showBacklinkProtyleBreadcrumb;
+  if (
+    showBacklinkProtyleBreadcrumb === undefined &&
+    normalizedPersistentConfig.hideBacklinkProtyleBreadcrumb !== undefined
+  ) {
+    showBacklinkProtyleBreadcrumb =
+      !normalizedPersistentConfig.hideBacklinkProtyleBreadcrumb;
+  }
   return {
     ...createDefaultSettingConfig(),
     ...BACKLINK_CONTEXT_PRESET_DEFAULTS[resolvedPreset],
     ...normalizedPersistentConfig,
+    ...(showBacklinkProtyleBreadcrumb !== undefined
+      ? { showBacklinkProtyleBreadcrumb }
+      : {}),
     backlinkContextPreset: resolvedPreset,
   };
 }

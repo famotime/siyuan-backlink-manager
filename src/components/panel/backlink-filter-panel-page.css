@@ -552,7 +552,8 @@
 .backlink-panel__area .list-item__document-name.backlink-hide .backlink-context-control-row,
 .backlink-panel__area .list-item__document-name.backlink-hide .backlink-breadcrumb-row,
 .backlink-panel__area .hide-breadcrumb .backlink-breadcrumb-row,
-.backlink-panel__area .hide-breadcrumb .protyle-breadcrumb__bar {
+.backlink-panel__area .hide-breadcrumb .protyle-breadcrumb__bar,
+.backlink-panel__area .hide-target-block .backlink-target-section-container {
     display: none !important;
 }
 

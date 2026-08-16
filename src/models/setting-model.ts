@@ -23,7 +23,7 @@ export class SettingConfig {
     docBottomBacklinkPanelViewExpand: boolean;
     pageSize: number;
     backlinkBlockSortMethod: BlockSortMethod;
-    hideBacklinkProtyleBreadcrumb: boolean;
+    showBacklinkProtyleBreadcrumb: boolean;
     enableLogPrint: boolean;
     showReferencedTargetBlock: boolean;
     defaultExpandedListItemLevel: number;

@@ -16,7 +16,8 @@
     export let queryParams;
     export let backlinkFilterPanelRenderData;
     export let displayHintBacklinkBlockCacheUsage = false;
-    export let hideBacklinkProtyleBreadcrumb = false;
+    export let showBacklinkProtyleBreadcrumb = false;
+    export let showReferencedTargetBlock = true;
     export let backlinkGlobalContextVisibilityLevel = "core";
     export let backlinkULElement;
     export let resetBacklinkQueryParametersToDefault;
@@ -66,13 +67,7 @@
 </script>
 
 <div class="backlink-panel__header backlink-results-panel__header">
-    <div
-        class="panel__title backlink-panel__title block__icons"
-        on:click={() => {
-            panelBacklinkViewExpand = !panelBacklinkViewExpand;
-        }}
-        on:keydown={handleKeyDownDefault}
-    >
+    <div class="panel__title backlink-panel__title block__icons">
         <div class="block__logo fn__flex-center" style="font-weight: bold;">
             <span class="block__logoicon b3-icon--wireframe">{@html renderIcon("iconBlPanelLogo", 16)}</span>
             <span style="margin-left: 6px;">反链管家</span>
@@ -96,15 +91,6 @@
         >
             {@html renderIcon("iconResetInitialization")}
         </button>
-        {#if panelBacklinkViewExpand}
-            <span class="block__icon b3-tooltips b3-tooltips__sw" aria-label="折叠面板">
-                {@html renderIcon("iconBlChevronUp")}
-            </span>
-        {:else}
-            <span class="block__icon b3-tooltips b3-tooltips__sw" aria-label="展开面板">
-                {@html renderIcon("iconBlChevronDown")}
-            </span>
-        {/if}
     </div>
     {#if panelBacklinkViewExpand && queryParams}
         <div class="backlink-toolbar-row">
@@ -239,7 +225,7 @@
         <div class="fn__flex-1">
             <ul
                 bind:this={backlinkULElement}
-                class="b3-list b3-list--background {hideBacklinkProtyleBreadcrumb ? 'hide-breadcrumb' : ''}"
+                class="b3-list b3-list--background {!showBacklinkProtyleBreadcrumb ? 'hide-breadcrumb' : ''} {!showReferencedTargetBlock ? 'hide-target-block' : ''}"
             ></ul>
         </div>
     </div>

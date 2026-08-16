@@ -16,8 +16,8 @@ export function createBacklinkPanelInitCoordinator({
     }
 
     const settingConfig = SettingService.ins.SettingConfig;
-    state.hideBacklinkProtyleBreadcrumb =
-      settingConfig.hideBacklinkProtyleBreadcrumb;
+    state.showBacklinkProtyleBreadcrumb =
+      settingConfig?.showBacklinkProtyleBreadcrumb ?? false;
 
     state.backlinkFilterPanelBaseData = await getBacklinkPanelData({
       rootId: state.rootId,

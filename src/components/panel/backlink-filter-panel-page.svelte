@@ -31,8 +31,10 @@
     let backlinkDocumentGroupArray = [];
     let displayHintPanelBaseDataCacheUsage = false;
     let displayHintBacklinkBlockCacheUsage = false;
-    let hideBacklinkProtyleBreadcrumb =
-        SettingService.ins.SettingConfig?.hideBacklinkProtyleBreadcrumb ?? false;
+    let showBacklinkProtyleBreadcrumb =
+        SettingService.ins.SettingConfig?.showBacklinkProtyleBreadcrumb ?? false;
+    let showReferencedTargetBlock =
+        SettingService.ins.SettingConfig?.showReferencedTargetBlock !== false;
     let backlinkGlobalContextVisibilityLevel =
         backlinkDocumentViewState.globalContextVisibilityLevel;
     let unsubscribeSetting: (() => void) | null = null;
@@ -165,11 +167,17 @@
         set displayHintBacklinkBlockCacheUsage(value) {
             displayHintBacklinkBlockCacheUsage = value;
         },
-        get hideBacklinkProtyleBreadcrumb() {
-            return hideBacklinkProtyleBreadcrumb;
+        get showBacklinkProtyleBreadcrumb() {
+            return showBacklinkProtyleBreadcrumb;
         },
-        set hideBacklinkProtyleBreadcrumb(value) {
-            hideBacklinkProtyleBreadcrumb = value;
+        set showBacklinkProtyleBreadcrumb(value) {
+            showBacklinkProtyleBreadcrumb = value;
+        },
+        get showReferencedTargetBlock() {
+            return showReferencedTargetBlock;
+        },
+        set showReferencedTargetBlock(value) {
+            showReferencedTargetBlock = value;
         },
     };
 
@@ -181,12 +189,19 @@
     $: controller.updateLastCriteria();
 
     onMount(() => {
-        hideBacklinkProtyleBreadcrumb =
-            SettingService.ins.SettingConfig?.hideBacklinkProtyleBreadcrumb ?? false;
+        showBacklinkProtyleBreadcrumb =
+            SettingService.ins.SettingConfig?.showBacklinkProtyleBreadcrumb ?? false;
+        showReferencedTargetBlock =
+            SettingService.ins.SettingConfig?.showReferencedTargetBlock !== false;
         unsubscribeSetting = SettingService.ins.addListener((config) => {
-            hideBacklinkProtyleBreadcrumb =
-                config.hideBacklinkProtyleBreadcrumb ?? false;
-            state.hideBacklinkProtyleBreadcrumb = hideBacklinkProtyleBreadcrumb;
+            showBacklinkProtyleBreadcrumb =
+                config.showBacklinkProtyleBreadcrumb ?? false;
+            state.showBacklinkProtyleBreadcrumb = showBacklinkProtyleBreadcrumb;
+
+            showReferencedTargetBlock =
+                config.showReferencedTargetBlock !== false;
+            state.showReferencedTargetBlock = showReferencedTargetBlock;
+            controller.syncAllBacklinkTargetSections?.(showReferencedTargetBlock);
         });
 
         if (rootId !== previousRootId) {
@@ -216,7 +231,8 @@
         {queryParams}
         {backlinkFilterPanelRenderData}
         {displayHintBacklinkBlockCacheUsage}
-        {hideBacklinkProtyleBreadcrumb}
+        {showBacklinkProtyleBreadcrumb}
+        {showReferencedTargetBlock}
         {backlinkGlobalContextVisibilityLevel}
         resetBacklinkQueryParametersToDefault={controller.resetBacklinkQueryParametersToDefault}
         refreshBacklinkPanelToCurrentMainDocument={controller.refreshBacklinkPanelToCurrentMainDocument}

@@ -694,6 +694,34 @@ export function createBacklinkPanelController(state) {
     return panelActionHandlers.handleBacklinkKeywordInput();
   }
 
+  function syncAllBacklinkTargetSections(showReferencedTargetBlockParam) {
+    const isShow =
+      typeof showReferencedTargetBlockParam === "boolean"
+        ? showReferencedTargetBlockParam
+        : SettingService.ins.SettingConfig.showReferencedTargetBlock !== false;
+
+    if (!state.backlinkULElement || !Array.isArray(state.backlinkDocumentGroupArray)) {
+      return;
+    }
+
+    for (const documentGroup of state.backlinkDocumentGroupArray) {
+      if (!documentGroup?.documentId) continue;
+      const documentLiElement = state.backlinkULElement.querySelector(
+        `.list-item__document-name[data-node-id="${documentGroup.documentId}"]`,
+      );
+      if (documentLiElement) {
+        documentLiElement._showReferencedTargetBlock = isShow;
+        updateBacklinkTargetSection(
+          documentLiElement,
+          documentGroup.activeBacklink?.targetBlocks,
+          isShow,
+          (event, blockId, rootId, blockType) =>
+            panelOpenActions.handleTargetBlockClick(event, blockId, rootId, blockType),
+        );
+      }
+    }
+  }
+
   return {
     updateLastCriteria,
     initEvent,
@@ -718,5 +746,6 @@ export function createBacklinkPanelController(state) {
     refreshBacklinkPanelToCurrentMainDocument,
     refreshBacklinkDocumentGroupById,
     handleBacklinkKeywordInput,
+    syncAllBacklinkTargetSections,
   };
 }

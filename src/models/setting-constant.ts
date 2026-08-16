@@ -10,10 +10,10 @@ export function getSettingTabArray(): TabProperty[] {
             iconKey: "iconLink",
             props: [
                 new ItemProperty({
-                    key: "hideBacklinkProtyleBreadcrumb",
+                    key: "showBacklinkProtyleBreadcrumb",
                     type: "switch",
-                    name: "隐藏面包屑",
-                    description: "隐藏反链块上方的面包屑导航，让显示更紧凑。",
+                    name: "显示面包屑",
+                    description: "在反链块上方显示层级面包屑导航，默认关闭。",
                     tips: "",
                 }),
                 new ItemProperty({

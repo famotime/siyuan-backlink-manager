@@ -27,7 +27,7 @@ export function buildBacklinkTargetBlockItemHtml(targetBlock = {}) {
 
 export function buildBacklinkTargetSectionHtml(
   targetBlocks = [],
-  showReferencedTargetBlock = true,
+  showReferencedTargetBlock = false,
 ) {
   if (!showReferencedTargetBlock) {
     return "";
@@ -48,7 +48,7 @@ export function buildBacklinkTargetSectionHtml(
 export function updateBacklinkTargetSection(
   documentLiElement,
   targetBlocks = [],
-  showReferencedTargetBlock = true,
+  showReferencedTargetBlock = false,
   onTargetBlockClick = null,
 ) {
   if (!documentLiElement) {
@@ -450,7 +450,7 @@ export function updateBacklinkDocumentLiNavigation(
   const showReferencedTargetBlock =
     options?.showReferencedTargetBlock ??
     documentLiElement._showReferencedTargetBlock ??
-    true;
+    false;
   const onTargetBlockClick =
     options?.onTargetBlockClick ?? documentLiElement._onTargetBlockClick;
 
@@ -512,7 +512,7 @@ export function updateBacklinkDocumentLiNavigation(
 export function createBacklinkDocumentListItemElement({
   documentGroup,
   contextControlState = {},
-  showReferencedTargetBlock = true,
+  showReferencedTargetBlock = false,
   parentElement,
   documentRef = globalThis.document,
   onDocumentClick,

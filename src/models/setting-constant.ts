@@ -20,7 +20,7 @@ export function getSettingTabArray(): TabProperty[] {
                     key: "showReferencedTargetBlock",
                     type: "switch",
                     name: "显示被引用目标块",
-                    description: "在反链内容下方显示被引用的块或文档标题卡片，点击可快速跳转定位。",
+                    description: "在反链内容下方显示被引用的块或文档标题卡片，点击可快速跳转定位，默认关闭。",
                     tips: "",
                 }),
                 new ItemProperty({

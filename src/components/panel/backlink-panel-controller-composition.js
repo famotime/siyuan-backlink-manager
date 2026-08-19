@@ -49,7 +49,7 @@ export function createBacklinkPanelRenderBindings({
   stepBacklinkDocumentContext,
   navigateBacklinkBreadcrumb,
   handleTargetBlockClick,
-  showReferencedTargetBlock = () => true,
+  showReferencedTargetBlock = () => false,
 } = {}) {
   function renderBacklinkDocumentGroup(
     documentGroup,

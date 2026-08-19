@@ -33,7 +33,7 @@ const DEFAULT_SETTING_CONFIG = {
   backlinkBlockSortMethod: "modifiedDesc",
   showBacklinkProtyleBreadcrumb: false,
   enableLogPrint: false,
-  showReferencedTargetBlock: true,
+  showReferencedTargetBlock: false,
   defaultExpandedListItemLevel: 0,
   backlinkContextPreset: "balanced",
   backlinkContextMaxVisibleFragments: 6,
@@ -46,8 +46,21 @@ export function createDefaultSettingConfig() {
   return { ...DEFAULT_SETTING_CONFIG };
 }
 
+function stripUndefinedProperties(obj) {
+  if (!obj || typeof obj !== "object") {
+    return {};
+  }
+  const result = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
 export function resolveSettingConfig(persistentConfig = {}) {
-  const normalizedPersistentConfig = persistentConfig || {};
+  const normalizedPersistentConfig = stripUndefinedProperties(persistentConfig);
   const resolvedPreset = resolveBacklinkContextPreset(normalizedPersistentConfig);
   let showBacklinkProtyleBreadcrumb =
     normalizedPersistentConfig.showBacklinkProtyleBreadcrumb;

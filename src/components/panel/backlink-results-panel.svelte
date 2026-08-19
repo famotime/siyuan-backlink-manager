@@ -17,7 +17,7 @@
     export let backlinkFilterPanelRenderData;
     export let displayHintBacklinkBlockCacheUsage = false;
     export let showBacklinkProtyleBreadcrumb = false;
-    export let showReferencedTargetBlock = true;
+    export let showReferencedTargetBlock = false;
     export let backlinkGlobalContextVisibilityLevel = "core";
     export let backlinkULElement;
     export let resetBacklinkQueryParametersToDefault;
@@ -69,7 +69,7 @@
 <div class="backlink-panel__header backlink-results-panel__header">
     <div class="panel__title backlink-panel__title block__icons">
         <div class="block__logo fn__flex-center" style="font-weight: bold;">
-            <span class="block__logoicon b3-icon--wireframe">{@html renderIcon("iconBlPanelLogo", 16)}</span>
+            <span class="block__logoicon b3-icon--wireframe">{@html renderIcon("iconBacklinkPanelFilter", 16)}</span>
             <span style="margin-left: 6px;">反链管家</span>
         </div>
         <span class="fn__flex-1"></span>

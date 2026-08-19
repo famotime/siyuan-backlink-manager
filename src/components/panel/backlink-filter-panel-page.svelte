@@ -34,7 +34,7 @@
     let showBacklinkProtyleBreadcrumb =
         SettingService.ins.SettingConfig?.showBacklinkProtyleBreadcrumb ?? false;
     let showReferencedTargetBlock =
-        SettingService.ins.SettingConfig?.showReferencedTargetBlock !== false;
+        SettingService.ins.SettingConfig?.showReferencedTargetBlock ?? false;
     let backlinkGlobalContextVisibilityLevel =
         backlinkDocumentViewState.globalContextVisibilityLevel;
     let unsubscribeSetting: (() => void) | null = null;
@@ -192,14 +192,14 @@
         showBacklinkProtyleBreadcrumb =
             SettingService.ins.SettingConfig?.showBacklinkProtyleBreadcrumb ?? false;
         showReferencedTargetBlock =
-            SettingService.ins.SettingConfig?.showReferencedTargetBlock !== false;
+            SettingService.ins.SettingConfig?.showReferencedTargetBlock ?? false;
         unsubscribeSetting = SettingService.ins.addListener((config) => {
             showBacklinkProtyleBreadcrumb =
                 config.showBacklinkProtyleBreadcrumb ?? false;
             state.showBacklinkProtyleBreadcrumb = showBacklinkProtyleBreadcrumb;
 
             showReferencedTargetBlock =
-                config.showReferencedTargetBlock !== false;
+                config.showReferencedTargetBlock ?? false;
             state.showReferencedTargetBlock = showReferencedTargetBlock;
             controller.syncAllBacklinkTargetSections?.(showReferencedTargetBlock);
         });

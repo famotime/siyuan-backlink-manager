@@ -129,4 +129,6 @@
 
 让反链管理回归初心，让双链笔记最初承诺的那种自由，真正落到日常使用里。
 
-‍
+## ‍感谢
+
+本插件初始版本基于 [Misuzu2027/syplugin-backlink-panel](https://github.com/Misuzu2027/syplugin-backlink-panel) 项目改造，这也是一个很棒的反链管理增强插件，感谢原作者！

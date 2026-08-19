@@ -201,12 +201,12 @@ test("updateBacklinkTargetSection updates container and binds click listeners", 
   assert.deepEqual(clickedArgs, { blockId: "target-block-99", rootId: "root-doc-99" });
 });
 
-test("resolveSettingConfig includes showReferencedTargetBlock default true", () => {
+test("resolveSettingConfig includes showReferencedTargetBlock default false", () => {
   const config = resolveSettingConfig({});
-  assert.equal(config.showReferencedTargetBlock, true);
+  assert.equal(config.showReferencedTargetBlock, false);
 
-  const customConfig = resolveSettingConfig({ showReferencedTargetBlock: false });
-  assert.equal(customConfig.showReferencedTargetBlock, false);
+  const customConfig = resolveSettingConfig({ showReferencedTargetBlock: true });
+  assert.equal(customConfig.showReferencedTargetBlock, true);
 });
 
 import {

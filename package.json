@@ -2,7 +2,7 @@
   "name": "siyuan-backlink-manager",
   "version": "0.9.0",
   "type": "module",
-  "description": "SiYuan Note Plugin: Filterable Backlink Panel",
+  "description": "Backlink Manager",
   "repository": "https://github.com/famotime/siyuan-backlink-manager",
   "homepage": "https://github.com/famotime/siyuan-backlink-manager",
   "author": "Quincy Zou",

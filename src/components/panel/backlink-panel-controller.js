@@ -349,7 +349,7 @@ export function createBacklinkPanelController(state) {
     handleTargetBlockClick: (event, blockId, rootId, blockType) =>
       panelOpenActions.handleTargetBlockClick(event, blockId, rootId, blockType),
     showReferencedTargetBlock: () =>
-      SettingService.ins.SettingConfig.showReferencedTargetBlock !== false,
+      Boolean(SettingService.ins.SettingConfig?.showReferencedTargetBlock),
   });
 
   function renderBacklinkDocumentGroup(
@@ -698,7 +698,7 @@ export function createBacklinkPanelController(state) {
     const isShow =
       typeof showReferencedTargetBlockParam === "boolean"
         ? showReferencedTargetBlockParam
-        : SettingService.ins.SettingConfig.showReferencedTargetBlock !== false;
+        : Boolean(SettingService.ins.SettingConfig?.showReferencedTargetBlock);
 
     if (!state.backlinkULElement || !Array.isArray(state.backlinkDocumentGroupArray)) {
       return;

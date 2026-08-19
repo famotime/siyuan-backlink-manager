@@ -35,7 +35,7 @@ test("createDefaultSettingConfig includes backlink context budget defaults", () 
 
   assert.equal(current.enableLogPrint, false);
   assert.equal(current.showBacklinkProtyleBreadcrumb, false);
-  assert.equal(current.showReferencedTargetBlock, true);
+  assert.equal(current.showReferencedTargetBlock, false);
   assert.equal(current.backlinkContextPreset, "balanced");
   assert.equal(current.backlinkContextMaxVisibleFragments, 6);
   assert.equal(current.backlinkContextMaxVisibleChars, 240);
@@ -87,3 +87,16 @@ test("resolveSettingConfig smoothly migrates legacy hideBacklinkProtyleBreadcrum
   const resolvedFromHideFalse = resolveSettingConfig({ hideBacklinkProtyleBreadcrumb: false });
   assert.equal(resolvedFromHideFalse.showBacklinkProtyleBreadcrumb, true);
 });
+
+test("resolveSettingConfig ignores undefined properties and preserves default config values", () => {
+  const resolved = resolveSettingConfig({
+    showReferencedTargetBlock: undefined,
+    showBacklinkProtyleBreadcrumb: undefined,
+    pageSize: undefined,
+  });
+
+  assert.equal(resolved.showReferencedTargetBlock, false);
+  assert.equal(resolved.showBacklinkProtyleBreadcrumb, false);
+  assert.equal(resolved.pageSize, 8);
+});
+

@@ -37,12 +37,7 @@ export const CUSTOM_ICON_MAP = {
     ResetInitialization: {
         id: "iconResetInitialization",
         source: `<symbol id="iconResetInitialization" viewBox="0 0 24 24">
-<g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-<path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
-<path d="M21 3v5h-5"/>
-<path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
-<path d="M3 21v-5h5"/>
-</g>
+<path fill="currentColor" style="fill:currentColor!important;stroke:none!important;" d="M13 15.75v-1.5h4v1.5zM14.5 21v-1.25H13v-1.5h1.5V17H16v4zm2.5-1.25v-1.5h4v1.5zM18 17v-4h1.5v1.25H21v1.5h-1.5V17zm2.775-7H18.7q-.65-2.2-2.475-3.6T12 5Q9.075 5 7.037 7.038T5 12q0 1.8.813 3.3T8 17.75V15h2v6H4v-2h2.35Q4.8 17.75 3.9 15.938T3 12q0-1.875.713-3.512t1.924-2.85t2.85-1.925T12 3q3.225 0 5.663 1.988T20.775 10"/>
 </symbol>`
     },
     iconContentSort: {
@@ -62,8 +57,11 @@ export const CUSTOM_ICON_MAP = {
         id: "iconBlPanelLogo",
         source: `<symbol id="iconBlPanelLogo" viewBox="0 0 24 24">
 <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+<path d="M9 15H7a3 3 0 0 1 0-6h2"/>
+<path d="M15 9h2a3 3 0 0 1 0 6h-2"/>
+<line x1="8" y1="12" x2="16" y2="12"/>
+<polyline points="6 6 12 3 18 6"/>
+<polyline points="6 18 12 21 18 18"/>
 </g>
 </symbol>`
     },
@@ -71,8 +69,10 @@ export const CUSTOM_ICON_MAP = {
         id: "iconBlRefresh",
         source: `<symbol id="iconBlRefresh" viewBox="0 0 24 24">
 <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-<path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/>
+<path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
 <path d="M21 3v5h-5"/>
+<path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+<path d="M3 21v-5h5"/>
 </g>
 </symbol>`
     },

@@ -1,8 +1,8 @@
 {
   "name": "siyuan-backlink-manager",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "type": "module",
-  "description": "Backlink Manager",
+  "description": "渐进式展开反链上下文，让双链笔记最初承诺的那种自由，真正落到日常里。",
   "repository": "https://github.com/famotime/siyuan-backlink-manager",
   "homepage": "https://github.com/famotime/siyuan-backlink-manager",
   "author": "Quincy Zou",

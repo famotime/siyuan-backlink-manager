@@ -25,7 +25,8 @@
     "zh_CN": "渐进式展开反链上下文，让双链笔记最初承诺的那种自由，真正落到日常里。"
   },
   "readme": {
-    "default": "README.md"
+    "default": "README.md",
+    "zh_CN": "README_zh_CN.md"
   },
   "keywords": [
     "backlink",

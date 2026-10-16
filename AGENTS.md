@@ -60,3 +60,16 @@ tests/                      # 针对数据管线、上下文预算、控制器�
 - **测试规范**: 凡涉及数据转换、上下文截取、过滤规则、控制器转发或设置解析等逻辑变更，必须在 `tests/` 中编写或更新 `node:test` 测试用例。
 - **日志规范**: 统一使用 `src/utils/logger.ts` 输出调试信息，严禁直接滥用 `console.log`，受插件设置中的日志开关管控。
 - **元数据同步**: 变更可见文案或功能时，同步维护 `public/i18n/` 和 `plugin.json`。
+
+## Reference Projects
+
+重要：在涉及解析思源笔记文档块结构和内容、确认API时，务必查看developer_docs目录下开发者文档 和 siyuan-note 项目源码确认，不要凭猜测开发和测试。
+
+路径按开发机器取用其一（两套路径指向同一批参考工程，不同机器布局不同）：
+
+- siyuan-note（思源笔记源码项目）
+  - Windows 开发机：`D:\MyCodingProjects\siyuan-note`
+  - Linux 开发机：`/home/quincyzou/projects/siyuan-note`
+- `developer_docs/`：思源笔记插件开发者文档
+  - 仓库根目录，并已列入 `.gitignore`（仅本机参考，不入库、不推送）。
+- 核对内核行为时以 siyuan-note 的 Go 源码为准（`kernel/server/serve.go`、`kernel/model/assets.go`），`app/src` 为前端实现参考；developer_docs 未覆盖的细节不要凭猜测推断。

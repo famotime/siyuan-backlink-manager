@@ -2,7 +2,6 @@
 .vscode
 .DS_Store
 .env
-pnpm-lock.yaml
 package-lock.json
 node_modules
 dev
@@ -11,3 +10,6 @@ build
 tmp
 /docs/superpowers/
 developer_docs/
+
+*.zip
+package.zip

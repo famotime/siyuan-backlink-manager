@@ -10,8 +10,17 @@
   "scripts": {
     "make-link": "node  --no-warnings ./scripts/make_dev_link.js",
     "dev": "vite build --watch",
-    "build": "vite build",
-    "make-install": "vite build && node --no-warnings ./scripts/make_install.js"
+    "build": "vite build && node ./scripts/verify-package.mjs",
+    "make-install": "vite build && node --no-warnings ./scripts/make_install.js",
+    "release": "node ./release.js",
+    "release:changelog": "node ./release.js --mode=changelog",
+    "release:manual": "node ./release.js --mode=manual",
+    "release:patch": "node ./release.js --mode=patch",
+    "release:minor": "node ./release.js --mode=minor",
+    "release:major": "node ./release.js --mode=major",
+    "verify:package": "node ./scripts/verify-package.mjs",
+    "changelog:extract": "node ./scripts/extract-changelog.mjs",
+    "preinstall": "npx --yes only-allow pnpm"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^3.0.0",
@@ -29,6 +38,8 @@
     "typescript": "^5.1.3",
     "vite": "^5.0.0",
     "vite-plugin-static-copy": "^1.0.2",
-    "vite-plugin-zip-pack": "^1.0.5"
-  }
+    "vite-plugin-zip-pack": "^1.0.5",
+    "jszip": "^3.10.1"
+  },
+  "packageManager": "pnpm@10.18.3"
 }

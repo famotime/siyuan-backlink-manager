@@ -210,10 +210,10 @@ test("resolveSettingConfig includes showReferencedTargetBlock default false", ()
 });
 
 import {
-  findOpenedDocumentEditorElement,
   activateOpenedDocumentTab,
+  findOpenedDocumentEditorElement,
   navigateToOpenedDocumentBlock,
-} from "../src/components/panel/backlink-document-open-target.js";
+} from "../src/components/panel/backlink-opened-document.js";
 import { createBacklinkPanelOpenActions } from "../src/components/panel/backlink-panel-controller-open-actions.js";
 
 test("findOpenedDocumentEditorElement finds open editor and ignores backlink panel preview protyles", () => {

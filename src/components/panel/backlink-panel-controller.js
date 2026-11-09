@@ -44,10 +44,10 @@ import {
   getBacklinkDocumentWndElementFromProtyle,
   getBacklinkDocumentWndElementFromTarget,
   mergeBacklinkDocumentOpenTargetIntoTabOptions,
-  navigateToOpenedDocumentBlock,
   resolveBacklinkDocumentCtrlLeftClickOpenAreaFromCache,
   resolveBacklinkDocumentOpenArea,
 } from "./backlink-document-open-target.js";
+import { navigateToOpenedDocumentBlock } from "./backlink-opened-document.js";
 import {
   createBacklinkDocumentListItemElement,
   updateBacklinkDocumentLiNavigation,
@@ -59,10 +59,12 @@ import {
   expandBacklinkHeadingMore,
   expandListItemNodeByDepth,
   foldListItemNodeByIdSet,
-  hideBlocksOutsideBacklinkSourceWindow,
-  hideOtherListItemElement,
   navigateToBacklinkBreadcrumbBlock,
 } from "./backlink-protyle-dom.js";
+import {
+  hideBlocksOutsideBacklinkSourceWindow,
+  hideOtherListItemElement,
+} from "./backlink-protyle-visibility.js";
 import {
   applyCreatedBacklinkProtyleState,
   batchRenderBacklinkDocumentGroups,

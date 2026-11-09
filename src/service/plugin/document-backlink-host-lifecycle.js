@@ -1,5 +1,5 @@
 export function mountOrUpdateDocumentBottomBacklinkHost({
-  docuemntContentElement,
+  documentContentElement,
   rootId,
   focusBlockId = null,
   panelBacklinkViewExpand = true,
@@ -8,11 +8,11 @@ export function mountOrUpdateDocumentBottomBacklinkHost({
   destroyExistingHost,
   mountNewHost,
 } = {}) {
-  if (!docuemntContentElement || !rootId) {
+  if (!documentContentElement || !rootId) {
     return;
   }
 
-  const backlinkPanelBottomElement = docuemntContentElement.querySelector(
+  const backlinkPanelBottomElement = documentContentElement.querySelector(
     ".backlink-panel-document-bottom__area",
   );
   if (backlinkPanelBottomElement) {
@@ -33,10 +33,10 @@ export function mountOrUpdateDocumentBottomBacklinkHost({
       };
     }
 
-    destroyExistingHost?.(docuemntContentElement);
+    destroyExistingHost?.(documentContentElement);
   }
 
-  mountNewHost?.(docuemntContentElement, rootId, focusBlockId);
+  mountNewHost?.(documentContentElement, rootId, focusBlockId);
   return {
     action: "mount",
     panelElement: null,

@@ -284,7 +284,6 @@ export async function getBlockIsFolded(id: string): Promise<boolean> {
     } else {
         result = response.isFolded;
     }
-    // console.log(`getBlockIsFolded response : ${JSON.stringify(response)}, result : ${result} `)
     return result;
 };
 

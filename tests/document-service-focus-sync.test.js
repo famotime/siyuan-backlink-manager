@@ -11,7 +11,7 @@ test("DocumentService forwards the current protyle focus block id into bottom pa
   assert.match(source, /let focusBlockId = getBacklinkPanelPageFocusBlockId\(e\.detail\.protyle\);/);
   assert.match(
     source,
-    /await refreshBacklinkPanelToBottom\(docuemntContentElement, rootId, focusBlockId\);/,
+    /await refreshBacklinkPanelToBottom\(documentContentElement, rootId, focusBlockId\);/,
   );
 });
 

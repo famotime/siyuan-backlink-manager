@@ -107,6 +107,73 @@ function logBacklinkDebug(...args: any[]) {
     logInfo(...args);
 }
 
+/**
+ * 组装 fetch 阶段（反链文档批量拉取 + 源窗口加载/挂载）的共享依赖装配。
+ * 首次渲染（getBacklinkPanelRenderData）与翻页（getTurnPageBacklinkPanelRenderData）
+ * 复用同一份装配，避免两处闭包各自演化导致行为漂移。
+ */
+function createBacklinkFetchStageDeps(
+    rootId: string,
+    validBacklinkBlockNodeArray: IBacklinkBlockNode[],
+) {
+    return {
+        getBatchBacklinkDoc: () => getBatchBacklinkDoc({
+            curRootId: rootId,
+            backlinkBlockNodeArray: validBacklinkBlockNodeArray,
+            deps: {
+                intersectionSet,
+                getBacklinkDocByApiOrCache: (currentRootId, defId, refTreeId, keyword, containChildren) =>
+                    getBacklinkDocByApiOrCache(
+                        currentRootId,
+                        defId,
+                        refTreeId,
+                        keyword,
+                        containChildren,
+                        { CacheManager, SettingService, getBacklinkDoc },
+                    ),
+                getBacklinkBlockId: (dom) =>
+                    getBacklinkBlockId(dom, {
+                        isStrBlank,
+                        stringToDom,
+                        NewNodeID,
+                    }),
+                extractTargetBacklinkDom: (dom, blockId) => {
+                    const rootElement = stringToDom(dom);
+                    if (!rootElement || !blockId) {
+                        return "";
+                    }
+                    const targetElement = rootElement.matches?.(`[data-node-id="${blockId}"]`)
+                        ? rootElement
+                        : rootElement.querySelector?.(`[data-node-id="${blockId}"]`);
+                    return targetElement?.outerHTML || "";
+                },
+                longestCommonSubstring,
+                triggerIncompleteBacklinkFetch: (currentRootId, sourceNodes, backlinks) => {
+                    logBacklinkDebug("反链管家插件 疑似 getBacklinkDoc 接口数据不全，如果清除缓存刷新后还是不全，请反馈开发者。 ");
+                    logBacklinkDebug("backlinkBlockNodeArray ", sourceNodes, " ,backlinkDcoDataResult ", backlinks);
+                    getBacklink2(currentRootId, "", "", "3", "3");
+                },
+            },
+        }),
+        loadOrderedBacklinkSourceWindowBlocks: (backlinkDataArrayArg) => loadOrderedBacklinkSourceWindowBlocks({
+            backlinkDataArray: backlinkDataArrayArg,
+            deps: {
+                queryDocumentBlocksByRootIds: async (rootIdArray) => {
+                    const blockSql = generateBacklinkSourceWindowBlockArraySql(rootIdArray);
+                    if (isStrBlank(blockSql)) {
+                        return [];
+                    }
+                    return sql(blockSql);
+                },
+                getBlockIndexMap: getBatchBlockIdIndex,
+                getChildBlocks,
+                getBlockKramdown,
+            },
+        }),
+        attachBacklinkSourceWindows,
+    };
+}
+
 export async function getBacklinkPanelRenderData(
     backlinkPanelData: IBacklinkFilterPanelData,
     queryParams: IPanelRenderBacklinkQueryParams,
@@ -158,62 +225,7 @@ export async function getBacklinkPanelRenderData(
     const fetchStageResult = await buildBacklinkFetchStageResult({
         rootId,
         pageBacklinkBlockArray: validBacklinkBlockNodeArray,
-        deps: {
-            getBatchBacklinkDoc: () => getBatchBacklinkDoc({
-                curRootId: rootId,
-                backlinkBlockNodeArray: validBacklinkBlockNodeArray,
-                deps: {
-                    intersectionSet,
-                    getBacklinkDocByApiOrCache: (currentRootId, defId, refTreeId, keyword, containChildren) =>
-                        getBacklinkDocByApiOrCache(
-                            currentRootId,
-                            defId,
-                            refTreeId,
-                            keyword,
-                            containChildren,
-                            { CacheManager, SettingService, getBacklinkDoc },
-                        ),
-                    getBacklinkBlockId: (dom) =>
-                        getBacklinkBlockId(dom, {
-                            isStrBlank,
-                            stringToDom,
-                            NewNodeID,
-                        }),
-                    extractTargetBacklinkDom: (dom, blockId) => {
-                        const rootElement = stringToDom(dom);
-                        if (!rootElement || !blockId) {
-                            return "";
-                        }
-                        const targetElement = rootElement.matches?.(`[data-node-id="${blockId}"]`)
-                            ? rootElement
-                            : rootElement.querySelector?.(`[data-node-id="${blockId}"]`);
-                        return targetElement?.outerHTML || "";
-                    },
-                    longestCommonSubstring,
-                    triggerIncompleteBacklinkFetch: (currentRootId, sourceNodes, backlinks) => {
-                        logBacklinkDebug("反链管家插件 疑似 getBacklinkDoc 接口数据不全，如果清除缓存刷新后还是不全，请反馈开发者。 ");
-                        logBacklinkDebug("backlinkBlockNodeArray ", sourceNodes, " ,backlinkDcoDataResult ", backlinks);
-                        getBacklink2(currentRootId, "", "", "3", "3");
-                    },
-                },
-            }),
-            loadOrderedBacklinkSourceWindowBlocks: (backlinkDataArrayArg) => loadOrderedBacklinkSourceWindowBlocks({
-                backlinkDataArray: backlinkDataArrayArg,
-                deps: {
-                    queryDocumentBlocksByRootIds: async (rootIdArray) => {
-                        const blockSql = generateBacklinkSourceWindowBlockArraySql(rootIdArray);
-                        if (isStrBlank(blockSql)) {
-                            return [];
-                        }
-                        return sql(blockSql);
-                    },
-                    getBlockIndexMap: getBatchBlockIdIndex,
-                    getChildBlocks,
-                    getBlockKramdown,
-                },
-            }),
-            attachBacklinkSourceWindows,
-        },
+        deps: createBacklinkFetchStageDeps(rootId, validBacklinkBlockNodeArray),
     });
     const backlinkDataArray = fetchStageResult.backlinkDataArray;
     const usedCache = fetchStageResult.usedCache;
@@ -260,63 +272,7 @@ export async function getTurnPageBacklinkPanelRenderData(
     const fetchStageResult = await buildBacklinkFetchStageResult({
         rootId,
         pageBacklinkBlockArray: validBacklinkBlockNodeArray,
-        deps: {
-            getBatchBacklinkDoc: () => getBatchBacklinkDoc({
-                curRootId: rootId,
-                backlinkBlockNodeArray: validBacklinkBlockNodeArray,
-                deps: {
-                    intersectionSet,
-                    getBacklinkDocByApiOrCache: (currentRootId, defId, refTreeId, keyword, containChildren) =>
-                        getBacklinkDocByApiOrCache(
-                            currentRootId,
-                            defId,
-                            refTreeId,
-                            keyword,
-                            containChildren,
-                            { CacheManager, SettingService, getBacklinkDoc },
-                        ),
-                    getBacklinkBlockId: (dom) =>
-                        getBacklinkBlockId(dom, {
-                            isStrBlank,
-                            stringToDom,
-                            NewNodeID,
-                        }),
-                    extractTargetBacklinkDom: (dom, blockId) => {
-                        const rootElement = stringToDom(dom);
-                        if (!rootElement || !blockId) {
-                            return "";
-                        }
-                        const targetElement = rootElement.matches?.(`[data-node-id="${blockId}"]`)
-                            ? rootElement
-                            : rootElement.querySelector?.(`[data-node-id="${blockId}"]`);
-                        return targetElement?.outerHTML || "";
-                    },
-                    longestCommonSubstring,
-                    triggerIncompleteBacklinkFetch: (currentRootId, sourceNodes, backlinks) => {
-                        logBacklinkDebug("反链管家插件 疑似 getBacklinkDoc 接口数据不全，如果清除缓存刷新后还是不全，请反馈开发者。 ");
-                        logBacklinkDebug("backlinkBlockNodeArray ", sourceNodes, " ,backlinkDcoDataResult ", backlinks);
-                        getBacklink2(currentRootId, "", "", "3", "3");
-                    },
-                },
-            }),
-            loadOrderedBacklinkSourceWindowBlocks: (backlinkDataArrayArg) =>
-                loadOrderedBacklinkSourceWindowBlocks({
-                    backlinkDataArray: backlinkDataArrayArg,
-                    deps: {
-                        queryDocumentBlocksByRootIds: async (rootIdArray) => {
-                            const blockSql = generateBacklinkSourceWindowBlockArraySql(rootIdArray);
-                            if (isStrBlank(blockSql)) {
-                                return [];
-                            }
-                            return sql(blockSql);
-                        },
-                        getBlockIndexMap: getBatchBlockIdIndex,
-                        getChildBlocks,
-                        getBlockKramdown,
-                    },
-                }),
-            attachBacklinkSourceWindows,
-        },
+        deps: createBacklinkFetchStageDeps(rootId, validBacklinkBlockNodeArray),
     });
     const backlinkDataArray = fetchStageResult.backlinkDataArray;
     const usedCache = fetchStageResult.usedCache;

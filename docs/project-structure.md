@@ -7,7 +7,7 @@
 - plugin tab
 - dock panel
 
-After the refactor on 2026-03-14, the codebase is organized around four layers:
+After the refactors on 2026-03-14 and 2026-11-09, the codebase is organized around four layers:
 - plugin bootstrap and host integration
 - backlink panel UI and UI helpers
 - backlink data assembly and filtering helpers
@@ -56,7 +56,13 @@ docs/                              Product and maintenance docs
 - `src/components/panel/backlink-document-navigation.js`
   Grouping backlinks by document and cyclic in-document navigation.
 - `src/components/panel/backlink-document-row.js`
-  Backlink document-row HTML, navigation state refresh, and DOM event wiring helpers.
+  Backlink document-row HTML (target section, context control row, navigation state refresh, and DOM event wiring helpers). Breadcrumb construction was extracted to `backlink-breadcrumb.js`.
+- `src/components/panel/backlink-breadcrumb.js`
+  Breadcrumb subdomain: builds heading-level breadcrumb items from backlink `blockPaths`, collapses long trails, and renders breadcrumb HTML. One-way dependency from `backlink-document-row.js`.
+- `src/components/panel/backlink-document-open-target.js`
+  Open-area decision helpers: window/tab layout resolution, pre-click open-area resolution, and main-area tab activation.
+- `src/components/panel/backlink-opened-document.js`
+  Opened-document subdomain: locates already-opened editors via the layout model tree with DOM fallback, activates their tabs, and navigates to blocks without reopening tabs.
 - `src/components/panel/backlink-panel-query-params.js`
   Filter-query reset, include/exclude toggling, and saved-criteria restore helpers extracted from the Svelte component.
 - `src/components/panel/backlink-panel-controller.js`
@@ -68,7 +74,9 @@ docs/                              Product and maintenance docs
 - `src/components/panel/backlink-panel-formatting.js`
   Highlight keyword sanitization and aria-label formatting helpers.
 - `src/components/panel/backlink-protyle-dom.js`
-  DOM-level list folding, heading expansion, Protyle state capture, and list-item visibility helpers.
+  DOM-level breadcrumb navigation, list folding/expansion by depth or id set, and Protyle state capture. Source-window visibility trimming was extracted to `backlink-protyle-visibility.js`.
+- `src/components/panel/backlink-protyle-visibility.js`
+  Source-window visibility subdomain: hides blocks outside the active context window, unfolds ancestors of visible blocks, and trims include/exclude list-item children.
 - `src/components/panel/backlink-protyle-rendering.js`
   Protyle render orchestration helpers for state sync, grouped document rendering, and post-create DOM application.
 - `src/components/panel/backlink-filter-panel-page.css`
@@ -77,7 +85,7 @@ docs/                              Product and maintenance docs
 ### Backlink Data Layer
 
 - `src/service/backlink/backlink-data.ts`
-  Main orchestration entry for backlink panel data and render data, now reduced below 500 lines and focused on public orchestration only.
+  Main orchestration entry for backlink panel data and render data, now reduced below 500 lines and focused on public orchestration only. The fetch-stage dependency wiring is shared by the first-render and turn-page paths via `createBacklinkFetchStageDeps`.
 - `src/service/backlink/backlink-def-blocks.js`
   Definition-block sorting and filter-state helpers used by the panel filter UI.
 - `src/service/backlink/backlink-document-pagination.js`
@@ -102,7 +110,9 @@ docs/                              Product and maintenance docs
 ### Plugin Hosts
 
 - `src/service/plugin/DocumentService.ts`
-  Mounts and destroys the document-bottom panel.
+  Mounts and destroys the document-bottom panel, and delegates editor-title-icon menu handling to `document-title-icon-menus.js`.
+- `src/service/plugin/document-title-icon-menus.js`
+  Editor-title-icon menu subdomain: registers the "Backlink Manager" submenu (reset / always-show / always-hide per-document bottom panel) with host-injected refresh and destroy actions.
 - `src/service/plugin/TabService.ts`
   Opens the backlink panel in a plugin tab.
 - `src/service/plugin/DockServices.ts`
@@ -111,6 +121,15 @@ docs/                              Product and maintenance docs
   Shared host helper for panel props, scroll cleanup, and panel teardown.
 - `src/service/plugin/TopBarService.ts`
   Top-bar entry for opening the backlink panel tab.
+
+### Models
+
+- `src/models/backlink-model.ts`
+  Type definitions for backlink panel data and query params. Behavior-bearing classes were extracted to dedicated files and re-exported here so legacy import paths keep working.
+- `src/models/list-item-tree-node.ts`
+  `ListItemTreeNode`: rebuilds list-item hierarchy from `parentIdPath`, resolves ref-block ids per node, and supports keyword matching plus include/exclude id propagation.
+- `src/models/backlink-panel-filter-criteria.ts`
+  `BacklinkPanelFilterCriteria`: persisted filter query params plus filter-view expand state.
 
 ### Settings
 
@@ -131,18 +150,23 @@ Current automated tests are in `tests/` and cover:
 - panel controller-adjacent query-param helpers
 - panel header formatting/state helpers
 - document view state helpers
-- document row helpers
-- Protyle DOM helpers
+- document row helpers and breadcrumb construction
+- Protyle DOM helpers and source-window visibility trimming
 - Protyle rendering helpers
+- opened-document lookup, tab activation, and block navigation
+- list-item tree node building, keyword matching, and include/exclude propagation
 - backlink filtering helpers
 - backlink markdown parsing helpers
 - backlink panel base-data builder helpers
 - backlink panel data collector helpers
 - backlink panel data assembly helpers
+- backlink data pipeline and fetch-stage dependency wiring guards
 - backlink query-loader helpers
 - backlink render-data helpers
 - panel host lifecycle helpers
 - panel query-parameter helpers
+- editor-title-icon menu handlers
+- document-bottom host lifecycle and focus-sync guards
 - setting config resolution helpers
 
 Run the suite with:
@@ -154,4 +178,5 @@ node --test tests/*.test.js
 ## Notes
 
 - `README.md` and this document were added during the refactor workflow on 2026-03-14.
+- The 2026-11-09 refactor extracted `backlink-protyle-visibility.js`, `backlink-breadcrumb.js`, `backlink-opened-document.js`, `list-item-tree-node.ts`, `backlink-panel-filter-criteria.ts`, and `document-title-icon-menus.js` from their larger host modules; deduplicated the fetch-stage dependency wiring in `backlink-data.ts`; fixed internal misspellings in `DocumentService.ts`; and removed dead code (empty `BacklinkService.ts`, commented `console.log` lines). See `docs/refactor-plan.md` for the full log.
 - The build currently succeeds, with only the upstream Dart Sass legacy API deprecation warning remaining.

@@ -39,6 +39,10 @@ test("production panel consumers read source window semantics through getters in
     new URL("../src/components/panel/backlink-protyle-dom.js", import.meta.url),
     "utf8",
   );
+  const visibilityModule = readFileSync(
+    new URL("../src/components/panel/backlink-protyle-visibility.js", import.meta.url),
+    "utf8",
+  );
   const navigationModule = readFileSync(
     new URL("../src/components/panel/backlink-document-navigation.js", import.meta.url),
     "utf8",
@@ -48,7 +52,9 @@ test("production panel consumers read source window semantics through getters in
   assert.match(interactionModule, /getBacklinkSourceWindowBodyRange/);
   assert.doesNotMatch(interactionModule, /sourceWindow\.(rootId|anchorBlockId|focusBlockId|startBlockId|endBlockId)\b/);
 
-  assert.match(domModule, /getBacklinkSourceWindowBodyRange/);
+  // 源窗口语义的读取方已随可见性裁剪子域迁移至 backlink-protyle-visibility.js，守护断言同步指向新模块
+  assert.match(visibilityModule, /getBacklinkSourceWindowBodyRange/);
+  assert.doesNotMatch(visibilityModule, /sourceWindow\.(windowBlockIds|visibleBlockIds|orderedVisibleBlockIds|collapsedBlockIds)\b/);
   assert.doesNotMatch(domModule, /sourceWindow\.(windowBlockIds|visibleBlockIds|orderedVisibleBlockIds|collapsedBlockIds)\b/);
 
   assert.match(navigationModule, /getBacklinkDataSourceDocumentOrder/);

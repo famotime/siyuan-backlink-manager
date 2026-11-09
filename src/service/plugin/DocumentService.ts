@@ -2,8 +2,6 @@ import { EnvConfig } from "@/config/EnvConfig";
 import BacklinkFilterPanelPageSvelte from "@/components/panel/backlink-filter-panel-page.svelte";
 import { SettingService } from "@/service/setting/SettingService";
 import Instance from "@/utils/Instance";
-import { Menu } from "siyuan";
-import { CUSTOM_ICON_MAP } from "@/models/icon-constant";
 import { BacklinkFilterPanelAttributeService, DOCUMENT_BOTTOM_SHOW_BACKLINK_FILTER_PANEL_ATTRIBUTE_KEY } from "@/service/setting/BacklinkPanelFilterCriteriaService";
 import { clearProtyleGutters, hasClosestByClassName, hasClosestById } from "@/utils/html-util";
 import { generateGetDocHasBacklinksSql } from "../backlink/backlink-sql";
@@ -19,11 +17,22 @@ import {
 } from "./backlink-panel-host.js";
 import { mountOrUpdateDocumentBottomBacklinkHost } from "./document-backlink-host-lifecycle.js";
 import { shouldIgnoreDocumentBottomBacklinkForProtyle } from "./document-protyle-guard.js";
+import { createDocumentTitleIconMenuHandlers } from "./document-title-icon-menus.js";
 
 
 let backlinkPanelPageSvelteMap: Map<string, BacklinkFilterPanelPageSvelte> = new Map();
 let backlinkPanelScrollCleanupMap: Map<string, () => void> = new Map();
 let documentProtyleElementMap: Map<string, HTMLElement> = new Map();
+
+// 标题图标菜单处理器：面板刷新/销毁与设置读取通过依赖注入接入
+const titleIconMenuHandlers = createDocumentTitleIconMenuHandlers({
+    updateDocumentBottomShowPanel: (rootId, value) =>
+        BacklinkFilterPanelAttributeService.ins.updateDocumentBottomShowPanel(rootId, value),
+    isDocumentBottomDisplayEnabled: () => SettingService.ins.SettingConfig.documentBottomDisplay,
+    refreshBacklinkPanelToBottom,
+    handleDestroyProtyle,
+    destroyPanel,
+});
 
 
 export class DocumentService {
@@ -34,12 +43,10 @@ export class DocumentService {
 
     public init() {
         EnvConfig.ins.plugin.eventBus.on("loaded-protyle-static", (e: any) => {
-            // console.log("loaded-protyle-static e : ", e)
             handleSwitchProtyleOrLoadedProtyleStatic(e);
         });
 
         EnvConfig.ins.plugin.eventBus.on("switch-protyle", (e: any) => {
-            // console.log("switch-protyle e : ", e)
             handleSwitchProtyleOrLoadedProtyleStatic(e);
         });
 
@@ -48,23 +55,22 @@ export class DocumentService {
         });
 
         EnvConfig.ins.plugin.eventBus.on("click-editortitleicon", (e: any) => {
-            hadnleClickEditorTitleIcon(e);
+            titleIconMenuHandlers.handleClickEditorTitleIcon(e);
         });
         // EnvConfig.ins.plugin.addCommand({
         //     langKey: "showDocumentBottomBacklinkPanel",
         //     langText: "始终显示底部反链面板",
         //     hotkey: "⌥⇧⌘A",
         //     editorCallback: (protyle: any) => {
-        //         console.log(protyle, "editorCallback");
         //     },
         // });
 
         intervalSetNodePaddingBottom();
     }
 
-    public destory() {
+    public destroy() {
         destroyAllPanel();
-        destoryIntervalSetNodePaddingBottom();
+        destroyIntervalSetNodePaddingBottom();
     }
 }
 
@@ -73,8 +79,8 @@ async function handleSwitchProtyleOrLoadedProtyleStatic(e) {
         return;
     }
 
-    let docuemntContentElement = e.detail.protyle.contentElement as HTMLElement;
-    if (shouldIgnoreDocumentBottomBacklinkForProtyle(docuemntContentElement, {
+    let documentContentElement = e.detail.protyle.contentElement as HTMLElement;
+    if (shouldIgnoreDocumentBottomBacklinkForProtyle(documentContentElement, {
         hasClosestByClassName,
     })) {
         return;
@@ -84,7 +90,7 @@ async function handleSwitchProtyleOrLoadedProtyleStatic(e) {
     if (!rootId) {
         return;
     }
-    await refreshBacklinkPanelToBottom(docuemntContentElement, rootId, focusBlockId);
+    await refreshBacklinkPanelToBottom(documentContentElement, rootId, focusBlockId);
 
 }
 
@@ -92,22 +98,22 @@ function handleDestroyProtyle(e) {
     // let rootId = e.detail.protyle.block.rootID;
     // documentProtyleElementMap.delete(rootId);
 
-    let docuemntContentElement = e.detail.protyle.contentElement as HTMLElement;
-    if (!docuemntContentElement) {
+    let documentContentElement = e.detail.protyle.contentElement as HTMLElement;
+    if (!documentContentElement) {
         return;
 
     }
-    destroyPanel(docuemntContentElement);
+    destroyPanel(documentContentElement);
 }
 
-async function getDocumentBottomBacklinkPanelDisplay(docuemntContentElement: HTMLElement, rootId: string) {
-    if (shouldIgnoreDocumentBottomBacklinkForProtyle(docuemntContentElement, {
+async function getDocumentBottomBacklinkPanelDisplay(documentContentElement: HTMLElement, rootId: string) {
+    if (shouldIgnoreDocumentBottomBacklinkForProtyle(documentContentElement, {
         hasClosestByClassName,
     })) {
         return false;
     }
     // 如果是闪卡界面，不显示底部反链面板
-    let isCardBlock = hasClosestByClassName(docuemntContentElement, "card__block")
+    let isCardBlock = hasClosestByClassName(documentContentElement, "card__block")
     if (isCardBlock) {
         let flashCardBottomDisplay = SettingService.ins.SettingConfig.flashCardBottomDisplay;
         if (!flashCardBottomDisplay) {
@@ -115,10 +121,10 @@ async function getDocumentBottomBacklinkPanelDisplay(docuemntContentElement: HTM
         }
     }
     // 必须是页签文档或悬浮窗才可以通过。防止 Dock 栏的插件渲染 protyle 加载反链。
-    let isLayoutCenter = hasClosestByClassName(docuemntContentElement, "layout__center");
-    let isPopoverBlock = hasClosestByClassName(docuemntContentElement, "block__popover");
+    let isLayoutCenter = hasClosestByClassName(documentContentElement, "layout__center");
+    let isPopoverBlock = hasClosestByClassName(documentContentElement, "block__popover");
     // 搜索弹窗的预览也显示底部反链面板，fn__flex-1 search__preview protyle
-    let isSearchDialog = hasClosestById(docuemntContentElement, "searchPreview");
+    let isSearchDialog = hasClosestById(documentContentElement, "searchPreview");
     if (!isLayoutCenter && !isPopoverBlock && !isSearchDialog) {
         return false;
     }
@@ -133,10 +139,10 @@ async function getDocumentBottomBacklinkPanelDisplay(docuemntContentElement: HTM
         }
     }
     let docProtyleElement = null;
-    if (docuemntContentElement.matches(".protyle-wysiwyg--attr")) {
-        docProtyleElement = docuemntContentElement;
+    if (documentContentElement.matches(".protyle-wysiwyg--attr")) {
+        docProtyleElement = documentContentElement;
     } else {
-        docProtyleElement = docuemntContentElement.querySelector(`div.protyle-wysiwyg--attr[${DOCUMENT_BOTTOM_SHOW_BACKLINK_FILTER_PANEL_ATTRIBUTE_KEY}]`);
+        docProtyleElement = documentContentElement.querySelector(`div.protyle-wysiwyg--attr[${DOCUMENT_BOTTOM_SHOW_BACKLINK_FILTER_PANEL_ATTRIBUTE_KEY}]`);
     }
 
     if (docProtyleElement) {
@@ -152,28 +158,28 @@ async function getDocumentBottomBacklinkPanelDisplay(docuemntContentElement: HTM
 }
 
 
-async function refreshBacklinkPanelToBottom(docuemntContentElement: HTMLElement, rootId: string, focusBlockId: string) {
-    if (!docuemntContentElement || !rootId) {
+async function refreshBacklinkPanelToBottom(documentContentElement: HTMLElement, rootId: string, focusBlockId: string) {
+    if (!documentContentElement || !rootId) {
         return;
     }
-    let bottomDisplay = await getDocumentBottomBacklinkPanelDisplay(docuemntContentElement, rootId);
+    let bottomDisplay = await getDocumentBottomBacklinkPanelDisplay(documentContentElement, rootId);
     // 如果该文档不需要显示，则尝试删除该元素内部可能存在的底部反链。
     if (!bottomDisplay) {
-        destroyPanel(docuemntContentElement);
+        destroyPanel(documentContentElement);
         return;
     } else {
-        addBacklinkPanelToBottom(docuemntContentElement, rootId, focusBlockId);
+        addBacklinkPanelToBottom(documentContentElement, rootId, focusBlockId);
     }
 }
 
-async function addBacklinkPanelToBottom(docuemntContentElement: HTMLElement, rootId: string, focusBlockId: string) {
-    if (!docuemntContentElement || !rootId) {
+async function addBacklinkPanelToBottom(documentContentElement: HTMLElement, rootId: string, focusBlockId: string) {
+    if (!documentContentElement || !rootId) {
         return;
     }
     const panelBacklinkViewExpand =
         SettingService.ins.SettingConfig.docBottomBacklinkPanelViewExpand;
     const hostResult = mountOrUpdateDocumentBottomBacklinkHost({
-        docuemntContentElement,
+        documentContentElement,
         rootId,
         focusBlockId,
         panelBacklinkViewExpand,
@@ -187,8 +193,8 @@ async function addBacklinkPanelToBottom(docuemntContentElement: HTMLElement, roo
     }
 }
 
-function createDocumentBottomBacklinkHost(docuemntContentElement: HTMLElement, rootId: string, focusBlockId: string) {
-    const protyleWysiwygElement = docuemntContentElement.querySelector(".protyle-wysiwyg.protyle-wysiwyg--attr");
+function createDocumentBottomBacklinkHost(documentContentElement: HTMLElement, rootId: string, focusBlockId: string) {
+    const protyleWysiwygElement = documentContentElement.querySelector(".protyle-wysiwyg.protyle-wysiwyg--attr");
     const backlinkPanelBottomElement = document.createElement("div");
     backlinkPanelBottomElement.classList.add(
         "backlink-panel-document-bottom__area"
@@ -199,8 +205,7 @@ function createDocumentBottomBacklinkHost(docuemntContentElement: HTMLElement, r
         backlinkPanelBottomElement.classList.add("document-panel-plugin-mobile");
     }
 
-    // console.log("handleDestroyProtyle setAttribute rootId ", rootId)
-    docuemntContentElement.appendChild(backlinkPanelBottomElement);
+    documentContentElement.appendChild(backlinkPanelBottomElement);
     let panelId = NewNodeID();
     backlinkPanelBottomElement.setAttribute("data-root-id", rootId);
     backlinkPanelBottomElement.setAttribute("misuzu-backlink-panel-id", panelId)
@@ -250,11 +255,11 @@ function createDocumentBottomBacklinkHost(docuemntContentElement: HTMLElement, r
 }
 
 
-function destroyPanel(docuemntContentElement: HTMLElement) {
-    if (!docuemntContentElement) {
+function destroyPanel(documentContentElement: HTMLElement) {
+    if (!documentContentElement) {
         return;
     }
-    let backlinkPanelBottomElement = docuemntContentElement.querySelector(".backlink-panel-document-bottom__area");
+    let backlinkPanelBottomElement = documentContentElement.querySelector(".backlink-panel-document-bottom__area");
     if (!backlinkPanelBottomElement) {
         return;
     }
@@ -286,64 +291,12 @@ function destroyAllPanel() {
     if (!allDocumentContentElementArray) {
         return;
     }
-    for (const docuemntContentElement of allDocumentContentElementArray) {
-        destroyPanel(docuemntContentElement as HTMLElement);
+    for (const documentContentElement of allDocumentContentElementArray) {
+        destroyPanel(documentContentElement as HTMLElement);
 
     }
 
 }
-
-function hadnleClickEditorTitleIcon(e) {
-
-
-    (e.detail.menu as Menu).addItem({
-        icon: CUSTOM_ICON_MAP.BacklinkPanelFilter.id,
-        type: "submenu",
-        label: "反链管家",
-        submenu: getDocumentBlockIconMenus(e)
-    });
-}
-
-function getDocumentBlockIconMenus(e) {
-    let rootId = e.detail.data.rootID;
-    if (!rootId) {
-        return;
-    }
-    let submenus = [];
-    submenus.push({
-        label: "恢复默认",
-        click: async () => {
-            await BacklinkFilterPanelAttributeService.ins.updateDocumentBottomShowPanel(rootId, null);
-            let documentBottomDisplay = SettingService.ins.SettingConfig.documentBottomDisplay;
-            if (documentBottomDisplay) {
-                let docuemntContentElement = e.detail.protyle.contentElement as HTMLElement;
-                await refreshBacklinkPanelToBottom(docuemntContentElement, rootId, null);
-            } else {
-                handleDestroyProtyle(e);
-            }
-        }
-    });
-    submenus.push({
-        label: "始终显示该文档底部反链",
-        click: async () => {
-            await BacklinkFilterPanelAttributeService.ins.updateDocumentBottomShowPanel(rootId, 1);
-
-            let docuemntContentElement = e.detail.protyle.contentElement as HTMLElement;
-            await refreshBacklinkPanelToBottom(docuemntContentElement, rootId, null);
-        }
-    });
-    submenus.push({
-        label: "始终隐藏该文档底部反链",
-        click: async () => {
-            BacklinkFilterPanelAttributeService.ins.updateDocumentBottomShowPanel(rootId, -1);
-            let docuemntContentElement = e.detail.protyle.contentElement as HTMLElement;
-            destroyPanel(docuemntContentElement);
-        }
-    });
-
-    return submenus;
-}
-
 
 let intervalId;
 function intervalSetNodePaddingBottom() {
@@ -365,7 +318,6 @@ function intervalSetNodePaddingBottom() {
             if (panelElement && protyleElement.style.paddingLeft != panelElement.style.paddingLeft) {
                 let paddingWidthPx = paddingWidthSize + "px";
                 if (paddingWidthSize == undefined || paddingWidthSize == null) {
-                    // console.log("intervalSetNodePaddingBottom")
                     paddingWidthPx = protyleElement.style.paddingLeft;
                 }
                 panelElement.style.paddingLeft = paddingWidthPx;
@@ -376,7 +328,7 @@ function intervalSetNodePaddingBottom() {
 }
 
 
-function destoryIntervalSetNodePaddingBottom() {
+function destroyIntervalSetNodePaddingBottom() {
     if (intervalId) {
         clearInterval(intervalId);
     }

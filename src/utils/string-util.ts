@@ -1,4 +1,4 @@
-import { isArrayEmpty } from "./array-util";
+import { isArrayEmpty } from "./array-util.ts";
 
 export function removePrefix(input: string, prefix: string): string {
     if (input.startsWith(prefix)) {

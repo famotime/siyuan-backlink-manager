@@ -14,6 +14,6 @@ test("DocumentService delegates bottom-panel host reuse and mount decisions to a
   );
   assert.match(
     source,
-    /mountOrUpdateDocumentBottomBacklinkHost\(\s*\{[\s\S]*docuemntContentElement,[\s\S]*rootId,[\s\S]*focusBlockId,[\s\S]*\}\s*\);/,
+    /mountOrUpdateDocumentBottomBacklinkHost\(\s*\{[\s\S]*documentContentElement,[\s\S]*rootId,[\s\S]*focusBlockId,[\s\S]*\}\s*\);/,
   );
 });

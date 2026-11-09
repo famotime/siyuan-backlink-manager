@@ -11,7 +11,7 @@ import {
 import {
   collapseBacklinkBreadcrumbItems,
   buildBacklinkBreadcrumbFullPath,
-} from "../src/components/panel/backlink-document-row.js";
+} from "../src/components/panel/backlink-breadcrumb.js";
 
 test("renderIcon 输出统一 bl-icon class 与 symbol 引用", () => {
   const html = renderIcon("iconBlRefresh");

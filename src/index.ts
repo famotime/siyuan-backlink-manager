@@ -53,7 +53,7 @@ export default class PluginSample extends Plugin {
     }
 
     async onunload() {
-        DocumentService.ins.destory();
+        DocumentService.ins.destroy();
     }
 
     async uninstall() {

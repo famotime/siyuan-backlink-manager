@@ -207,7 +207,6 @@
         {#if displayHintBacklinkBlockCacheUsage}
             <div>此次查询使用了缓存数据</div>
         {/if}
-        <div class="block__icons" style="display: none;"></div>
         {#if backlinkFilterPanelRenderData && !isArrayNotEmpty(backlinkFilterPanelRenderData.backlinkDataArray)}
             <!-- 空态：居中线框图标 + 主文案 + 辅助提示 -->
             <div class="backlink-empty-state">

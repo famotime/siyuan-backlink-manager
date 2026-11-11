@@ -47,14 +47,6 @@ export function getNextBacklinkContextLevel(level = "core") {
   return BACKLINK_CONTEXT_LEVEL_ORDER[nextIndex];
 }
 
-export function getPreviousBacklinkContextLevel(level = "core") {
-  const currentIndex = BACKLINK_CONTEXT_LEVEL_ORDER.indexOf(
-    normalizeBacklinkContextLevel(level),
-  );
-  const previousIndex = Math.max(currentIndex - 1, 0);
-  return BACKLINK_CONTEXT_LEVEL_ORDER[previousIndex];
-}
-
 export function cycleBacklinkContextLevel(level = "core", direction = "next") {
   const currentIndex = BACKLINK_CONTEXT_LEVEL_ORDER.indexOf(
     normalizeBacklinkContextLevel(level),

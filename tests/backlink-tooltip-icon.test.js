@@ -3,11 +3,7 @@ import assert from "node:assert/strict";
 
 import { CUSTOM_ICON_MAP } from "../src/models/icon-constant.ts";
 import { renderIcon } from "../src/utils/svg-icon.ts";
-import {
-  buildBacklinkTooltipClass,
-  getBacklinkTooltipDirection,
-  buildBacklinkProgressTooltip,
-} from "../src/utils/tooltip.ts";
+import { buildBacklinkProgressTooltip } from "../src/utils/tooltip.ts";
 import {
   collapseBacklinkBreadcrumbItems,
   buildBacklinkBreadcrumbFullPath,
@@ -41,15 +37,6 @@ test("CUSTOM_ICON_MAP 中 BlRefresh, ResetInitialization, BlPanelLogo path 定�
 test("renderIcon 支持数字与自定义尺寸", () => {
   assert.match(renderIcon("iconBlSearch", 13), /width="13px"/);
   assert.match(renderIcon("iconBlSearch", "14px"), /width="14px"/);
-});
-
-test("tooltip 方向按宿主解析：dock 用 sw，宽场景用 s", () => {
-  assert.equal(getBacklinkTooltipDirection("dock"), "sw");
-  assert.equal(getBacklinkTooltipDirection("tab"), "s");
-  assert.equal(getBacklinkTooltipDirection("bottom"), "s");
-  assert.equal(getBacklinkTooltipDirection(), "sw");
-  assert.equal(buildBacklinkTooltipClass("tab"), "b3-tooltips b3-tooltips__s");
-  assert.equal(buildBacklinkTooltipClass("dock"), "b3-tooltips b3-tooltips__sw");
 });
 
 test("buildBacklinkProgressTooltip 解析分页进度为语义化文案", () => {

@@ -1,6 +1,3 @@
-import { isArrayEmpty, isArrayNotEmpty } from "./array-util";
-
-
 export class CacheUtil {
 
 
@@ -62,18 +59,6 @@ export class CacheUtil {
      */
     delete(key: string): void {
         this.cache.delete(key);
-    }
-
-    /**
-     * 清除所有过期的缓存项
-     */
-    cleanUp(): void {
-        const now = Date.now();
-        for (const [key, { expiry }] of this.cache) {
-            if (expiry <= now) {
-                this.cache.delete(key);
-            }
-        }
     }
 
     clearByPrefix(prefix: string): void {

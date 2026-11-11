@@ -14,7 +14,7 @@ export class SettingConfig {
     // 缓存
     cacheAfterResponseMs: number;
     cacheExpirationTime: number;
-    usePraentIdIdx: boolean;
+    useParentIdIdx: boolean;
 
     // 文档底部反链面板宽度
     documentBottomBacklinkPaddingWidth: number;

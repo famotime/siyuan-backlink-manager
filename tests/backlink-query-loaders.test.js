@@ -54,7 +54,7 @@ test("getListItemChildBlockArray enriches list items with sub-markdown data", as
     },
     {
       generateGetListItemChildBlockArraySql: () => "LIST_CHILD_SQL",
-      generateGetListItemtSubMarkdownArraySql: () => "SUB_MARKDOWN_SQL",
+      generateGetListItemSubMarkdownArraySql: () => "SUB_MARKDOWN_SQL",
       sql: async (query) => {
         if (query === "LIST_CHILD_SQL") {
           return [{ id: "list-root", type: "i" }];
@@ -89,7 +89,7 @@ test("getParentBlockArray enriches deep list parents with sub-markdown", async (
     { queryParentDefBlock: true },
     {
       generateGetParentDefBlockArraySql: () => "PARENT_SQL",
-      generateGetParenListItemtDefBlockArraySql: () => "PARENT_SUB_SQL",
+      generateGetParentListItemDefBlockArraySql: () => "PARENT_SUB_SQL",
       sql: async (query) => {
         if (query === "PARENT_SQL") {
           return [{ id: "parent-a", type: "i", childIdPath: "a->b->c->d" }];
@@ -324,7 +324,7 @@ test("getSiblingBlockGroupArray uses sibling list items when backlink block is i
     },
     {
       generateGetBacklinkSiblingBlockArraySql: () => "SIBLING_SQL",
-      generateGetListItemtSubMarkdownArraySql: () => "SUB_MARKDOWN_SQL",
+      generateGetListItemSubMarkdownArraySql: () => "SUB_MARKDOWN_SQL",
       sql: async (query) => {
         if (query === "SIBLING_SQL") {
           return [
@@ -410,7 +410,7 @@ test("getSiblingBlockGroupArray queries list item sibling containers instead of 
         );
         return parentIds.join(",");
       },
-      generateGetListItemtSubMarkdownArraySql: () => "",
+      generateGetListItemSubMarkdownArraySql: () => "",
       sql: async (query) => {
         sqlCalls.push(query);
         return [];
@@ -438,7 +438,7 @@ test("getSiblingBlockGroupArray keeps list item neighbors in the actual parent l
     },
     {
       generateGetBacklinkSiblingBlockArraySql: () => "SIBLING_SQL",
-      generateGetListItemtSubMarkdownArraySql: () => "SUB_MARKDOWN_SQL",
+      generateGetListItemSubMarkdownArraySql: () => "SUB_MARKDOWN_SQL",
       sql: async (query) => {
         if (query === "SIBLING_SQL") {
           return [

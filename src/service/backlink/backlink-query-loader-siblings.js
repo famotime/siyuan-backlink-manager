@@ -94,7 +94,7 @@ function sortSiblingBlocksByParent(parentId, blockArray = [], siblingOrderMapByP
 
 async function enrichSiblingListItemBlocks(siblingBlockArray = [], deps) {
   const {
-    generateGetListItemtSubMarkdownArraySql,
+    generateGetListItemSubMarkdownArraySql,
     getBlockKramdown,
     sql,
     isStrNotBlank,
@@ -106,11 +106,11 @@ async function enrichSiblingListItemBlocks(siblingBlockArray = [], deps) {
       listItemIdSet.add(siblingBlock.id);
     }
   }
-  if (listItemIdSet.size <= 0 || !generateGetListItemtSubMarkdownArraySql) {
+  if (listItemIdSet.size <= 0 || !generateGetListItemSubMarkdownArraySql) {
     return;
   }
 
-  const subMarkdownSql = generateGetListItemtSubMarkdownArraySql(
+  const subMarkdownSql = generateGetListItemSubMarkdownArraySql(
     Array.from(listItemIdSet),
   );
   if (!isStrNotBlank?.(subMarkdownSql)) {
@@ -166,7 +166,7 @@ async function enrichSiblingListItemBlocks(siblingBlockArray = [], deps) {
 export async function getSiblingBlockGroupArray(queryParams, deps) {
   const {
     generateGetBacklinkSiblingBlockArraySql,
-    generateGetListItemtSubMarkdownArraySql,
+    generateGetListItemSubMarkdownArraySql,
     getBlockKramdown,
     getChildBlocks,
     sql,
@@ -185,7 +185,7 @@ export async function getSiblingBlockGroupArray(queryParams, deps) {
   }
 
   await enrichSiblingListItemBlocks(siblingBlockArray, {
-    generateGetListItemtSubMarkdownArraySql,
+    generateGetListItemSubMarkdownArraySql,
     getBlockKramdown,
     sql,
     isStrNotBlank,

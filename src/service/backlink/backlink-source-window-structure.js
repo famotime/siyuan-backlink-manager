@@ -42,20 +42,6 @@ export function findBlockSubtreeEndIndex(startIndex, context) {
   return endIndex;
 }
 
-export function getBlockRangeEndIndex(blockId = "", context) {
-  const startIndex = context.indexById.get(blockId);
-  if (startIndex === undefined) {
-    return undefined;
-  }
-
-  const block = context.blockById.get(blockId);
-  if (block?.type === "i") {
-    return findBlockSubtreeEndIndex(startIndex, context);
-  }
-
-  return startIndex;
-}
-
 export function resolveListItemAnchorBlockId(backlinkBlockNode = {}, context) {
   const backlinkBlock = backlinkBlockNode?.block;
   if (!backlinkBlock?.id) {
@@ -274,26 +260,6 @@ export function getSiblingBlockIdByOffset(blockId = "", offset = 0, context) {
   }
 
   return siblingBlockIds[siblingIndex + offset] || "";
-}
-
-export function findNearestSiblingBlockIdByPredicate(
-  blockId = "",
-  direction = "previous",
-  predicate = () => true,
-  context,
-) {
-  const step = direction === "next" ? 1 : -1;
-  let candidateBlockId = getSiblingBlockIdByOffset(blockId, step, context);
-
-  while (candidateBlockId) {
-    const candidateBlock = context?.blockById?.get(candidateBlockId);
-    if (predicate(candidateBlock)) {
-      return candidateBlockId;
-    }
-    candidateBlockId = getSiblingBlockIdByOffset(candidateBlockId, step, context);
-  }
-
-  return "";
 }
 
 export function resolveReadableListItemShellBlockIds(listItemBlockId = "", context) {

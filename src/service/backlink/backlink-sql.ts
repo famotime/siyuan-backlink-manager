@@ -47,7 +47,7 @@ export function generateGetParentDefBlockArraySql(
     return cleanSpaceText(sql);
 }
 
-export function generateGetParenListItemtDefBlockArraySql(
+export function generateGetParentListItemDefBlockArraySql(
     queryParams: IBacklinkBlockQueryParams,
 ): string {
     let backlinkParentBlockIds = queryParams.backlinkAllParentBlockIds;
@@ -69,7 +69,7 @@ export function generateGetParenListItemtDefBlockArraySql(
     return cleanSpaceText(sql);
 }
 
-export function generateGetListItemtSubMarkdownArraySql(
+export function generateGetListItemSubMarkdownArraySql(
     listItemIdArray: string[],
 ): string {
     if (isArrayEmpty(listItemIdArray)) {
@@ -281,13 +281,6 @@ export function generateGetBlockArraySql(
     WHERE 1 = 1 
     ${idInSql}
     LIMIT 999999999;
-    `;
-    return cleanSpaceText(sql);
-}
-
-export function getParentIdIdxInfoSql() {
-    let sql = `
-    PRAGMA index_info(idx_blocks_parent_id_backlink_panel_plugin);
     `;
     return cleanSpaceText(sql);
 }

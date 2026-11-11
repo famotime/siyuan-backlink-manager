@@ -71,6 +71,6 @@
 
 
 
-## ‍感谢
+## 感谢
 
 本插件初始版本基于 [Misuzu2027/syplugin-backlink-panel](https://github.com/Misuzu2027/syplugin-backlink-panel) 项目改造，这也是一个很棒的反链管理增强插件，感谢原作者！

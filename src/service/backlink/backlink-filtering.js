@@ -53,14 +53,6 @@ export function sanitizeBacklinkRenderQueryParams(queryParams, backlinkPanelData
   }
 }
 
-export function filterExistingDefBlocks(
-  existingDefBlockArray = [],
-  _validBacklinkBlockNodeArray = [],
-  _queryParams = {},
-) {
-  return existingDefBlockArray || [];
-}
-
 export function filterBacklinkDocumentBlocks(
   existingDocBlockArray = [],
   validBacklinkBlockNodeArray = [],

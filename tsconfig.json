@@ -11,7 +11,8 @@
         "skipLibCheck": true,
         /* Bundler mode */
         "moduleResolution": "Node",
-        // "allowImportingTsExtensions": true,
+        // node:test 会直接导入 .ts 源文件（要求带 .ts 扩展名的相对导入），故需开启此选项；仅类型检查（noEmit），不影响产物
+        "allowImportingTsExtensions": true,
         "allowSyntheticDefaultImports": true,
         "resolveJsonModule": true,
         "isolatedModules": true,
@@ -41,23 +42,16 @@
             "@/*": [
                 "./src/*"
             ],
-            "@/libs/*": [
-                "./src/libs/*"
-            ],
         }
     },
     "include": [
-        "tools/**/*.ts",
         "src/**/*.ts",
         "src/**/*.d.ts",
-        "src/**/*.tsx",
-        "src/**/*.vue",
         "src/**/*.svelte"
     ],
     "references": [
         {
             "path": "./tsconfig.node.json"
         }
-    ],
-    "root": "."
+    ]
 }

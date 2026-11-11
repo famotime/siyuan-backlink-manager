@@ -5,8 +5,8 @@ import {
     generateGetChildBlockArraySql,
     generateGetHeadlineChildDefBlockArraySql,
     generateGetListItemChildBlockArraySql,
-    generateGetListItemtSubMarkdownArraySql,
-    generateGetParenListItemtDefBlockArraySql,
+    generateGetListItemSubMarkdownArraySql,
+    generateGetParentListItemDefBlockArraySql,
     generateGetParentDefBlockArraySql,
     generateGetBacklinkSiblingBlockArraySql,
     generateGetBlockArraySql,
@@ -340,14 +340,14 @@ export async function getBacklinkPanelData(
         backlinkBlockQueryParams,
         {
             generateGetParentDefBlockArraySql,
-            generateGetParenListItemtDefBlockArraySql,
+            generateGetParentListItemDefBlockArraySql,
             sql,
             countOccurrences,
             isSetNotEmpty,
         },
     );
 
-    let headlinkBacklinkChildBlockArray: BacklinkChildBlock[] =
+    let headlineBacklinkChildBlockArray: BacklinkChildBlock[] =
         await getHeadlineChildBlockArray(backlinkBlockQueryParams, {
             generateGetHeadlineChildDefBlockArraySql,
             sql,
@@ -357,7 +357,7 @@ export async function getBacklinkPanelData(
     let listItemBacklinkChildBlockArray: BacklinkChildBlock[] =
         await getListItemChildBlockArray(backlinkBlockQueryParams, {
             generateGetListItemChildBlockArraySql,
-            generateGetListItemtSubMarkdownArraySql,
+            generateGetListItemSubMarkdownArraySql,
             sql,
             isSetEmpty,
             isStrNotBlank,
@@ -367,7 +367,7 @@ export async function getBacklinkPanelData(
         backlinkBlockQueryParams,
         {
             generateGetBacklinkSiblingBlockArraySql,
-            generateGetListItemtSubMarkdownArraySql,
+            generateGetListItemSubMarkdownArraySql,
             getBlockKramdown,
             getChildBlocks,
             sql,
@@ -381,7 +381,7 @@ export async function getBacklinkPanelData(
             rootId,
             curDocDefBlockArray: [],
             backlinkBlockArray,
-            headlinkBacklinkChildBlockArray,
+            headlineBacklinkChildBlockArray,
             listItemBacklinkChildBlockArray,
             backlinkParentBlockArray,
             backlinkSiblingBlockGroupArray,

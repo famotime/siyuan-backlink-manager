@@ -26,7 +26,7 @@ const DEFAULT_SETTING_CONFIG = {
   topBarDisplay: true,
   cacheAfterResponseMs: -1,
   cacheExpirationTime: 5 * 60,
-  usePraentIdIdx: false,
+  useParentIdIdx: false,
   documentBottomBacklinkPaddingWidth: null,
   docBottomBacklinkPanelViewExpand: true,
   pageSize: 8,
@@ -71,6 +71,14 @@ export function resolveSettingConfig(persistentConfig = {}) {
     showBacklinkProtyleBreadcrumb =
       !normalizedPersistentConfig.hideBacklinkProtyleBreadcrumb;
   }
+  // 旧版配置 key 为拼写错误的 usePraentIdIdx，迁移到 useParentIdIdx
+  let useParentIdIdx = normalizedPersistentConfig.useParentIdIdx;
+  if (
+    useParentIdIdx === undefined &&
+    normalizedPersistentConfig.usePraentIdIdx !== undefined
+  ) {
+    useParentIdIdx = normalizedPersistentConfig.usePraentIdIdx;
+  }
   return {
     ...createDefaultSettingConfig(),
     ...BACKLINK_CONTEXT_PRESET_DEFAULTS[resolvedPreset],
@@ -78,6 +86,7 @@ export function resolveSettingConfig(persistentConfig = {}) {
     ...(showBacklinkProtyleBreadcrumb !== undefined
       ? { showBacklinkProtyleBreadcrumb }
       : {}),
+    ...(useParentIdIdx !== undefined ? { useParentIdIdx } : {}),
     backlinkContextPreset: resolvedPreset,
   };
 }

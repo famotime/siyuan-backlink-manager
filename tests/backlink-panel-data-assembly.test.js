@@ -11,7 +11,7 @@ test("buildBacklinkPanelData forwards sibling groups and collector helpers to th
       rootId: "doc-current",
       curDocDefBlockArray: [],
       backlinkBlockArray: [],
-      headlinkBacklinkChildBlockArray: [],
+      headlineBacklinkChildBlockArray: [],
       listItemBacklinkChildBlockArray: [],
       backlinkParentBlockArray: [],
       backlinkSiblingBlockGroupArray: [

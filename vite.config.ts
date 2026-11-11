@@ -8,7 +8,6 @@ import { svelte } from "@sveltejs/vite-plugin-svelte"
 import zipPack from "vite-plugin-zip-pack";
 import fg from 'fast-glob';
 
-import vitePluginYamlI18n from './yaml-plugin';
 import { resolveBuildDirectories } from "./scripts/dev-build-config.js";
 
 const args = minimist(process.argv.slice(2))
@@ -38,19 +37,11 @@ export default defineConfig({
             scss: {
                 api: "modern",
             },
-            sass: {
-                api: "modern",
-            },
         },
     },
 
     plugins: [
         svelte(),
-
-        vitePluginYamlI18n({
-            inDir: 'public/i18n',
-            outDir: `${distDir}/i18n`
-        }),
 
         viteStaticCopy({
             targets: [
@@ -77,11 +68,6 @@ export default defineConfig({
     // https://github.com/vitejs/vite/issues/1930
     // https://vitejs.dev/guide/env-and-mode.html#env-files
     // https://github.com/vitejs/vite/discussions/3058#discussioncomment-2115319
-    // 在这里自定义变量
-    define: {
-        "process.env.DEV_MODE": `"${isWatch}"`,
-        "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV)
-    },
 
     build: {
         // 输出路径

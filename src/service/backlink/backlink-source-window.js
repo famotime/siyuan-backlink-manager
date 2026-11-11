@@ -1,7 +1,5 @@
 import {
   dedupeBlockIdArray,
-  resolveReadableListItemShellBlockIds,
-  resolveReadableStructuralUnit,
 } from "./backlink-source-window-structure.js";
 import {
   generateBacklinkSourceWindowBlockArraySql,
@@ -9,14 +7,7 @@ import {
 } from "./backlink-source-window-loader.js";
 import {
   buildBacklinkSourceWindow,
-  buildCoreBacklinkSourceWindow,
-  buildExtendedBacklinkSourceWindow,
-  buildNearbyBacklinkSourceWindow,
 } from "./backlink-source-window-planner.js";
-import {
-  buildDocumentBlockContext,
-  getBlockDocumentOrder,
-} from "./backlink-source-window-ordering.js";
 
 export {
   generateBacklinkSourceWindowBlockArraySql,
@@ -133,30 +124,11 @@ export function getBacklinkSourceWindowCollapsedBlockIds(sourceWindow = null) {
     : [];
 }
 
-export function hasBacklinkSourceWindowExplicitVisibleBlockIds(sourceWindow = null) {
-  const collapsedBlockIds = getBacklinkSourceWindowCollapsedBlockIds(sourceWindow);
-  if (collapsedBlockIds.length > 0) {
-    return true;
-  }
-  const visibleBlockIds = dedupeBlockIdArray(
-    Array.isArray(sourceWindow?.visibleBlockIds) ? sourceWindow.visibleBlockIds : [],
-  );
-  const windowBlockIds = dedupeBlockIdArray(
-    Array.isArray(sourceWindow?.windowBlockIds) ? sourceWindow.windowBlockIds : [],
-  );
-  if (visibleBlockIds.length <= 0) {
-    return false;
-  }
-  if (visibleBlockIds.length !== windowBlockIds.length) {
-    return true;
-  }
-  return visibleBlockIds.some((blockId, index) => blockId !== windowBlockIds[index]);
-}
-
 export function getBacklinkSourceWindowCandidateBlockIds({
   backlinkBlockId = "",
   sourceWindow = null,
 } = {}) {
+  /** @type {Object<string, any>} */
   const sourceWindowIdentity = getBacklinkSourceWindowIdentity(sourceWindow) || {};
   const bodyRange = getBacklinkSourceWindowBodyRange(sourceWindow);
   return dedupeBlockIdArray([
@@ -168,11 +140,19 @@ export function getBacklinkSourceWindowCandidateBlockIds({
   ]).filter(Boolean);
 }
 
+/**
+ * 将三个可见级别的来源窗口挂载到反链块节点与反链数据上。
+ * 可见级别在内部固定为 core/nearby/extended 三档，一次性构建完成。
+ * @param {Object} [options] 参数对象
+ * @param {Array<Object>} [options.backlinkDataArray] 反链数据数组
+ * @param {Array<Object>} [options.backlinkBlockNodeArray] 反链块节点数组
+ * @param {Map<string, Array<Object>>} [options.orderedBlocksByRootId] 按文档真实顺序组织的文档块（rootId -> 块数组）
+ * @returns {Array<Object>} 原样返回 backlinkDataArray（已就地挂载 sourceWindows/sourceWindow/sourceDocumentOrder）
+ */
 export function attachBacklinkSourceWindows({
   backlinkDataArray = [],
   backlinkBlockNodeArray = [],
   orderedBlocksByRootId = new Map(),
-  contextVisibilityLevel = "extended",
   } = {}) {
   if (!Array.isArray(backlinkDataArray)) {
     return backlinkDataArray;
@@ -226,19 +206,3 @@ export function attachBacklinkSourceWindows({
 
   return backlinkDataArray;
 }
-
-export const __internal = {
-  ordering: {
-    buildDocumentBlockContext,
-    getBlockDocumentOrder,
-  },
-  structure: {
-    resolveReadableStructuralUnit,
-    resolveReadableListItemShellBlockIds,
-  },
-  planner: {
-    buildCoreBacklinkSourceWindow,
-    buildNearbyBacklinkSourceWindow,
-    buildExtendedBacklinkSourceWindow,
-  },
-};

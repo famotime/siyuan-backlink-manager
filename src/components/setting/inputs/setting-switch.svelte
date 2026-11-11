@@ -6,7 +6,7 @@
     let checked = SettingService.ins.SettingConfig[itemProperty.key];
 
     function selectChange() {
-        SettingService.ins.updateSettingCofnigValue(itemProperty.key, checked);
+        SettingService.ins.updateSettingConfigValue(itemProperty.key, checked);
     }
 </script>
 

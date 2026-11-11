@@ -55,6 +55,15 @@ function buildMetaInfoMatchSummary(label, text = "") {
   return compactText ? `${label}：${compactText}` : label;
 }
 
+/**
+ * 对上下文元信息字段（文档标题/标题路径/列表路径）执行关键词匹配。
+ * @param {Object} bundle 上下文数据包
+ * @param {Object} [filterParams] 过滤参数
+ * @param {string[]} [filterParams.includeText] 包含关键词数组
+ * @param {string[]} [filterParams.excludeText] 排除关键词数组
+ * @param {boolean} [filterParams.requireText] 是否要求必须命中包含关键词
+ * @param {Function} [filterParams.matchKeywords] 关键词匹配函数 (content, includeText, excludeText) => boolean
+ */
 export function matchMetaInfoFields(
   bundle,
   {

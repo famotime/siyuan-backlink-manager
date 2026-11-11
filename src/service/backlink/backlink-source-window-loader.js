@@ -26,6 +26,18 @@ export function generateBacklinkSourceWindowBlockArraySql(rootIdArray = []) {
   return `SELECT * FROM blocks WHERE root_id IN (${rootIdListSql}) AND type != 'd' LIMIT 999999999;`;
 }
 
+/**
+ * 按文档真实顺序加载来源窗口所需的所有文档块：
+ * 优先使用块索引（文档序），索引缺失的文档回退到 kramdown + 兄弟层级排序。
+ * @param {Object} [options] 参数对象
+ * @param {Array<Object>} [options.backlinkDataArray] 反链数据数组
+ * @param {Object} [options.deps] 依赖注入（便于单测替换真实实现）
+ * @param {Function} [options.deps.queryDocumentBlocksByRootIds] 按 rootId 批量查询文档块
+ * @param {Function} [options.deps.getBlockIndexMap] 批量获取块在文档中的索引
+ * @param {Function} [options.deps.getChildBlocks] 查询子块
+ * @param {Function} [options.deps.getBlockKramdown] 查询块 kramdown 源码
+ * @returns {Promise<Map<string, Array<Object>>>} rootId -> 已按文档顺序排序的块数组
+ */
 export async function loadOrderedBacklinkSourceWindowBlocks({
   backlinkDataArray = [],
   deps = {},
@@ -70,8 +82,13 @@ export async function loadOrderedBacklinkSourceWindowBlocks({
     blockArray.push(block);
   }
 
-  const incompleteRootIdArray = Array.from(orderedBlocksByRootId.entries())
-    .filter(([, blockArray]) => !hasCompleteDocumentOrder(blockArray, indexMap))
+  // 文档序完整性只计算一次，避免同一份数据在筛选与排序两个阶段重复扫描
+  const completeOrderMapByRootId = new Map();
+  for (const [rootId, blockArray] of orderedBlocksByRootId.entries()) {
+    completeOrderMapByRootId.set(rootId, hasCompleteDocumentOrder(blockArray, indexMap));
+  }
+  const incompleteRootIdArray = Array.from(completeOrderMapByRootId.entries())
+    .filter(([, hasComplete]) => !hasComplete)
     .map(([rootId]) => rootId);
   const kramdownOrderMapByRootId = await getKramdownOrderMapByRootId(
     incompleteRootIdArray,
@@ -79,8 +96,7 @@ export async function loadOrderedBacklinkSourceWindowBlocks({
   );
 
   for (const [rootId, blockArray] of orderedBlocksByRootId.entries()) {
-    const hasFullDocumentOrder = hasCompleteDocumentOrder(blockArray, indexMap);
-    if (hasFullDocumentOrder) {
+    if (completeOrderMapByRootId.get(rootId)) {
       blockArray.forEach((block) => {
         block.__backlinkSourceDocumentOrder = indexMap.get(block.id);
       });

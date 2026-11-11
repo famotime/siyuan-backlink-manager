@@ -7,10 +7,10 @@ import {
   buildBacklinkContextBundle,
   dedupeBacklinkContextFragments,
   getBacklinkContextExplanationFragments,
-  getBacklinkContextMatchMeta,
   hydrateBacklinkContextBundles,
   matchBacklinkContextBundle,
 } from "../src/service/backlink/backlink-context.js";
+import { getBacklinkContextMatchMeta } from "../src/service/backlink/backlink-context-meta.js";
 import {
   BACKLINK_CONTEXT_SOURCE_RULES,
   getBacklinkContextSourceRule,

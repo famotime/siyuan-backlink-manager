@@ -50,24 +50,24 @@ function addBacklinkPanelDock() {
     }
 
     let plugin = EnvConfig.ins.plugin;
-    let docSearchSvelet: BacklinkPanelDockSvelte;
+    let backlinkPanelSvelte: BacklinkPanelDockSvelte;
     let detachScrollCleanup: () => void;
-    let dockRet = plugin.addDock({
+    plugin.addDock({
         config: {
             ...DEFAULT_BACKLINK_DOCK_CONFIG,
         },
         data: {},
         type: BACKLINK_PANEL_DOCK_TYPE,
         resize() {
-            if (docSearchSvelet) {
-                docSearchSvelet.resize(this.element.clientWidth);
+            if (backlinkPanelSvelte) {
+                backlinkPanelSvelte.resize(this.element.clientWidth);
             }
         },
         update() {
         },
         init() {
             this.element.innerHTML = "";
-            docSearchSvelet = new BacklinkPanelDockSvelte({
+            backlinkPanelSvelte = new BacklinkPanelDockSvelte({
                 target: this.element,
                 props: {
                 }
@@ -78,13 +78,12 @@ function addBacklinkPanelDock() {
             });
 
             if (EnvConfig.ins.isMobile) {
-                docSearchSvelet.resize(1);
+                backlinkPanelSvelte.resize(1);
             }
         },
         destroy() {
             detachScrollCleanup?.();
-            docSearchSvelet.$destroy();
+            backlinkPanelSvelte.$destroy();
         }
     });
-    // EnvConfig.ins.docSearchDock = dockRet;
 }

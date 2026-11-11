@@ -5,17 +5,9 @@ import {
   buildBacklinkContextBudgetHint,
   buildBacklinkVisibleSourceSummary,
   buildLegacyBacklinkSearchText,
-  formatBacklinkDocApiKeyword,
   getBatchBacklinkDoc,
   isBacklinkBlockValid,
 } from "../src/service/backlink/backlink-render-data.js";
-
-test("formatBacklinkDocApiKeyword keeps the longest segment and truncates it to 80 chars", () => {
-  const longSegment = "x".repeat(100);
-
-  assert.equal(formatBacklinkDocApiKeyword(`a'bigger'${longSegment}`), longSegment.slice(0, 80));
-  assert.equal(formatBacklinkDocApiKeyword(""), "");
-});
 
 test("buildLegacyBacklinkSearchText counts document markdown only once", () => {
   const result = buildLegacyBacklinkSearchText({
@@ -232,7 +224,7 @@ test("getBatchBacklinkDoc deduplicates backlink dom results without reordering a
   assert.equal(result.backlinks[1].contextBundle.primaryMatchSourceType, "parent");
   assert.equal(result.backlinks[0].contextBundle.matchSummaryList[0], "前相邻块：Beta");
   assert.deepEqual(result.backlinks[0].includeChildListItemIdArray, ["child-1"]);
-  assert.deepEqual(result.backlinks[0].excludeChildLisetItemIdArray, ["child-2"]);
+  assert.deepEqual(result.backlinks[0].excludeChildListItemIdArray, ["child-2"]);
 });
 
 test("getBatchBacklinkDoc maps list item container dom back to the nested backlink block", async () => {

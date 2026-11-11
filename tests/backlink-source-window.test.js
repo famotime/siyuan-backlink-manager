@@ -11,10 +11,10 @@ import {
   getBacklinkSourceWindowIdentity,
   getBacklinkSourceWindowOrderedVisibleBlockIds,
   getBacklinkSourceWindowByLevel,
-  hasBacklinkSourceWindowExplicitVisibleBlockIds,
   loadOrderedBacklinkSourceWindowBlocks,
 } from "../src/service/backlink/backlink-source-window.js";
-import * as backlinkSourceWindowModule from "../src/service/backlink/backlink-source-window.js";
+import { buildDocumentBlockContext } from "../src/service/backlink/backlink-source-window-ordering.js";
+import { resolveReadableStructuralUnit } from "../src/service/backlink/backlink-source-window-structure.js";
 import { groupBacklinksByDocument } from "../src/components/panel/backlink-document-navigation.js";
 
 function createDocumentBlocks(blocks = []) {
@@ -28,17 +28,6 @@ function createDocumentBlocks(blocks = []) {
   }));
 }
 
-test("source window module exposes decomposed internal ordering and structure helpers", () => {
-  assert.equal(
-    typeof backlinkSourceWindowModule.__internal?.ordering?.buildDocumentBlockContext,
-    "function",
-  );
-  assert.equal(
-    typeof backlinkSourceWindowModule.__internal?.structure?.resolveReadableStructuralUnit,
-    "function",
-  );
-});
-
 test("buildDocumentBlockContext indexes document order and child relationships for ordered blocks", () => {
   const orderedBlocks = createDocumentBlocks([
     { id: "heading-a", type: "h", parent_id: "doc-a" },
@@ -47,10 +36,7 @@ test("buildDocumentBlockContext indexes document order and child relationships f
     { id: "block-a", type: "p", parent_id: "item-a" },
   ]);
 
-  const context =
-    backlinkSourceWindowModule.__internal?.ordering?.buildDocumentBlockContext(
-      orderedBlocks,
-    );
+  const context = buildDocumentBlockContext(orderedBlocks);
 
   assert.equal(context.indexById.get("heading-a"), 0);
   assert.equal(context.indexById.get("block-a"), 3);
@@ -71,15 +57,8 @@ test("resolveReadableStructuralUnit keeps list shells with the first readable de
     { id: "block-child", type: "p", parent_id: "item-child" },
   ]);
 
-  const context =
-    backlinkSourceWindowModule.__internal?.ordering?.buildDocumentBlockContext(
-      orderedBlocks,
-    );
-  const unit =
-    backlinkSourceWindowModule.__internal?.structure?.resolveReadableStructuralUnit(
-      "list-root",
-      context,
-    );
+  const context = buildDocumentBlockContext(orderedBlocks);
+  const unit = resolveReadableStructuralUnit("list-root", context);
 
   assert.deepEqual(unit.visibleBlockIds, ["list-root", "item-a", "block-a"]);
   assert.equal(unit.startBlockId, "list-root");
@@ -365,26 +344,6 @@ test("source window getters prefer contextPlan and fall back to legacy fields", 
       collapsedBlockIds: ["legacy-collapsed"],
     }),
     ["legacy-collapsed"],
-  );
-
-  assert.equal(
-    hasBacklinkSourceWindowExplicitVisibleBlockIds({
-      contextPlan: {
-        orderedVisibleBlockIds: ["item-shell", "block-focus"],
-        collapsedBlockIds: ["list-nested", "item-nested", "block-nested"],
-      },
-    }),
-    true,
-  );
-
-  assert.equal(
-    hasBacklinkSourceWindowExplicitVisibleBlockIds({
-      contextPlan: {
-        orderedVisibleBlockIds: ["block-a", "block-b"],
-        collapsedBlockIds: [],
-      },
-    }),
-    false,
   );
 
   const backlinkData = {
@@ -1571,7 +1530,6 @@ test("attachBacklinkSourceWindows adds heading-bounded source windows to extende
     backlinkDataArray: backlinks,
     backlinkBlockNodeArray,
     orderedBlocksByRootId,
-    contextVisibilityLevel: "extended",
   });
 
   assert.equal(backlinks[0].sourceWindow.startBlockId, "heading-h2");

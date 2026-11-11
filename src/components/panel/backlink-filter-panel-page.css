@@ -7,7 +7,6 @@
 .backlink-panel__area svg.b3-icon--wireframe,
 .backlink-panel__area svg.bl-icon,
 .backlink-panel__area .block__icon svg,
-.backlink-panel__area .backlink-nav-btn svg,
 .backlink-panel__area .backlink-context-step-button svg,
 .backlink-panel__area .b3-list-item__arrow,
 .backlink-panel__area .backlink-search-icon,
@@ -184,7 +183,6 @@
    按钮热区与微交互
    ========================================================================== */
 .backlink-panel__area .block__icon,
-.backlink-panel__area .backlink-nav-btn,
 .backlink-panel__area .backlink-context-step-button {
     display: inline-flex;
     align-items: center;
@@ -204,7 +202,6 @@
 }
 
 .backlink-panel__area .block__icon:hover:not(:disabled):not(.disabled),
-.backlink-panel__area .backlink-nav-btn:hover:not(:disabled):not(.disabled),
 .backlink-panel__area .backlink-context-step-button:hover:not(:disabled):not(.disabled) {
     background-color: var(--b3-list-icon-hover);
     color: var(--b3-theme-primary);
@@ -212,8 +209,6 @@
 
 .backlink-panel__area .block__icon:disabled,
 .backlink-panel__area .block__icon.disabled,
-.backlink-panel__area .backlink-nav-btn:disabled,
-.backlink-panel__area .backlink-nav-btn.disabled,
 .backlink-panel__area .backlink-context-step-button:disabled,
 .backlink-panel__area .backlink-context-step-button.disabled {
     opacity: 0.35;
@@ -226,36 +221,6 @@
     font-size: var(--bl-font-s);
     color: var(--b3-theme-on-surface-light);
     user-select: none;
-}
-
-.backlink-panel__area .backlink-context-source,
-.backlink-panel__area .backlink-context-summary {
-    display: inline-flex;
-    align-items: center;
-    max-width: 10em;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    vertical-align: middle;
-}
-
-.backlink-panel__area .backlink-context-source:empty,
-.backlink-panel__area .backlink-context-summary:empty {
-    display: none;
-}
-
-.backlink-panel__area .backlink-context-source {
-    margin-left: 6px;
-    font-size: var(--bl-font-xs);
-    color: var(--b3-theme-primary);
-    background: var(--backlink-chip-primary-surface);
-    border: 1px solid var(--backlink-chip-primary-border);
-}
-
-.backlink-panel__area .backlink-context-summary {
-    max-width: 14em;
-    font-size: var(--bl-font-xs);
-    color: var(--b3-theme-on-surface-light);
 }
 
 .backlink-panel__area .backlink-card {
@@ -691,12 +656,6 @@
     100% {
         background-position: -200% 0;
     }
-}
-
-.backlink-panel__area .backlink-pagination {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
 }
 
 .backlink-panel__area .backlink-panel__header {

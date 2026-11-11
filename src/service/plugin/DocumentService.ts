@@ -6,7 +6,6 @@ import { BacklinkFilterPanelAttributeService, DOCUMENT_BOTTOM_SHOW_BACKLINK_FILT
 import { clearProtyleGutters, hasClosestByClassName, hasClosestById } from "@/utils/html-util";
 import { generateGetDocHasBacklinksSql } from "../backlink/backlink-sql";
 import { sql } from "@/utils/api";
-import { isArrayEmpty } from "@/utils/array-util";
 import { NewNodeID } from "@/utils/siyuan-util";
 import {
     attachBacklinkPanelScrollCleanup,

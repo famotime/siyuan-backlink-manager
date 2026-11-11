@@ -2,12 +2,6 @@ import { isArrayEmpty } from "./array-util";
 import { isStrBlank } from "./string-util";
 import { logInfo } from "./logger";
 
-export const escapeAttr = (html: string) => {
-    return html.replace(/"/g, "&quot;").replace(/'/g, "&apos;");
-};
-
-
-
 export async function highlightElementTextByCss(
     contentElement: HTMLElement,
     keywordArray: string[],
@@ -35,10 +29,6 @@ export async function highlightElementTextByCss(
         allTextNodes.push(currentNode);
         currentNode = treeWalker.nextNode();
     }
-
-
-    // 默认不清除
-    // clearCssHighlights();
 
     // Clean-up the search query and bail-out if
     // if it's empty.
@@ -100,21 +90,6 @@ export async function highlightElementTextByCss(
 
 }
 
-export function clearCssHighlights() {
-    CSS.highlights.delete("search-result-mark");
-    CSS.highlights.delete("search-result-focus");
-}
-
-
-
-export function highlightContent(content: string, keywords: string[]): string {
-    if (!content) {
-        return content;
-    }
-    let contentHtml = getHighlightedContent(content, keywords);
-    return contentHtml;
-}
-
 export function clearProtyleGutters(target: HTMLElement) {
     if (!target) {
         return;
@@ -124,69 +99,6 @@ export function clearProtyleGutters(target: HTMLElement) {
         item.innerHTML = "";
     });
 }
-
-
-// 查找可滚动的父级元素
-export function findScrollableParent(element: HTMLElement) {
-    if (!element) {
-        return null;
-    }
-
-    // const hasScrollableSpace = element.scrollHeight > element.clientHeight;
-    const hasVisibleOverflow = getComputedStyle(element).overflowY !== 'visible';
-
-    if (hasVisibleOverflow) {
-        return element;
-    }
-
-    return findScrollableParent(element.parentElement);
-}
-
-
-
-
-function getHighlightedContent(
-    content: string,
-    keywords: string[],
-): string {
-    if (!content) {
-        return content;
-    }
-    // let highlightedContent: string = escapeHtml(content);
-    let highlightedContent: string = content;
-
-    if (keywords) {
-        highlightedContent = highlightMatches(highlightedContent, keywords);
-    }
-    return highlightedContent;
-}
-
-function highlightMatches(content: string, keywords: string[]): string {
-    if (!keywords.length || !content) {
-        return content; // 返回原始字符串，因为没有需要匹配的内容
-    }
-
-    const regexPattern = new RegExp(`(${keywords.join("|")})`, "gi");
-    const highlightedString = content.replace(
-        regexPattern,
-        "<span class='search-mark'>$1</span>",
-    );
-    return highlightedString;
-}
-
-function escapeHtml(input: string): string {
-    const escapeMap: Record<string, string> = {
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;",
-    };
-
-    return input.replace(/[&<>"']/g, (match) => escapeMap[match]);
-}
-
-
 
 export function getElementsBeforeDepth(rootElement: HTMLElement, selector: string, depth: number) {
     const result = [];
@@ -282,16 +194,6 @@ export function stringToDom(htmlString: string): Element {
     container.innerHTML = htmlString.trim();
 
     return container.children[0];
-}
-
-// 将 HTML 字符串转换为 DOM 节点数组
-export function stringToDomArray(htmlString: string): Element[] {
-    // 创建一个容器元素，临时用于包含解析后的节点
-    const container = document.createElement('div');
-    container.innerHTML = htmlString.trim(); // 清除字符串两端空白字符
-
-    // 转换 NodeList 为数组返回
-    return Array.from(container.children);
 }
 
 

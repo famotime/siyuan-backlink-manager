@@ -53,12 +53,6 @@ type BlockSortMethod =
     ;
 
 
-interface IBacklinkCacheData {
-    backlinks: IBacklinkData[];
-    usedCache: boolean;
-}
-
-
 type IItemPropertyType =
     "select" |
     "text" |

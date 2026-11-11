@@ -100,3 +100,19 @@ test("resolveSettingConfig ignores undefined properties and preserves default co
   assert.equal(resolved.pageSize, 8);
 });
 
+
+test("resolveSettingConfig smoothly migrates legacy typoed usePraentIdIdx config", () => {
+  // 旧版持久化配置使用拼写错误的 usePraentIdIdx key，迁移到 useParentIdIdx
+  const resolvedFromLegacy = resolveSettingConfig({ usePraentIdIdx: true });
+  assert.equal(resolvedFromLegacy.useParentIdIdx, true);
+
+  const resolvedFromDefault = resolveSettingConfig({});
+  assert.equal(resolvedFromDefault.useParentIdIdx, false);
+
+  // 新 key 优先于旧 key
+  const resolvedWithBoth = resolveSettingConfig({
+    usePraentIdIdx: true,
+    useParentIdIdx: false,
+  });
+  assert.equal(resolvedWithBoth.useParentIdIdx, false);
+});

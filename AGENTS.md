@@ -8,17 +8,19 @@
 
 - **Framework & Build**: Vite 5, Svelte 4, TypeScript / ES Module, SCSS (Modern API)
 - **Host Platform**: SiYuan Kernel API / Protyle Editor
-- **Testing**: Node.js 内置测试框架 (`node:test` + `node:assert/strict`)
+- **Testing**: Node.js 内置测试框架 (`node:test` + `node:assert/strict`，依赖 Node ≥ 22.18 的 .ts 类型剥离直接导入源码)
+- **Package Manager**: pnpm（`preinstall` 钩子强制，使用 npm/yarn 安装会被拒绝）
 
 ## Essential Commands
 
 ```bash
-npm install                     # 安装依赖
-npm run dev                     # 开发模式 (Vite watch 实时编译至 dev/)
-npm run build                   # 生产打包 (输出 dist/ 并生成 package.zip)
-npm run make-link               # 创建 dev/ 到思源插件目录的软链接
-npm run make-install            # 编译并安装到思源工作区
-node --test tests/*.test.js     # 运行全部回归测试
+pnpm install                    # 安装依赖
+pnpm run dev                    # 开发模式 (Vite watch 实时编译至 dev/)
+pnpm run build                  # 生产打包 (输出 dist/ 并生成 package.zip)
+pnpm run make-link              # 创建 dev/ 到思源插件目录的软链接
+pnpm run make-install           # 编译并安装到思源工作区
+pnpm test                       # 运行全部回归测试 (node --test tests/)
+pnpm run typecheck              # TypeScript 类型检查 (tsc --noEmit)
 node --test tests/<name>.test.js # 运行指定测试文件
 ```
 

@@ -1,28 +1,5 @@
 // 反链面板 tooltip 统一封装：基于思源 aria-label + b3-tooltips 机制
-// 约束：单行短文案（≤12 字）；方向按宿主可配（Dock 窄栏 __sw，宽场景 __s）
-
-export type BacklinkTooltipHostKind = "dock" | "tab" | "bottom" | string;
-
-/**
- * 按宿主类型解析 tooltip 弹出方向
- * @param hostKind 宿主类型：dock（窄栏）/ tab（独立页签）/ bottom（文档底部）
- * @returns b3-tooltips 方向后缀
- */
-export function getBacklinkTooltipDirection(
-    hostKind: BacklinkTooltipHostKind = "dock",
-): string {
-    return hostKind === "dock" ? "sw" : "s";
-}
-
-/**
- * 生成 tooltip class 组合
- * @param hostKind 宿主类型，默认 dock
- */
-export function buildBacklinkTooltipClass(
-    hostKind: BacklinkTooltipHostKind = "dock",
-): string {
-    return `b3-tooltips b3-tooltips__${getBacklinkTooltipDirection(hostKind)}`;
-}
+// 约束：单行短文案（≤12 字）
 
 /**
  * 由分页进度文本（如 "2/3"）生成完整语义 tooltip

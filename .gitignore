@@ -8,8 +8,6 @@ dev
 dist
 build
 tmp
-/docs/superpowers/
 developer_docs/
 
 *.zip
-package.zip

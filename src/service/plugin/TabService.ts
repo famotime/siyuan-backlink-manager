@@ -28,8 +28,7 @@ export class TabService {
             langKey: "showDocumentBacklinkPanelTab",
             langText: "显示当前文档反链管家页签",
             hotkey: "⌥⇧T",
-            editorCallback: (protyle: any) => {
-                // let rootId = protyle.block.rootID;
+            editorCallback: () => {
                 let currentDocument: HTMLDivElement = getActiveTab();
                 if (!currentDocument) {
                     return;
@@ -46,14 +45,12 @@ export class TabService {
 
         // 用来修复反链管家新窗口打开时，没有初始化该页签ID，导致显示空白的问题 https://github.com/Misuzu2027/siyuan-backlink-manager/issues/23
         // 初始化时查看有没有销毁的ID，有的话初始化tab。
-        // let destoryDocIdArray = CacheManager.ins.getAndRemoveBacklinkDestoryTabDocIdArray();
+        // let destoryDocIdArray = CacheManager.ins.getAndRemoveBacklinkDestroyTabDocIdArray();
         // for (const docId of destoryDocIdArray) {
         //     this.pluginAddTab(docId, null);
         // }
 
-    }
-
-    public pluginAddTab(docId: string, focusBlockId: string) {
+    }    public pluginAddTab(docId: string, focusBlockId: string) {
         let tabId = BACKLINK_TAB_PREFIX + docId;
         let backlinkFilterPanelPageSvelte: BacklinkFilterPanelPageSvelte;
         let detachScrollCleanup: () => void;
@@ -73,7 +70,8 @@ export class TabService {
 
                 detachScrollCleanup = attachBacklinkPanelScrollCleanup({
                     element: this.element,
-                    onCleanup: () => clearProtyleGutters(this.element),
+                    // SiYuan 的 Tab.element 类型声明为 Element，运行时实际是 HTMLElement 容器
+                    onCleanup: () => clearProtyleGutters(this.element as HTMLElement),
                 });
             },
             beforeDestroy() {
@@ -104,7 +102,7 @@ export class TabService {
 
         this.pluginAddTab(docId, focusBlockId);
 
-        CacheManager.ins.addBacklinkDestoryTabDocId(docId);
+        CacheManager.ins.addBacklinkDestroyTabDocId(docId);
 
         openTab({
             app: EnvConfig.ins.app,

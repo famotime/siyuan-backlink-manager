@@ -106,6 +106,15 @@ export function resolveBacklinkBlockNodeByContainer({
   };
 }
 
+/**
+ * 判断反链块的可搜索文本与锚点文本是否命中关键词。
+ * @param {Object} [params] 参数对象
+ * @param {Object} [params.keywordObj] 关键词集合（includeText/excludeText/includeAnchor/excludeAnchor）
+ * @param {string} [params.searchableText] 可搜索正文文本
+ * @param {string} [params.searchableAnchorText] 可搜索锚点文本
+ * @param {Function} [params.matchKeywords] 关键词匹配函数 (content, includeText, excludeText) => boolean
+ * @returns {{matchText: boolean, matchAnchor: boolean}}
+ */
 export function matchesBacklinkKeywords({
   keywordObj,
   searchableText = "",

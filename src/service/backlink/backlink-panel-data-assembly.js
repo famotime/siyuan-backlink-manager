@@ -63,7 +63,7 @@ export async function buildBacklinkPanelData(paramObj, deps) {
 
   const relatedDefBlockIdSet = new Set(relatedDefBlockCountMap.keys());
   collectHeadlineChildBlocks({
-    headlinkBacklinkChildBlockArray: paramObj.headlinkBacklinkChildBlockArray,
+    headlineBacklinkChildBlockArray: paramObj.headlineBacklinkChildBlockArray,
     relatedDefBlockIdSet,
     getRefBlockId,
     updateDynamicAnchorMap,

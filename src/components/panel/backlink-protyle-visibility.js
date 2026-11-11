@@ -49,9 +49,9 @@ export function hideOtherListItemElement(
 
   if (
     isSetNotEmpty(excludeRelatedDefBlockIds) &&
-    isArrayNotEmpty(backlinkData.excludeChildLisetItemIdArray)
+    isArrayNotEmpty(backlinkData.excludeChildListItemIdArray)
   ) {
-    for (const itemId of backlinkData.excludeChildLisetItemIdArray) {
+    for (const itemId of backlinkData.excludeChildListItemIdArray) {
       const targetElement = targetBlockParentElement.querySelector(
         `div[data-type="NodeListItem"][data-node-id="${itemId}"]`,
       );

@@ -1,10 +1,8 @@
 import {
   applyBacklinkContextBudgetToNodes,
-  applyBacklinkContextBudget,
 } from "./backlink-context-budget.js";
 import {
   createBacklinkContextMetaInfo,
-  getBacklinkContextMatchMeta,
 } from "./backlink-context-meta.js";
 import {
   buildMatchSummary,
@@ -15,8 +13,6 @@ import {
   getBacklinkContextSourceRule,
   getBacklinkContextVisibilityLevelOrder,
 } from "./backlink-context-rules.js";
-
-export { getBacklinkContextMatchMeta };
 
 function pushFragment(fragmentArray, fragment) {
   if (!fragment || !fragment.text) {
@@ -115,6 +111,17 @@ function createContextFragment({
   };
 }
 
+/**
+ * 构建一个 Markdown 来源的上下文片段（自块/父块/标题子块/列表子块/兄弟块）。
+ * @param {Object} params 参数对象
+ * @param {Object} params.backlinkBlockNode 反链块节点
+ * @param {string} params.sourceType 片段来源类型
+ * @param {number} params.order 片段在包内的顺序
+ * @param {string} params.text 片段文本（Markdown）
+ * @param {string} [params.renderMarkdown] 渲染用 Markdown（缺省时回退到 text）
+ * @param {Object} params.deps 依赖注入
+ * @returns {Object|null} 上下文片段；text 为空时返回 null
+ */
 function createMarkdownFragment({
   backlinkBlockNode,
   sourceType,
@@ -305,7 +312,7 @@ export function applyBacklinkContextVisibilityToNodes(
   }
 }
 
-export { applyBacklinkContextBudget, applyBacklinkContextBudgetToNodes };
+export { applyBacklinkContextBudgetToNodes };
 
 export function matchBacklinkContextBundle(bundle, { keywordObj, matchKeywords }) {
   resetBacklinkContextMatches(bundle);

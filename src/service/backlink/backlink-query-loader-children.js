@@ -33,7 +33,7 @@ export async function getHeadlineChildBlockArray(queryParams, deps) {
 export async function getListItemChildBlockArray(queryParams, deps) {
   const {
     generateGetListItemChildBlockArraySql,
-    generateGetListItemtSubMarkdownArraySql,
+    generateGetListItemSubMarkdownArraySql,
     sql,
     isSetEmpty,
     isStrNotBlank,
@@ -67,7 +67,7 @@ export async function getListItemChildBlockArray(queryParams, deps) {
       }
     }
 
-    const subMarkdownSql = generateGetListItemtSubMarkdownArraySql(
+    const subMarkdownSql = generateGetListItemSubMarkdownArraySql(
       Array.from(listItemIdSet),
     );
     if (isStrNotBlank(subMarkdownSql)) {
@@ -109,7 +109,7 @@ export async function getListItemChildBlockArray(queryParams, deps) {
 export async function getParentBlockArray(queryParams, deps) {
   const {
     generateGetParentDefBlockArraySql,
-    generateGetParenListItemtDefBlockArraySql,
+    generateGetParentListItemDefBlockArraySql,
     sql,
     countOccurrences,
     isSetNotEmpty,
@@ -135,7 +135,7 @@ export async function getParentBlockArray(queryParams, deps) {
   if (isSetNotEmpty(backlinkParentListItemBlockIdSet)) {
     queryParams.backlinkAllParentBlockIds = Array.from(backlinkParentListItemBlockIdSet);
     const subMarkdownArray =
-      (await sql(generateGetParenListItemtDefBlockArraySql(queryParams))) || [];
+      (await sql(generateGetParentListItemDefBlockArraySql(queryParams))) || [];
     const subMarkdownMap = new Map();
 
     for (const parentListItemBlock of subMarkdownArray) {

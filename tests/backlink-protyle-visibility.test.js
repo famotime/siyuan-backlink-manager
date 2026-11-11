@@ -46,7 +46,7 @@ test("hideOtherListItemElement hides non-included children and excludes requeste
     {
       backlinkBlock: { id: "block-a" },
       includeChildListItemIdArray: ["inc"],
-      excludeChildLisetItemIdArray: ["exc"],
+      excludeChildListItemIdArray: ["exc"],
     },
     protyleContentElement,
     {

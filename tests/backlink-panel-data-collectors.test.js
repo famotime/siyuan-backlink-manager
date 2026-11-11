@@ -99,7 +99,7 @@ test("collectHeadlineChildBlocks appends markdown and only counts new related id
   };
 
   collectHeadlineChildBlocks({
-    headlinkBacklinkChildBlockArray: [
+    headlineBacklinkChildBlockArray: [
       {
         markdown: "headline ((def-current 'current')) ((def-new 'new'))",
         subInAttrConcat: " extra",

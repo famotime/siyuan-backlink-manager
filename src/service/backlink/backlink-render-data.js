@@ -4,31 +4,13 @@ import {
   matchBacklinkContextBundle,
 } from "./backlink-context.js";
 import {
-  extractNestedNodeDomById,
   getBacklinkNodeSortComparator,
   matchesBacklinkKeywords,
-  normalizeTargetBacklinkDom,
   resolveBacklinkBlockNodeByContainer,
 } from "./backlink-render-data-dom.js";
 import { getBacklinkContextSourceRule } from "./backlink-context-rules.js";
 import { sanitizeBacklinkContent } from "./backlink-content-sanitize.js";
 import { getBacklinkSourceWindowByLevel } from "./backlink-source-window.js";
-
-export function formatBacklinkDocApiKeyword(keyword = "") {
-  if (!keyword) {
-    return "";
-  }
-
-  const keywordSplitArray = keyword.split("'");
-  let longestSubstring = "";
-  for (const substring of keywordSplitArray) {
-    if (substring.length > longestSubstring.length) {
-      longestSubstring = substring;
-    }
-  }
-
-  return longestSubstring.substring(0, 80);
-}
 
 export function buildLegacyBacklinkSearchText({
   selfMarkdown = "",
@@ -136,7 +118,7 @@ export async function getBacklinkDocByApiOrCache(
     getBacklinkDoc,
   } = deps;
 
-  keyword = formatBacklinkDocApiKeyword(keyword);
+  // 关键词过滤已下线：API 查询与缓存 key 统一使用空关键词
   keyword = "";
 
   let backlinks = CacheManager.ins.getBacklinkDocApiData(
@@ -195,7 +177,7 @@ export async function getBatchBacklinkDoc({
   const backlinkBlockNodeMap = new Map();
   const backlinkBlockParentNodeMap = new Map();
 
-  for (const [index, node] of backlinkBlockNodeArray.entries()) {
+  for (const node of backlinkBlockNodeArray) {
     const backlinkRootId = node.block.root_id;
     const backlinkContent = node.block.content;
     const defId =
@@ -270,7 +252,7 @@ export async function getBatchBacklinkDoc({
     if (backlinkBlockNode.parentListItemTreeNode) {
       backlink.includeChildListItemIdArray =
         backlinkBlockNode.parentListItemTreeNode.includeChildIdArray;
-      backlink.excludeChildLisetItemIdArray =
+      backlink.excludeChildListItemIdArray =
         backlinkBlockNode.parentListItemTreeNode.excludeChildIdArray;
     }
   }

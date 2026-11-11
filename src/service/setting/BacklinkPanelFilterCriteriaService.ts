@@ -1,13 +1,11 @@
 import { CacheManager } from "@/config/CacheManager";
-import { IPanelRednerFilterQueryParams, BacklinkPanelFilterCriteria } from "@/models/backlink-model";
+import { IPanelRenderFilterQueryParams, BacklinkPanelFilterCriteria } from "@/models/backlink-model";
 import { getBlockAttrs, setBlockAttrs } from "@/utils/api";
 import Instance from "@/utils/Instance";
 import { SettingService } from "./SettingService";
-import { setReplacer, setReviver } from "@/utils/json-util";
 import { mergeObjects } from "@/utils/object-util";
 
 const BACKLINK_FILTER_PANEL_LAST_CRITERIA_ATTRIBUTE_KEY = "custom-backlink-filter-panel-last-criteria";
-const BACKLINK_FILTER_PANEL_SAVED_CRITERIA_ATTRIBUTE_KEY = "custom-backlink-filter-panel-saved-criteria";
 export const DOCUMENT_BOTTOM_SHOW_BACKLINK_FILTER_PANEL_ATTRIBUTE_KEY = "custom-document-bottom-show-backlink-filter-panel";
 
 export class BacklinkFilterPanelAttributeService {
@@ -18,7 +16,7 @@ export class BacklinkFilterPanelAttributeService {
     public async getPanelCriteria(rootId: string): Promise<BacklinkPanelFilterCriteria> {
         let documentPanelCriteria = CacheManager.ins.getBacklinkFilterPanelLastCriteria(rootId);
         let defaultQueryParams = this.getDefaultQueryParams();
-        let queryParams: IPanelRednerFilterQueryParams;
+        let queryParams: IPanelRenderFilterQueryParams;
 
         if (documentPanelCriteria) {
             documentPanelCriteria.queryParams.pageNum = 1;
@@ -71,48 +69,6 @@ export class BacklinkFilterPanelAttributeService {
         setBlockAttrs(rootId, attrs);
     }
 
-    public async getPanelSavedCriteriaMap(rootId: string): Promise<Map<string, IPanelRednerFilterQueryParams>> {
-        let savedCriteriaMap = CacheManager.ins.getBacklinkPanelSavedCriteria(rootId);
-        if (savedCriteriaMap && savedCriteriaMap.size > 0) {
-            return savedCriteriaMap;
-        }
-
-        let attrsMap = await getBlockAttrs(rootId);
-        if (attrsMap && Object.keys(attrsMap).includes(BACKLINK_FILTER_PANEL_SAVED_CRITERIA_ATTRIBUTE_KEY)) {
-            let json = attrsMap[BACKLINK_FILTER_PANEL_SAVED_CRITERIA_ATTRIBUTE_KEY];
-            let parseObject = JSON.parse(json, setReviver);
-            if (parseObject) {
-                const resultMap = new Map<string, IPanelRednerFilterQueryParams>(Object.entries(parseObject));
-                CacheManager.ins.setBacklinkPanelSavedCriteria(rootId, resultMap);
-                return resultMap;
-            }
-        }
-
-        return new Map();
-    }
-
-    public async updatePanelSavedCriteriaMap(rootId: string, criteriaMap: Map<string, IPanelRednerFilterQueryParams>) {
-        if (!rootId) {
-            return;
-        }
-        const mapObject = Object.fromEntries(criteriaMap);
-        let criteriaJson = JSON.stringify(mapObject, setReplacer);
-        CacheManager.ins.setBacklinkPanelSavedCriteria(rootId, criteriaMap);
-
-        let attrs: Record<string, string> = {};
-        attrs[BACKLINK_FILTER_PANEL_SAVED_CRITERIA_ATTRIBUTE_KEY] = criteriaJson;
-        setBlockAttrs(rootId, attrs);
-    }
-
-    public async getDocumentBottomShowPanel(rootId: string): Promise<number> {
-        let attrsMap = await getBlockAttrs(rootId);
-        if (attrsMap && Object.keys(attrsMap).includes(DOCUMENT_BOTTOM_SHOW_BACKLINK_FILTER_PANEL_ATTRIBUTE_KEY)) {
-            let json = attrsMap[DOCUMENT_BOTTOM_SHOW_BACKLINK_FILTER_PANEL_ATTRIBUTE_KEY];
-            return Number(json);
-        }
-        return null;
-    }
-
     public async updateDocumentBottomShowPanel(rootId: string, value: number) {
         if (!rootId) {
             return;
@@ -123,7 +79,7 @@ export class BacklinkFilterPanelAttributeService {
         setBlockAttrs(rootId, attrs);
     }
 
-    getDefaultQueryParams(): IPanelRednerFilterQueryParams {
+    getDefaultQueryParams(): IPanelRenderFilterQueryParams {
         let settingConfig = SettingService.ins.SettingConfig;
         let backlinkBlockSortMethod = "modifiedDesc";
         let pageSize = 8;
@@ -138,6 +94,6 @@ export class BacklinkFilterPanelAttributeService {
             backlinkKeywordStr: "",
             includeDocumentIds: new Set<string>(),
             excludeDocumentIds: new Set<string>(),
-        } as IPanelRednerFilterQueryParams;
+        } as IPanelRenderFilterQueryParams;
     }
 }

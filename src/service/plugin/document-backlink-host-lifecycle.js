@@ -1,3 +1,17 @@
+/**
+ * 文档底部反链宿主的挂载/更新调度：
+ * 已有同文档面板则更新 props，异文档面板则先销毁再重新挂载。
+ * @param {Object} [options] 参数对象
+ * @param {HTMLElement} [options.documentContentElement] 文档内容容器元素
+ * @param {string} [options.rootId] 当前文档 ID
+ * @param {string|null} [options.focusBlockId] 聚焦块 ID
+ * @param {boolean} [options.panelBacklinkViewExpand] 面板展开状态
+ * @param {Function} [options.resolvePanelInstance] 按面板 ID 解析已挂载面板实例
+ * @param {Function} [options.updatePanelProps] 更新面板 props
+ * @param {Function} [options.destroyExistingHost] 销毁现有面板宿主
+ * @param {Function} [options.mountNewHost] 挂载新面板宿主
+ * @returns {{action: "update"|"mount", panelElement: Element}|undefined}
+ */
 export function mountOrUpdateDocumentBottomBacklinkHost({
   documentContentElement,
   rootId,

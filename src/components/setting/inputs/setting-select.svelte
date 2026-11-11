@@ -6,7 +6,7 @@
     let value = SettingService.ins.SettingConfig[itemProperty.key];
 
     function selectChange() {
-        SettingService.ins.updateSettingCofnigValue(itemProperty.key, value);
+        SettingService.ins.updateSettingConfigValue(itemProperty.key, value);
     }
 </script>
 

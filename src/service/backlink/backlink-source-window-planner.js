@@ -9,7 +9,6 @@ import {
   findFirstHeadingIndex,
   findNearestNonHeadingIndex,
   findSectionEndIndexByHeadingStart,
-  getBlockRangeEndIndex,
   getMaxIndexedBlockEntry,
   getSiblingBlockIdByOffset,
   isStructuralContainerBlock,
@@ -20,6 +19,21 @@ import {
   resolveTopLevelStructuralContainerBlockId,
 } from "./backlink-source-window-structure.js";
 
+/**
+ * 构建来源窗口的上下文计划（identity + bodyRange + 可见块集合）。
+ * @param {Object} [params] 参数对象
+ * @param {string} [params.rootId] 来源文档 ID
+ * @param {string} [params.anchorBlockId] 锚点块 ID
+ * @param {string} [params.focusBlockId] 聚焦块 ID
+ * @param {string} [params.zoomInBlockId] 缩放定位块 ID（列表项上下文）
+ * @param {number} [params.sourceDocumentOrder] 反链块在来源文档中的顺序
+ * @param {string} [params.startBlockId] 窗口起始块 ID
+ * @param {string} [params.endBlockId] 窗口结束块 ID
+ * @param {string[]} [params.windowBlockIds] 窗口内全部块 ID
+ * @param {string[]} [params.orderedVisibleBlockIds] 按文档顺序排列的可见块 ID
+ * @param {Object} [params.context] 文档块上下文（含 blockById 索引）
+ * @returns {Object} 上下文计划对象
+ */
 function buildSourceWindowContextPlan({
   rootId = "",
   anchorBlockId = "",
@@ -61,6 +75,14 @@ function buildSourceWindowContextPlan({
   };
 }
 
+/**
+ * 将上下文计划装配为完整来源窗口对象。
+ * @param {Object} [params] 参数对象
+ * @param {Object|null} [params.contextPlan] 上下文计划
+ * @param {string} [params.renderMode] 渲染模式
+ * @param {string} [params.defaultExpandMode] 默认展开模式
+ * @returns {Object|null} 来源窗口对象；无计划时返回 null
+ */
 function buildSourceWindowFromContextPlan({
   contextPlan = null,
   renderMode = "",
@@ -72,6 +94,7 @@ function buildSourceWindowFromContextPlan({
 
   const identity = contextPlan.identity || {};
   const bodyRange = contextPlan.bodyRange || {};
+  /** @type {Object<string, any>} */
   const sourceWindow = {
     rootId: identity.rootId || "",
     anchorBlockId: identity.anchorBlockId || "",
@@ -99,6 +122,21 @@ function buildSourceWindowFromContextPlan({
   return sourceWindow;
 }
 
+/**
+ * 按块索引区间构建来源窗口：截取窗口块并计算可见块集合。
+ * @param {Object} [params] 参数对象
+ * @param {Object|null} [params.backlinkBlockNode] 反链块节点
+ * @param {Object} [params.context] 文档块上下文（含 orderedDocumentBlocks/indexById）
+ * @param {string} [params.anchorBlockId] 锚点块 ID
+ * @param {string} [params.zoomInBlockId] 缩放定位块 ID（列表项上下文）
+ * @param {number} [params.startIndex] 窗口起始块索引
+ * @param {number} [params.endIndex] 窗口结束块索引
+ * @param {string} [params.startBlockId] 窗口起始块 ID
+ * @param {string} [params.endBlockId] 窗口结束块 ID
+ * @param {string[]} [params.visibleBlockIds] 指定可见块 ID（缺省时窗口内全部可见）
+ * @param {string} [params.renderMode] 渲染模式
+ * @returns {Object|null} 来源窗口对象；参数不完整或窗口为空时返回 null
+ */
 function buildSourceWindowFromRange({
   backlinkBlockNode = null,
   context,

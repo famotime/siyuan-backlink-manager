@@ -1,6 +1,6 @@
-import { getRefBlockId } from "@/service/backlink/backlink-markdown.js";
-
 // 带行为的逻辑类已迁出至独立文件，此处 re-export 维持旧导入路径兼容
+import type { ListItemTreeNode } from "./list-item-tree-node";
+
 export { ListItemTreeNode } from "./list-item-tree-node";
 export { BacklinkPanelFilterCriteria } from "./backlink-panel-filter-criteria";
 
@@ -65,16 +65,6 @@ export interface IBacklinkContextFragment {
     order: number;
 }
 
-export interface IBacklinkContextSourceRule {
-    label: string;
-    visibilityLevel: BacklinkContextVisibilityLevel;
-    defaultVisible: boolean;
-    searchable: boolean;
-    filterable: boolean;
-    budgetPriority: number;
-    matchPriority: number;
-}
-
 export interface IBacklinkContextMetaInfoField {
     key: string;
     text: string;
@@ -119,36 +109,6 @@ export interface IBacklinkContextBudgetSummary {
     preservedMatchedFragmentCount: number;
     visibleCharacterCount: number;
     truncated: boolean;
-}
-
-export interface IBacklinkSourceWindow {
-    rootId: string;
-    anchorBlockId: string;
-    startBlockId: string;
-    endBlockId: string;
-    focusBlockId: string;
-    zoomInBlockId?: string;
-    windowBlockIds: string[];
-    visibleBlockIds?: string[];
-    orderedVisibleBlockIds?: string[];
-    contextPlan?: {
-        identity?: {
-            rootId?: string;
-            anchorBlockId?: string;
-            focusBlockId?: string;
-            zoomInBlockId?: string;
-            sourceDocumentOrder?: number;
-        };
-        bodyRange: {
-            startBlockId: string;
-            endBlockId: string;
-            windowBlockIds: string[];
-        };
-        orderedVisibleBlockIds: string[];
-        collapsedBlockIds: string[];
-        structuralShellBlockIds: string[];
-    };
-    defaultExpandMode: string;
 }
 
 export interface IBacklinkBlockNode {
@@ -207,7 +167,7 @@ export interface IPanelRenderBacklinkQueryParams {
     excludeDocumentIds?: Set<string>;
 }
 
-export interface IPanelRednerFilterQueryParams extends IPanelRenderBacklinkQueryParams {
+export interface IPanelRenderFilterQueryParams extends IPanelRenderBacklinkQueryParams {
     filterPanelCurDocDefBlockSortMethod?: BlockSortMethod;
     filterPanelCurDocDefBlockKeywords?: string;
     filterPanelRelatedDefBlockType?: string;

@@ -16,12 +16,10 @@
 
     let backlinkPanelAreaElement: HTMLDivElement;
     let previousRootId: string;
-    let previousFocusBlockId: string;
     let backlinkULElement: HTMLElement;
     let backlinkFilterPanelBaseData;
     let backlinkFilterPanelRenderData;
     let queryParams;
-    let savedQueryParamMap: Map<string, any>;
     let defalutEditors = [];
     let inputChangeTimeoutId: NodeJS.Timeout;
     const backlinkDocumentViewState = createBacklinkDocumentViewState();
@@ -61,12 +59,6 @@
         set previousRootId(value) {
             previousRootId = value;
         },
-        get previousFocusBlockId() {
-            return previousFocusBlockId;
-        },
-        set previousFocusBlockId(value) {
-            previousFocusBlockId = value;
-        },
         get backlinkULElement() {
             return backlinkULElement;
         },
@@ -90,12 +82,6 @@
         },
         set queryParams(value) {
             queryParams = value;
-        },
-        get savedQueryParamMap() {
-            return savedQueryParamMap;
-        },
-        set savedQueryParamMap(value) {
-            savedQueryParamMap = value;
         },
         get defalutEditors() {
             return defalutEditors;

@@ -15,9 +15,19 @@ test("backlink render data delegates dom extraction helpers to a dedicated modul
     "utf8",
   );
 
+  // 只锁定生产代码实际使用的 dom helper 导入（extractNestedNodeDomById/normalizeTargetBacklinkDom
+  // 在渲染数据模块中无调用方，不应出现在 import 列表中）
   assert.match(
     source,
-    /import\s*\{[\s\S]*extractNestedNodeDomById,[\s\S]*getBacklinkNodeSortComparator,[\s\S]*matchesBacklinkKeywords,[\s\S]*normalizeTargetBacklinkDom,[\s\S]*resolveBacklinkBlockNodeByContainer[\s\S]*\}\s*from "\.\/backlink-render-data-dom\.js";/,
+    /import\s*\{[\s\S]*getBacklinkNodeSortComparator,[\s\S]*matchesBacklinkKeywords,[\s\S]*resolveBacklinkBlockNodeByContainer[\s\S]*\}\s*from "\.\/backlink-render-data-dom\.js";/,
+  );
+  assert.doesNotMatch(
+    source,
+    /import\s*\{[^}]*extractNestedNodeDomById/,
+  );
+  assert.doesNotMatch(
+    source,
+    /import\s*\{[^}]*normalizeTargetBacklinkDom/,
   );
 });
 

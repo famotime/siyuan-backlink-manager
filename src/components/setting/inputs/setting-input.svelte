@@ -14,7 +14,7 @@
         }
         changeTimeoutId = setTimeout(() => {
             changeTimeoutId = null;
-            SettingService.ins.updateSettingCofnigValue(
+            SettingService.ins.updateSettingConfigValue(
                 itemProperty.key,
                 inputValue,
             );

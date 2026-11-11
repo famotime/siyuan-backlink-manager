@@ -73,7 +73,7 @@ export async function collectBacklinkBlocks({
 }
 
 export function collectHeadlineChildBlocks({
-  headlinkBacklinkChildBlockArray = [],
+  headlineBacklinkChildBlockArray = [],
   relatedDefBlockIdSet = new Set(),
   getRefBlockId,
   updateDynamicAnchorMap,
@@ -82,7 +82,7 @@ export function collectHeadlineChildBlocks({
   updateMapCount,
   context,
 }) {
-  for (const childBlock of headlinkBacklinkChildBlockArray) {
+  for (const childBlock of headlineBacklinkChildBlockArray) {
     let markdown = childBlock.markdown;
     const childDefBlockIdArray = getRefBlockId(markdown);
     markdown += childBlock.subInAttrConcat;

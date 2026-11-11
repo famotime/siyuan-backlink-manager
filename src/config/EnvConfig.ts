@@ -1,7 +1,5 @@
-import { lsNotebooks } from "@/utils/api";
-import { convertIconInIal } from "@/utils/icon-util";
 import Instance from "@/utils/Instance";
-import { App, I18N, IDockModel, IPluginDockTab, Plugin, getFrontend } from "siyuan";
+import { App, IObject, Plugin, getFrontend } from "siyuan";
 
 export class EnvConfig {
 
@@ -24,13 +22,11 @@ export class EnvConfig {
         return this._plugin.app;
     }
 
-    get i18n(): I18N {
+    get i18n(): IObject {
         if (this._plugin) {
             return this._plugin.i18n;
         }
-        const i18nObject: I18N = {
-            // 添加你需要的属性和方法
-        };
+        const i18nObject: IObject = {};
         return i18nObject;
     }
 
@@ -41,25 +37,6 @@ export class EnvConfig {
         let frontEnd: string = getFrontend();
         this._isMobile = frontEnd === "mobile" || frontEnd === "browser-mobile";
         this._plugin = plugin;
-    }
-
-
-    // docSearchDock: { config: IPluginDockTab, model: IDockModel };
-    // flatDocTreeDock: { config: IPluginDockTab, model: IDockModel };
-
-    private _notebookMap: Map<string, Notebook> = new Map();
-    public async notebookMap(cache: boolean): Promise<Map<string, Notebook>> {
-        if (cache && this._notebookMap && this._notebookMap.size > 0) {
-            return this._notebookMap
-        } else {
-            let notebooks: Notebook[] = (await lsNotebooks()).notebooks;
-            this._notebookMap.clear();
-            for (const notebook of notebooks) {
-                notebook.icon = convertIconInIal(notebook.icon);
-                this._notebookMap.set(notebook.id, notebook);
-            }
-        }
-        return this._notebookMap;
     }
 
 

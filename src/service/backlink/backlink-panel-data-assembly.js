@@ -2,19 +2,13 @@ export async function buildBacklinkPanelData(paramObj, deps) {
   const {
     getBlockIds,
     collectBacklinkBlocks,
-    collectHeadlineChildBlocks,
-    collectListItemTreeNodes,
-    collectParentBlocks,
     collectSiblingBlocks,
-    getBacklinkEmbedBlockInfo,
     createBacklinkBlockNode,
     updateDynamicAnchorMap,
     updateStaticAnchorMap,
     getRefBlockId,
     updateMaxValueMap,
     updateMapCount,
-    ListItemTreeNode,
-    isArrayNotEmpty,
     getBlockInfoMap,
     generateGetBlockArraySql,
     sql,
@@ -50,49 +44,11 @@ export async function buildBacklinkPanelData(paramObj, deps) {
 
   await collectBacklinkBlocks({
     backlinkBlockArray: paramObj.backlinkBlockArray,
-    curDocDefBlockArray: paramObj.curDocDefBlockArray,
-    getBacklinkEmbedBlockInfo,
     createBacklinkBlockNode,
     updateDynamicAnchorMap,
     updateStaticAnchorMap,
     getRefBlockId,
     updateMaxValueMap,
-    updateMapCount,
-    context: collectContext,
-  });
-
-  const relatedDefBlockIdSet = new Set(relatedDefBlockCountMap.keys());
-  collectHeadlineChildBlocks({
-    headlineBacklinkChildBlockArray: paramObj.headlineBacklinkChildBlockArray,
-    relatedDefBlockIdSet,
-    getRefBlockId,
-    updateDynamicAnchorMap,
-    updateStaticAnchorMap,
-    updateMaxValueMap,
-    updateMapCount,
-    context: collectContext,
-  });
-
-  if (isArrayNotEmpty(paramObj.listItemBacklinkChildBlockArray)) {
-    collectListItemTreeNodes({
-      listItemTreeNodeArray: ListItemTreeNode.buildTree(
-        paramObj.listItemBacklinkChildBlockArray,
-      ),
-      getRefBlockId,
-      updateDynamicAnchorMap,
-      updateStaticAnchorMap,
-      updateMaxValueMap,
-      updateMapCount,
-      context: collectContext,
-    });
-  }
-
-  collectParentBlocks({
-    backlinkParentBlockArray: paramObj.backlinkParentBlockArray,
-    relatedDefBlockIdSet,
-    getRefBlockId,
-    updateDynamicAnchorMap,
-    updateStaticAnchorMap,
     updateMapCount,
     context: collectContext,
   });

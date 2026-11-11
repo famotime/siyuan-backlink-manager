@@ -45,12 +45,6 @@ export function sanitizeBacklinkRenderQueryParams(queryParams, backlinkPanelData
     queryParams.excludeDocumentIds.delete(blockId);
   }
 
-  for (const node of backlinkPanelData?.backlinkBlockNodeArray || []) {
-    if (node.parentListItemTreeNode) {
-      node.parentListItemTreeNode.includeChildIdArray = null;
-      node.parentListItemTreeNode.excludeChildIdArray = null;
-    }
-  }
 }
 
 export function filterBacklinkDocumentBlocks(

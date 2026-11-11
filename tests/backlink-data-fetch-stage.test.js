@@ -20,7 +20,7 @@ test("backlink data delegates backlink fetch and source-window attachment to a d
   assert.match(source, /const usedCache = fetchStageResult\.usedCache;/);
 });
 
-test("backlink data wires the fetch stage dependencies exactly once for both render and turn-page paths", () => {
+test("backlink data wires the fetch stage dependencies exactly once for the render path", () => {
   const source = readFileSync(
     new URL("../src/service/backlink/backlink-data.ts", import.meta.url),
     "utf8",
@@ -46,12 +46,12 @@ test("backlink data wires the fetch stage dependencies exactly once for both ren
     );
   }
 
-  // 首次渲染与翻页两条路径都必须复用同一装配工厂
+  // 渲染路径必须复用同一装配工厂，且装配只出现一份（翻页路径已随分页 UI 移除）
   const callSites = source.match(
     /deps:\s*createBacklinkFetchStageDeps\(rootId,\s*validBacklinkBlockNodeArray\)/g,
   );
   assert.ok(
-    Array.isArray(callSites) && callSites.length >= 2,
-    "getBacklinkPanelRenderData 与 getTurnPageBacklinkPanelRenderData 都应复用 createBacklinkFetchStageDeps",
+    Array.isArray(callSites) && callSites.length === 1,
+    "getBacklinkPanelRenderData 应复用 createBacklinkFetchStageDeps 且仅装配一次",
   );
 });

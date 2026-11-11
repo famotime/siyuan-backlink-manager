@@ -1,28 +1,15 @@
-// 带行为的逻辑类已迁出至独立文件，此处 re-export 维持旧导入路径兼容
-import type { ListItemTreeNode } from "./list-item-tree-node";
-
-export { ListItemTreeNode } from "./list-item-tree-node";
 export { BacklinkPanelFilterCriteria } from "./backlink-panel-filter-criteria";
 
 export interface IBacklinkFilterPanelDataQueryParams {
     rootId: string;
     focusBlockId?: string;
-    queryParentDefBlock?: boolean;
-    querrChildDefBlockForListItem?: boolean;
-    queryChildDefBlockForHeadline?: boolean;
-    queryCurDocDefBlockRange?: string;
 }
 
 export interface IBacklinkBlockQueryParams {
     rootId?: string;
-    queryParentDefBlock?: boolean;
-    querrChildDefBlockForListItem?: boolean;
-    queryChildDefBlockForHeadline?: boolean;
     defBlockIds?: string[];
     backlinkBlockIds?: string[];
     backlinkBlocks?: BacklinkBlock[];
-    backlinkAllParentBlockIds?: string[];
-    backlinkParentListItemBlockIds?: string[];
 }
 
 export type BacklinkContextSourceType =
@@ -117,7 +104,6 @@ export interface IBacklinkBlockNode {
     selfRenderMarkdown?: string;
     parentMarkdown: string;
     parentRenderMarkdown?: string;
-    listItemChildMarkdown: string;
     headlineChildMarkdown: string;
     previousSiblingMarkdown: string;
     nextSiblingMarkdown: string;
@@ -135,7 +121,6 @@ export interface IBacklinkBlockNode {
     includeParentDefBlockIds: Set<string>;
     dynamicAnchorMap: Map<string, Set<string>>;
     staticAnchorMap: Map<string, Set<string>>;
-    parentListItemTreeNode?: ListItemTreeNode;
     parentContextBlockIds?: string[];
     previousSiblingBlockId?: string;
     nextSiblingBlockId?: string;
@@ -182,8 +167,6 @@ export interface IBacklinkPanelRenderData {
     backlinkDataArray: IBacklinkData[];
     backlinkDocumentCount: number;
     backlinkBlockNodeArray: IBacklinkBlockNode[];
-    curDocDefBlockArray?: DefBlock[];
-    relatedDefBlockArray?: DefBlock[];
     backlinkDocumentArray?: DefBlock[];
     pageNum: number;
     pageSize: number;

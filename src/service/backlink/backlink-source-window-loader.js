@@ -120,7 +120,19 @@ export async function loadOrderedBacklinkSourceWindowBlocks({
       }
     }
 
-    const siblingOrderMapByParentId = await getSiblingOrderMapByParentId(blockArray, {
+    // 仅对存在多个子块的父块查询真实子块顺序，避免无谓的 getChildBlocks 调用
+    const childCountByParentId = new Map();
+    for (const block of blockArray) {
+      const parentId = block?.parent_id;
+      if (!parentId) {
+        continue;
+      }
+      childCountByParentId.set(parentId, (childCountByParentId.get(parentId) ?? 0) + 1);
+    }
+    const candidateParentIds = Array.from(childCountByParentId.entries())
+      .filter(([, childCount]) => childCount > 1)
+      .map(([parentId]) => parentId);
+    const siblingOrderMapByParentId = await getSiblingOrderMapByParentId(candidateParentIds, {
       getChildBlocks,
     });
     const orderedBlocks = buildTreeOrderedBlocks(

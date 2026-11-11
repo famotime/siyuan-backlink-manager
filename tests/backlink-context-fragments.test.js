@@ -16,6 +16,7 @@ import {
   getBacklinkContextSourceRule,
   getBacklinkContextVisibilityLevelOrder,
 } from "../src/service/backlink/backlink-context-rules.js";
+import { matchKeywords } from "./helpers/predicates.js";
 
 function createBundleDeps() {
   return {
@@ -73,7 +74,6 @@ test("buildBacklinkContextBundle materializes ordered fragments and default visi
       includeCurBlockDefBlockIds: new Set(["def-current"]),
       includeDirectDefBlockIds: new Set(["def-current"]),
       includeRelatedDefBlockIds: new Set(["def-parent"]),
-      parentListItemTreeNode: null,
     },
     createBundleDeps(),
   );
@@ -178,23 +178,18 @@ test("hydrateBacklinkContextBundles attaches context fragments and bundle to bac
       includeCurBlockDefBlockIds: new Set(),
       includeDirectDefBlockIds: new Set(),
       includeRelatedDefBlockIds: new Set(),
-      parentListItemTreeNode: {
-        includeChildIdArray: ["item-a"],
-        excludeChildIdArray: [],
-        getFilterMarkdown: () => "list child ((def-list 'list'))",
-      },
     },
   ];
 
   hydrateBacklinkContextBundles(backlinkBlockNodeArray, createBundleDeps());
 
-  assert.equal(backlinkBlockNodeArray[0].contextFragments.length, 2);
-  assert.equal(backlinkBlockNodeArray[0].contextBundle.fragments.length, 2);
+  // 列表子块（child_list）片段管线已随 ListItemTreeNode 一并下线
+  assert.equal(backlinkBlockNodeArray[0].contextFragments.length, 1);
+  assert.equal(backlinkBlockNodeArray[0].contextBundle.fragments.length, 1);
   assert.equal(
     backlinkBlockNodeArray[0].contextBundle.metaInfo.documentTitle.text,
     "document title",
   );
-  assert.ok(backlinkBlockNodeArray[0].contextBundle.includeRelatedDefBlockIds.has("def-list"));
 });
 
 test("matchBacklinkContextBundle records matched fragments, primary source, and summaries", () => {
@@ -217,7 +212,6 @@ test("matchBacklinkContextBundle records matched fragments, primary source, and 
       includeCurBlockDefBlockIds: new Set(),
       includeDirectDefBlockIds: new Set(),
       includeRelatedDefBlockIds: new Set(),
-      parentListItemTreeNode: null,
     },
     createBundleDeps(),
   );
@@ -229,9 +223,7 @@ test("matchBacklinkContextBundle records matched fragments, primary source, and 
       includeAnchor: [],
       excludeAnchor: [],
     },
-    matchKeywords: (content, includeText, excludeText) =>
-      includeText.every((keyword) => content.includes(keyword)) &&
-      excludeText.every((keyword) => !content.includes(keyword)),
+    matchKeywords,
   });
 
   assert.equal(result.matchText, true);
@@ -263,7 +255,6 @@ test("matchBacklinkContextBundle strips markdown markers from match summaries", 
       includeCurBlockDefBlockIds: new Set(),
       includeDirectDefBlockIds: new Set(),
       includeRelatedDefBlockIds: new Set(),
-      parentListItemTreeNode: null,
     },
     createBundleDeps(),
   );
@@ -275,9 +266,7 @@ test("matchBacklinkContextBundle strips markdown markers from match summaries", 
       includeAnchor: [],
       excludeAnchor: [],
     },
-    matchKeywords: (content, includeText, excludeText) =>
-      includeText.every((keyword) => content.includes(keyword)) &&
-      excludeText.every((keyword) => !content.includes(keyword)),
+    matchKeywords,
   });
 
   assert.equal(bundle.matchSummaryList.length, 1);
@@ -306,7 +295,6 @@ test("matchBacklinkContextBundle records document title hits in metaInfo instead
       includeCurBlockDefBlockIds: new Set(),
       includeDirectDefBlockIds: new Set(),
       includeRelatedDefBlockIds: new Set(),
-      parentListItemTreeNode: null,
     },
     createBundleDeps(),
   );
@@ -318,9 +306,7 @@ test("matchBacklinkContextBundle records document title hits in metaInfo instead
       includeAnchor: [],
       excludeAnchor: [],
     },
-    matchKeywords: (content, includeText, excludeText) =>
-      includeText.every((keyword) => content.includes(keyword)) &&
-      excludeText.every((keyword) => !content.includes(keyword)),
+    matchKeywords,
   });
 
   assert.equal(result.matchText, true);
@@ -351,7 +337,6 @@ test("applyBacklinkContextVisibility exposes fragments by visibility level", () 
       includeCurBlockDefBlockIds: new Set(),
       includeDirectDefBlockIds: new Set(),
       includeRelatedDefBlockIds: new Set(),
-      parentListItemTreeNode: null,
     },
     createBundleDeps(),
   );

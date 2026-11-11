@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
+import { findBacklinkDocumentRenderTargets } from "../src/components/panel/backlink-document-editor-targets.js";
 import { createBacklinkPreviewRenderCoordinator } from "../src/components/panel/backlink-panel-controller-rendering.js";
 import { createBacklinkPanelBulkActions } from "../src/components/panel/backlink-panel-controller-bulk.js";
 
@@ -60,42 +61,7 @@ test("findBacklinkDocumentRenderTargets finds document header and editor element
     },
   };
 
-  // 验证与 controller 一致的 targets 查找逻辑
-  function findBacklinkDocumentRenderTargets(docId) {
-    if (!docId || !backlinkULElement) {
-      return { documentLiElement: null, editorElement: null };
-    }
-
-    const foundDocLi =
-      (typeof backlinkULElement.querySelector === "function"
-        ? backlinkULElement.querySelector(
-            `.list-item__document-name[data-node-id="${docId}"]`,
-          )
-        : null) ||
-      (typeof backlinkULElement.querySelectorAll === "function"
-        ? Array.from(
-            backlinkULElement.querySelectorAll(".list-item__document-name"),
-          ).find((element) => element.getAttribute?.("data-node-id") === docId)
-        : null) ||
-      null;
-
-    const foundEditor =
-      foundDocLi?.closest?.(".backlink-card")?.querySelector?.(".backlink-document-editor") ||
-      foundDocLi?.nextElementSibling?.querySelector?.(".backlink-document-editor") ||
-      (typeof backlinkULElement.querySelector === "function"
-        ? backlinkULElement.querySelector(
-            `.backlink-document-editor[data-backlink-root-id="${docId}"]`,
-          )
-        : null) ||
-      null;
-
-    return {
-      documentLiElement: foundDocLi || null,
-      editorElement: foundEditor || null,
-    };
-  }
-
-  const targets = findBacklinkDocumentRenderTargets(documentId);
+  const targets = findBacklinkDocumentRenderTargets(backlinkULElement, documentId);
   assert.equal(targets.documentLiElement, documentLiElement);
   assert.equal(targets.editorElement, editorElement);
 

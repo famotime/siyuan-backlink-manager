@@ -8,6 +8,7 @@
  * @param {Function} [handlers.refreshBacklinkPanelToBottom] 刷新文档底部反链面板
  * @param {Function} [handlers.handleDestroyProtyle] 处理编辑器销毁事件
  * @param {Function} [handlers.destroyPanel] 销毁反链面板实例
+ * @param {Object} [handlers.i18n] 插件 i18n 文案对象（菜单标签），缺省回退中文
  */
 export function createDocumentTitleIconMenuHandlers({
     updateDocumentBottomShowPanel,
@@ -15,6 +16,7 @@ export function createDocumentTitleIconMenuHandlers({
     refreshBacklinkPanelToBottom,
     handleDestroyProtyle,
     destroyPanel,
+    i18n = {},
 } = {}) {
     function getDocumentBlockIconMenus(e) {
         let rootId = e.detail.data.rootID;
@@ -23,7 +25,7 @@ export function createDocumentTitleIconMenuHandlers({
         }
         let submenus = [];
         submenus.push({
-            label: "恢复默认",
+            label: i18n?.menuReset || "恢复默认",
             click: async () => {
                 await updateDocumentBottomShowPanel(rootId, null);
                 if (isDocumentBottomDisplayEnabled()) {
@@ -35,7 +37,7 @@ export function createDocumentTitleIconMenuHandlers({
             }
         });
         submenus.push({
-            label: "始终显示该文档底部反链",
+            label: i18n?.menuShowBottomPanel || "始终显示该文档底部反链",
             click: async () => {
                 await updateDocumentBottomShowPanel(rootId, 1);
 
@@ -44,7 +46,7 @@ export function createDocumentTitleIconMenuHandlers({
             }
         });
         submenus.push({
-            label: "始终隐藏该文档底部反链",
+            label: i18n?.menuHideBottomPanel || "始终隐藏该文档底部反链",
             click: async () => {
                 updateDocumentBottomShowPanel(rootId, -1);
                 let documentContentElement = e.detail.protyle.contentElement;

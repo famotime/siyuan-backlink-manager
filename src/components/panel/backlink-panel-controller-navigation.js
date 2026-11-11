@@ -1,16 +1,16 @@
 import {
+  BACKLINK_CONTEXT_VISIBILITY_LEVELS as BACKLINK_CONTEXT_VISIBILITY_LEVEL_ORDER,
+} from "../../service/backlink/backlink-context-rules.js";
+import {
+  findBacklinkDocumentEditorElement,
+} from "./backlink-document-editor-targets.js";
+import {
   getBacklinkSourceWindowByLevel,
   getBacklinkSourceWindowBodyRange,
   getBacklinkSourceWindowIdentity,
   getBacklinkSourceWindowOrderedVisibleBlockIds,
 } from "../../service/backlink/backlink-source-window.js";
 
-const BACKLINK_CONTEXT_VISIBILITY_LEVEL_ORDER = [
-  "core",
-  "nearby",
-  "extended",
-  "full",
-];
 
 export function createBacklinkPanelNavigationActions({
   state,
@@ -138,12 +138,11 @@ export function createBacklinkPanelNavigationActions({
     }
 
     const documentId = documentLiElement.getAttribute("data-node-id");
-    const editorElement =
-      documentLiElement.closest?.(".backlink-card")?.querySelector?.(".backlink-document-editor") ||
-      documentLiElement.nextElementSibling?.querySelector?.(".backlink-document-editor") ||
-      state.backlinkULElement?.querySelector?.(
-        `.backlink-document-editor[data-backlink-root-id="${documentId}"]`,
-      );
+    const editorElement = findBacklinkDocumentEditorElement(
+      documentLiElement,
+      state.backlinkULElement,
+      documentId,
+    );
     if (!documentId || !editorElement) {
       return;
     }
@@ -197,13 +196,12 @@ export function createBacklinkPanelNavigationActions({
     }
 
     expandBacklinkDocument(documentLiElement);
-    const editorElement =
-      documentLiElement.closest?.(".backlink-card")?.querySelector?.(".backlink-document-editor") ||
-      documentLiElement.nextElementSibling?.querySelector?.(".backlink-document-editor") ||
-      state.backlinkULElement?.querySelector?.(
-        `.backlink-document-editor[data-backlink-root-id="${documentId}"]`,
-      ) ||
-      documentLiElement.nextElementSibling;
+    const editorElement = findBacklinkDocumentEditorElement(
+      documentLiElement,
+      state.backlinkULElement,
+      documentId,
+      { fallbackToSibling: true },
+    );
     const editor = state.backlinkDocumentEditorMap?.get?.(documentId);
     const protyleContentElement =
       editor?.protyle?.contentElement || editorElement;

@@ -27,11 +27,11 @@ export function BACKLINK_BLOCK_SORT_METHOD_ELEMENT(): { name: string, value: Blo
             value: "alphabeticDesc",
         },
         {
-            name: "文档名称升序",
+            name: EnvConfig.ins.i18n.docSortNameAsc || "文档名称升序",
             value: "documentAlphabeticAsc",
         },
         {
-            name: "文档名称降序",
+            name: EnvConfig.ins.i18n.docSortNameDesc || "文档名称降序",
             value: "documentAlphabeticDesc",
         },
     ];

@@ -56,8 +56,6 @@ export function buildValidBacklinkRenderNodes({
  * @param {Array<Object>} [options.backlinkDataArray] 反链数据数组
  * @param {Object} [options.pagination] 分页信息（totalDocumentCount/pageNum/totalPage）
  * @param {Array<Object>|null} [options.validBacklinkBlockNodeArray] 过滤排序后的反链块节点数组
- * @param {Array<Object>|null} [options.filterCurDocDefBlockArray] 当前文档定义块数组
- * @param {Array<Object>|null} [options.filterRelatedDefBlockArray] 相关定义块数组
  * @param {Array<Object>|null} [options.filterBacklinkDocumentArray] 反链文档数组
  * @param {number} [options.pageSize] 每页数量
  * @param {boolean} [options.usedCache] 本次渲染是否命中缓存
@@ -68,8 +66,6 @@ export function buildBacklinkPanelRenderDataResult({
   backlinkDataArray = [],
   pagination = {},
   validBacklinkBlockNodeArray = null,
-  filterCurDocDefBlockArray = null,
-  filterRelatedDefBlockArray = null,
   filterBacklinkDocumentArray = null,
   pageSize = 0,
   usedCache = false,
@@ -79,8 +75,6 @@ export function buildBacklinkPanelRenderDataResult({
     backlinkDataArray,
     backlinkDocumentCount: pagination?.totalDocumentCount,
     backlinkBlockNodeArray: validBacklinkBlockNodeArray,
-    curDocDefBlockArray: filterCurDocDefBlockArray,
-    relatedDefBlockArray: filterRelatedDefBlockArray,
     backlinkDocumentArray: filterBacklinkDocumentArray,
     pageNum: pagination?.pageNum,
     pageSize,

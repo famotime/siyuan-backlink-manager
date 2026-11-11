@@ -19,7 +19,7 @@ export const DEFAULT_BACKLINK_DOCK_CONFIG = {
     position: "RightTop" as const,
     size: { width: 300, height: 0 },
     icon: CUSTOM_ICON_MAP.BacklinkPanelFilter.id,
-    title: "反链管家 Dock",
+    title: EnvConfig.ins.i18n?.dockTitle || "反链管家 Dock",
     hotkey: "⌥⇧B",
     show: false,
 };

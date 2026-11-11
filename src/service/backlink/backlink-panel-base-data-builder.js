@@ -31,7 +31,6 @@ export function createBacklinkBlockNode(backlinkBlock) {
     selfRenderMarkdown: "",
     parentMarkdown: "",
     parentRenderMarkdown: "",
-    listItemChildMarkdown: "",
     headlineChildMarkdown: "",
     previousSiblingMarkdown: "",
     nextSiblingMarkdown: "",

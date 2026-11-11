@@ -149,24 +149,20 @@ export function getElementsAtDepth(rootElement: Element, selector: string, depth
 }
 
 
+/**
+ * 递归遍历的深度控制谓词：当元素子节点足够多（≥4，通常为复杂容器）时停止下钻。
+ * 注意：历史实现曾检测 NodeList 列表节点，现行为已退化为纯数量阈值，
+ * 调用方（getElementsBeforeDepth 等遍历入口）依赖的是"复杂容器不再深入"这一效果。
+ */
 export function syHasChildListNode(root: Element): boolean {
     if (!root) {
         return false;
     }
-    // 获取 root 的所有子节点
     const children = Array.from(root.children) as HTMLElement[];
 
-    // 确保有至少4个子节点
     if (children.length < 4) {
         return false;
     }
-    // let listNodeElement = root.querySelector(`:scope > [data-type="NodeList"].list`);
-
-    // if (
-    //     listNodeElement
-    // ) {
-    //     return true;
-    // }
 
     return true;
 }

@@ -69,6 +69,6 @@ test("backlink results panel exposes a refresh button wired to the refresh handl
   );
 
   assert.match(source, /export let refreshBacklinkPanelToCurrentMainDocument;/);
-  assert.match(source, /aria-label="刷新反链"/);
+  assert.match(source, /aria-label={EnvConfig.ins.i18n.refreshBacklink || "刷新反链"}/);
   assert.match(source, /on:click\|stopPropagation=\{refreshBacklinkPanelToCurrentMainDocument\}/);
 });

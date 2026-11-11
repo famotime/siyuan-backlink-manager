@@ -1,5 +1,6 @@
 export function createBacklinkPanelRenderBindings({
   state,
+  i18n = {},
   renderBacklinkDocumentGroupByHelper,
   updateBacklinkDocumentLiNavigation,
   getBacklinkContextControlState,
@@ -24,7 +25,6 @@ export function createBacklinkPanelRenderBindings({
   getElementsAtDepth,
   syHasChildListNode,
   hideBlocksOutsideBacklinkSourceWindow,
-  hideOtherListItemElement,
   isSetEmpty,
   isSetNotEmpty,
   isArrayNotEmpty,
@@ -81,6 +81,7 @@ export function createBacklinkPanelRenderBindings({
             {
               showReferencedTargetBlock: isShowTargetBlock,
               onTargetBlockClick: handleTargetBlockClick,
+              i18n,
             },
           ),
         syncBacklinkDocumentProtyleState: (editorArg) =>
@@ -128,8 +129,7 @@ export function createBacklinkPanelRenderBindings({
               backlinkProtyleHeadingExpandMap:
                 state.backlinkProtyleHeadingExpandMap,
               hideBlocksOutsideBacklinkSourceWindow,
-              hideOtherListItemElement,
-              queryParams: state.queryParams,
+                          queryParams: state.queryParams,
               isSetEmpty,
               isSetNotEmpty,
               isArrayNotEmpty,
@@ -170,6 +170,7 @@ export function createBacklinkPanelRenderBindings({
         createDocumentListItemElement: (documentGroup, wrapper) =>
           createBacklinkDocumentListItemElement({
             documentGroup,
+            i18n,
             contextControlState: getBacklinkContextControlState(documentGroup),
             showReferencedTargetBlock: isShowTargetBlock,
             parentElement: wrapper || state.backlinkULElement,
@@ -188,13 +189,8 @@ export function createBacklinkPanelRenderBindings({
     });
   }
 
-  function getBacklinkContextControlStateWrapper(documentGroup) {
-    return getBacklinkContextControlState(documentGroup);
-  }
-
   return {
     renderBacklinkDocumentGroup,
     batchCreateOfficialBacklinkProtyle,
-    getBacklinkContextControlState: getBacklinkContextControlStateWrapper,
   };
 }

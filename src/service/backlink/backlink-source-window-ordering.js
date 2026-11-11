@@ -74,31 +74,26 @@ function compareBlocksBySiblingOrder(
   return compareBlocksByDocumentOrder(blockA, blockB, indexMap);
 }
 
-export async function getSiblingOrderMapByParentId(blockArray = [], deps = {}) {
+/**
+ * 并发查询各父块的子块顺序，构建 parentId -> (childId -> index) 映射。
+ * 兄弟块加载器与来源窗口排序共用此唯一实现。
+ * @param {string[]} parentIdArray 需要排序的父块 ID 列表（调用方自行决定过滤条件）
+ * @param {Object} deps 依赖注入（getChildBlocks）
+ * @returns {Promise<Map<string, Map<string, number>>>}
+ */
+export async function getSiblingOrderMapByParentId(parentIdArray = [], deps = {}) {
   const { getChildBlocks } = deps;
-  if (typeof getChildBlocks !== "function" || !Array.isArray(blockArray)) {
-    return new Map();
-  }
-
-  const childCountByParentId = new Map();
-  for (const block of blockArray) {
-    const parentId = block?.parent_id;
-    if (!parentId) {
-      continue;
-    }
-    childCountByParentId.set(parentId, (childCountByParentId.get(parentId) ?? 0) + 1);
-  }
-
-  const candidateParentIds = Array.from(childCountByParentId.entries())
-    .filter(([parentId, childCount]) => parentId && childCount > 1)
-    .map(([parentId]) => parentId);
-  if (candidateParentIds.length <= 0) {
+  if (
+    typeof getChildBlocks !== "function" ||
+    !Array.isArray(parentIdArray) ||
+    parentIdArray.length <= 0
+  ) {
     return new Map();
   }
 
   const siblingOrderMapByParentId = new Map();
   await Promise.all(
-    candidateParentIds.map(async (parentId) => {
+    parentIdArray.filter(Boolean).map(async (parentId) => {
       const childBlocks = await getChildBlocks(parentId);
       if (!Array.isArray(childBlocks) || childBlocks.length <= 0) {
         return;
@@ -117,6 +112,32 @@ export async function getSiblingOrderMapByParentId(blockArray = [], deps = {}) {
   );
 
   return siblingOrderMapByParentId;
+}
+
+/**
+ * 按父块的子块真实顺序就地排序列表；映射缺失的块排到最后（Infinity），
+ * 元数据无法证明顺序时保持原查询顺序（与文档序回退变体刻意不同）。
+ * 供兄弟块加载器使用；buildTreeOrderedBlocks 内部使用文档序回退变体。
+ */
+export function sortBlocksByParentSiblingOrder(
+  parentId = "",
+  blockArray = [],
+  siblingOrderMapByParentId = new Map(),
+) {
+  const siblingOrderMap = siblingOrderMapByParentId.get(parentId);
+  if (!siblingOrderMap || siblingOrderMap.size <= 0) {
+    blockArray.sort(compareBlocksByFallbackOrder);
+    return;
+  }
+
+  blockArray.sort((a, b) => {
+    const orderA = siblingOrderMap.has(a?.id) ? siblingOrderMap.get(a.id) : Infinity;
+    const orderB = siblingOrderMap.has(b?.id) ? siblingOrderMap.get(b.id) : Infinity;
+    if (Number.isFinite(orderA) && Number.isFinite(orderB) && orderA !== orderB) {
+      return orderA - orderB;
+    }
+    return 0;
+  });
 }
 
 function extractBlockOrderMapFromKramdown(kramdown = "") {

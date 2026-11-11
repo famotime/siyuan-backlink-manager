@@ -6,8 +6,6 @@ import * as backlinkDocumentInteraction from "../src/components/panel/backlink-d
 const {
   buildBacklinkDocumentRenderOptions,
   getBacklinkDocumentClickAction,
-  getNextBacklinkContextVisibilityLevel,
-  getPreviousBacklinkContextVisibilityLevel,
   getBacklinkDocumentTargetRole,
   shouldHandleBacklinkDocumentClick,
 } = backlinkDocumentInteraction;
@@ -91,19 +89,6 @@ test("right-click on the backlink document title opens the document in the right
   assert.equal(openArea, "right");
 });
 
-test("returns the next document visibility level until full", () => {
-  assert.equal(getNextBacklinkContextVisibilityLevel("core"), "nearby");
-  assert.equal(getNextBacklinkContextVisibilityLevel("nearby"), "extended");
-  assert.equal(getNextBacklinkContextVisibilityLevel("extended"), "full");
-  assert.equal(getNextBacklinkContextVisibilityLevel("full"), "full");
-});
-
-test("returns the previous document visibility level until core", () => {
-  assert.equal(getPreviousBacklinkContextVisibilityLevel("full"), "extended");
-  assert.equal(getPreviousBacklinkContextVisibilityLevel("extended"), "nearby");
-  assert.equal(getPreviousBacklinkContextVisibilityLevel("nearby"), "core");
-  assert.equal(getPreviousBacklinkContextVisibilityLevel("core"), "core");
-});
 
 test("skips row-level handling when the click comes from the dedicated toggle button", () => {
   assert.equal(

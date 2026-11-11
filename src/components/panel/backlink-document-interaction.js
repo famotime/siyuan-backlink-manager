@@ -1,4 +1,7 @@
 import {
+  BACKLINK_CONTEXT_VISIBILITY_LEVELS as BACKLINK_CONTEXT_VISIBILITY_LEVEL_ORDER,
+} from "../../service/backlink/backlink-context-rules.js";
+import {
   getBacklinkSourceWindowBodyRange,
   getBacklinkSourceWindowByLevel,
   getBacklinkSourceWindowIdentity,
@@ -12,12 +15,6 @@ export const BACKLINK_DOCUMENT_RENDER_CONFIG = {
   breadcrumb: false,
 };
 
-const BACKLINK_CONTEXT_VISIBILITY_LEVEL_ORDER = [
-  "core",
-  "nearby",
-  "extended",
-  "full",
-];
 
 export function getBacklinkDocumentClickAction({
   ctrlKey = false,
@@ -168,25 +165,6 @@ export function buildBacklinkDocumentRenderOptions({
   }
 
   return options;
-}
-
-export function getNextBacklinkContextVisibilityLevel(level = "core") {
-  const currentIndex = BACKLINK_CONTEXT_VISIBILITY_LEVEL_ORDER.includes(level)
-    ? BACKLINK_CONTEXT_VISIBILITY_LEVEL_ORDER.indexOf(level)
-    : 0;
-  const nextIndex = Math.min(
-    currentIndex + 1,
-    BACKLINK_CONTEXT_VISIBILITY_LEVEL_ORDER.length - 1,
-  );
-  return BACKLINK_CONTEXT_VISIBILITY_LEVEL_ORDER[nextIndex];
-}
-
-export function getPreviousBacklinkContextVisibilityLevel(level = "core") {
-  const currentIndex = BACKLINK_CONTEXT_VISIBILITY_LEVEL_ORDER.includes(level)
-    ? BACKLINK_CONTEXT_VISIBILITY_LEVEL_ORDER.indexOf(level)
-    : 0;
-  const previousIndex = Math.max(currentIndex - 1, 0);
-  return BACKLINK_CONTEXT_VISIBILITY_LEVEL_ORDER[previousIndex];
 }
 
 export function getBacklinkDocumentTargetRole(target) {

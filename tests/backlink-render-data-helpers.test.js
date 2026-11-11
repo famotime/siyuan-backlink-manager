@@ -8,6 +8,7 @@ import {
   normalizeTargetBacklinkDom,
   resolveBacklinkBlockNodeByContainer,
 } from "../src/service/backlink/backlink-render-data-dom.js";
+import { matchKeywords } from "./helpers/predicates.js";
 
 test("backlink render data delegates dom extraction helpers to a dedicated module", () => {
   const source = readFileSync(
@@ -86,9 +87,7 @@ test("matchesBacklinkKeywords validates text and anchor matches from prepared se
     },
     searchableText: "alpha beta",
     searchableAnchorText: "skill docs",
-    matchKeywords: (content, includeText, excludeText) =>
-      includeText.every((keyword) => content.includes(keyword)) &&
-      excludeText.every((keyword) => !content.includes(keyword)),
+    matchKeywords,
   });
 
   assert.deepEqual(result, {

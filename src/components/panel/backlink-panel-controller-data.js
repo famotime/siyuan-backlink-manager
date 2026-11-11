@@ -1,14 +1,8 @@
 export function createBacklinkPanelDataCoordinator({
   state,
   getBacklinkPanelRenderData,
-  getTurnPageBacklinkPanelRenderData,
-  mergeTurnPageBacklinkPanelRenderData,
   refreshBacklinkPreview,
 } = {}) {
-  async function refreshFilterDisplayData() {
-    // No-op after removing filter panel
-  }
-
   async function updateRenderData() {
     state.backlinkFilterPanelRenderData = await getBacklinkPanelRenderData(
       state.backlinkFilterPanelBaseData,
@@ -18,38 +12,12 @@ export function createBacklinkPanelDataCoordinator({
       return;
     }
 
-    state.queryParams = state.queryParams;
-    refreshBacklinkPreview();
-  }
-
-  async function pageTurning(pageNumParam) {
-    if (
-      !state.backlinkFilterPanelRenderData ||
-      pageNumParam < 1 ||
-      pageNumParam > state.backlinkFilterPanelRenderData.totalPage
-    ) {
-      return;
-    }
-
-    state.queryParams.pageNum = pageNumParam;
-    const pageBacklinkPanelRenderData =
-      await getTurnPageBacklinkPanelRenderData(
-        state.backlinkFilterPanelRenderData.rootId,
-        state.backlinkFilterPanelRenderData.backlinkBlockNodeArray,
-        state.queryParams,
-      );
-
-    state.backlinkFilterPanelRenderData = mergeTurnPageBacklinkPanelRenderData(
-      state.backlinkFilterPanelRenderData,
-      pageBacklinkPanelRenderData,
-    );
+    // 触发 Svelte 响应式失效（queryParams 的 set 访问器）
     state.queryParams = state.queryParams;
     refreshBacklinkPreview();
   }
 
   return {
-    refreshFilterDisplayData,
     updateRenderData,
-    pageTurning,
   };
 }

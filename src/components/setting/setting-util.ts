@@ -11,7 +11,7 @@ export function openSettingsDialog() {
     const dialogId = "backlink-panel-setting-" + Date.now();
     // 创建dialog
     const settingDialog = new Dialog({
-        title: "反链管家设置",
+        title: EnvConfig.ins.i18n?.settingTitle || "反链管家设置",
         content: `
           <div id="${dialogId}" style="overflow: hidden; position: relative; height: 100%;"></div>
           `,

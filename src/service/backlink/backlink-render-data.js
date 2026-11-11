@@ -19,7 +19,6 @@ export function buildLegacyBacklinkSearchText({
   headlineChildMarkdown = "",
   previousSiblingMarkdown = "",
   nextSiblingMarkdown = "",
-  listItemChildMarkdown = "",
 } = {}) {
   return [
     selfMarkdown,
@@ -28,7 +27,6 @@ export function buildLegacyBacklinkSearchText({
     headlineChildMarkdown,
     previousSiblingMarkdown,
     nextSiblingMarkdown,
-    listItemChildMarkdown,
   ].join("");
 }
 
@@ -249,12 +247,6 @@ export async function getBatchBacklinkDoc({
     backlink.contextBundle = backlinkBlockNode.contextBundle;
     backlink.targetBlocks = backlinkBlockNode.targetBlocks || [];
     backlinkDataMap.set(backlinkBlockId, backlink);
-    if (backlinkBlockNode.parentListItemTreeNode) {
-      backlink.includeChildListItemIdArray =
-        backlinkBlockNode.parentListItemTreeNode.includeChildIdArray;
-      backlink.excludeChildListItemIdArray =
-        backlinkBlockNode.parentListItemTreeNode.excludeChildIdArray;
-    }
   }
 
   const backlinks = Array.from(backlinkDataMap.values());
@@ -281,7 +273,6 @@ export function isBacklinkBlockValid(queryParams, backlinkBlockNode, deps) {
   const excludeDocumentIds = queryParams.excludeDocumentIds;
 
   const backlinkBlockInfo = backlinkBlockNode.block;
-  const parentListItemTreeNode = backlinkBlockNode.parentListItemTreeNode;
 
   if (isSetNotEmpty(includeDocumentIds) && !includeDocumentIds.has(backlinkBlockInfo.root_id)) {
     return false;
@@ -293,7 +284,7 @@ export function isBacklinkBlockValid(queryParams, backlinkBlockNode, deps) {
   if (keywordStr) {
     const keywordObj = parseSearchSyntax(keywordStr.toLowerCase());
     let contextBundle = backlinkBlockNode.contextBundle;
-    if (!contextBundle?.fragments?.length || parentListItemTreeNode) {
+    if (!contextBundle?.fragments?.length) {
       contextBundle = buildBacklinkContextBundle(backlinkBlockNode, {
         getQueryStrByBlock,
         getMarkdownAnchorTextArray,
@@ -327,14 +318,6 @@ export function isBacklinkBlockValid(queryParams, backlinkBlockNode, deps) {
       const headlineChildMarkdown = backlinkBlockNode.headlineChildMarkdown;
       const previousSiblingMarkdown = backlinkBlockNode.previousSiblingMarkdown || "";
       const nextSiblingMarkdown = backlinkBlockNode.nextSiblingMarkdown || "";
-      let listItemChildMarkdown = "";
-      if (parentListItemTreeNode) {
-        listItemChildMarkdown = parentListItemTreeNode.getFilterMarkdown(
-          parentListItemTreeNode.includeChildIdArray,
-          parentListItemTreeNode.excludeChildIdArray,
-        );
-      }
-
       backlinkConcatContent = buildLegacyBacklinkSearchText({
         selfMarkdown,
         documentMarkdown,
@@ -342,7 +325,6 @@ export function isBacklinkBlockValid(queryParams, backlinkBlockNode, deps) {
         headlineChildMarkdown,
         previousSiblingMarkdown,
         nextSiblingMarkdown,
-        listItemChildMarkdown,
       });
       backlinkAllAnchorText = getMarkdownAnchorTextArray(backlinkConcatContent).join(" ");
       backlinkConcatContent = removeMarkdownRefBlockStyle(backlinkConcatContent).toLowerCase();

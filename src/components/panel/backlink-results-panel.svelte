@@ -76,7 +76,7 @@
         <button
             type="button"
             class="block__icon b3-tooltips b3-tooltips__sw"
-            aria-label="刷新反链"
+            aria-label={EnvConfig.ins.i18n.refreshBacklink || "刷新反链"}
             on:click|stopPropagation={refreshBacklinkPanelToCurrentMainDocument}
             on:keydown={handleKeyDownDefault}
         >
@@ -85,7 +85,7 @@
         <button
             type="button"
             class="block__icon b3-tooltips b3-tooltips__sw"
-            aria-label="恢复默认设置与筛选条件"
+            aria-label={EnvConfig.ins.i18n.resetSettingsAndCriteria || "恢复默认设置与筛选条件"}
             on:click|stopPropagation={resetBacklinkQueryParametersToDefault}
             on:keydown={handleKeyDownDefault}
         >
@@ -107,7 +107,7 @@
                     <button
                         type="button"
                         class="backlink-search-clear b3-tooltips b3-tooltips__s"
-                        aria-label="清空搜索内容"
+                        aria-label={EnvConfig.ins.i18n.clearSearch || "清空搜索内容"}
                         on:click={clearKeywordSearch}
                     >
                         {@html renderIcon("iconBlClear", 12)}
@@ -133,8 +133,8 @@
                 <button
                     type="button"
                     class="block__icon b3-tooltips b3-tooltips__sw"
-                    aria-label={isAllExpanded ? "折叠所有文档" : "展开所有文档"}
-                    title={isAllExpanded ? "右键：折叠列表项节点" : "右键：展开列表项节点"}
+                    aria-label={isAllExpanded ? (EnvConfig.ins.i18n.collapseAllDocs || "折叠所有文档") : (EnvConfig.ins.i18n.expandAllDocs || "展开所有文档")}
+                    title={isAllExpanded ? (EnvConfig.ins.i18n.rightClickCollapseListItems || "右键：折叠列表项节点") : (EnvConfig.ins.i18n.rightClickExpandListItems || "右键：展开列表项节点")}
                     on:click={toggleAllBacklinkDocuments}
                     on:contextmenu={handleToggleContextMenu}
                     on:keydown={handleKeyDownDefault}
@@ -170,7 +170,7 @@
                 <button
                     type="button"
                     class="block__icon ariaLabel backlink-context-step-button previous"
-                    aria-label="全部文档：上一个层级"
+                    aria-label={EnvConfig.ins.i18n.allDocsPrevLevel || "全部文档：上一个层级"}
                     on:click={() => stepAllBacklinkDocumentContextVisibilityLevel("previous")}
                 >
                     {@html renderIcon("iconBlChevronLeft")}
@@ -182,17 +182,17 @@
                             class="backlink-chip backlink-chip--flat backlink-context-state ariaLabel {level === backlinkGlobalContextVisibilityLevel ? 'active' : ''}"
                             data-context-level={level}
                             aria-pressed={level === backlinkGlobalContextVisibilityLevel}
-                            aria-label={getBacklinkContextLevelTooltip(level)}
+                            aria-label={getBacklinkContextLevelTooltip(level, EnvConfig.ins.i18n)}
                             on:click={() => setAllBacklinkDocumentContextVisibilityLevel(level)}
                         >
-                            {getBacklinkContextLevelLabel(level)}
+                            {getBacklinkContextLevelLabel(level, EnvConfig.ins.i18n)}
                         </button>
                     {/each}
                 </div>
                 <button
                     type="button"
                     class="block__icon ariaLabel backlink-context-step-button next"
-                    aria-label="全部文档：下一个层级"
+                    aria-label={EnvConfig.ins.i18n.allDocsNextLevel || "全部文档：下一个层级"}
                     on:click={() => stepAllBacklinkDocumentContextVisibilityLevel("next")}
                 >
                     {@html renderIcon("iconBlChevronRight")}
@@ -205,7 +205,7 @@
 <div class="backlinkList fn__flex-1 {panelBacklinkViewExpand ? '' : 'fn__none'}">
     <div class="sy__backlink">
         {#if displayHintBacklinkBlockCacheUsage}
-            <div>此次查询使用了缓存数据</div>
+            <div>{EnvConfig.ins.i18n.cacheUsedHint || "此次查询使用了缓存数据"}</div>
         {/if}
         {#if backlinkFilterPanelRenderData && !isArrayNotEmpty(backlinkFilterPanelRenderData.backlinkDataArray)}
             <!-- 空态：居中线框图标 + 主文案 + 辅助提示 -->

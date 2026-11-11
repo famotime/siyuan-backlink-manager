@@ -25,9 +25,6 @@ test("buildBacklinkPanelData forwards sibling groups and collector helpers to th
     {
       getBlockIds: () => [],
       collectBacklinkBlocks: async () => {},
-      collectHeadlineChildBlocks: () => {},
-      collectListItemTreeNodes: () => {},
-      collectParentBlocks: () => {},
       collectSiblingBlocks: (args) => {
         receivedArgs = args;
       },
@@ -38,7 +35,6 @@ test("buildBacklinkPanelData forwards sibling groups and collector helpers to th
       getRefBlockId: () => [],
       updateMaxValueMap: () => {},
       updateMapCount: () => {},
-      ListItemTreeNode: { buildTree: () => [] },
       isArrayNotEmpty: () => false,
       getBlockInfoMap: async () => new Map(),
       generateGetBlockArraySql: () => "",

@@ -2,7 +2,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  advanceBacklinkDocumentVisibilityLevel,
   cycleBacklinkDocumentVisibilityLevel,
   createBacklinkDocumentViewState,
   getBacklinkDocumentRenderState,
@@ -20,18 +19,6 @@ test("creates isolated maps for backlink document view state", () => {
   assert.ok(state.documentShowFullMap instanceof Map);
   assert.ok(state.documentVisibilityLevelMap instanceof Map);
   assert.ok(state.documentActiveIndexMap instanceof Map);
-});
-
-test("advancing document visibility level stops at full", () => {
-  const state = createBacklinkDocumentViewState();
-
-  assert.equal(advanceBacklinkDocumentVisibilityLevel(state, "doc-a"), "nearby");
-  assert.equal(advanceBacklinkDocumentVisibilityLevel(state, "doc-a"), "extended");
-  assert.equal(advanceBacklinkDocumentVisibilityLevel(state, "doc-a"), "full");
-  assert.equal(advanceBacklinkDocumentVisibilityLevel(state, "doc-a"), "full");
-
-  assert.equal(state.documentVisibilityLevelMap.get("doc-a"), "full");
-  assert.equal(state.documentShowFullMap.get("doc-a"), true);
 });
 
 test("cycling document visibility level wraps in both directions", () => {

@@ -73,12 +73,17 @@ export const BACKLINK_CONTEXT_SOURCE_RULES = {
   },
 };
 
-const BACKLINK_CONTEXT_VISIBILITY_LEVEL_ORDER = {
-  core: 1,
-  nearby: 2,
-  extended: 3,
-  full: 4,
-};
+// 可见级别顺序的唯一事实来源，组件层与服务层共用
+export const BACKLINK_CONTEXT_VISIBILITY_LEVELS = [
+  "core",
+  "nearby",
+  "extended",
+  "full",
+];
+
+const BACKLINK_CONTEXT_VISIBILITY_LEVEL_ORDER = Object.fromEntries(
+  BACKLINK_CONTEXT_VISIBILITY_LEVELS.map((level, index) => [level, index + 1]),
+);
 
 const DEFAULT_BACKLINK_CONTEXT_SOURCE_RULE = {
   label: "上下文",

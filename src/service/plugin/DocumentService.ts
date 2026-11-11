@@ -31,6 +31,7 @@ const titleIconMenuHandlers = createDocumentTitleIconMenuHandlers({
     refreshBacklinkPanelToBottom,
     handleDestroyProtyle,
     destroyPanel,
+    i18n: EnvConfig.ins.i18n,
 });
 
 
@@ -299,7 +300,8 @@ function destroyAllPanel() {
 
 let intervalId;
 function intervalSetNodePaddingBottom() {
-    // 后续看能不能优化成响应式的。。
+    // 以 50ms 轮询同步文档底部面板的 padding：思源编辑器的布局尺寸变化没有可靠的
+    // 回调入口（ResizeObserver 对编辑器内部结构改动仍需实机验证），当前轮询开销可控
     intervalId = setInterval(() => {
         if (documentProtyleElementMap.size <= 0) {
             return;

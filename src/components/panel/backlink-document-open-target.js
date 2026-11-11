@@ -157,52 +157,6 @@ export function getBacklinkDocumentPreClickOpenArea({
   });
 }
 
-function getBacklinkDocumentWndElementDebugInfo(element) {
-  if (!element) {
-    return null;
-  }
-
-  const rect = element.getBoundingClientRect?.();
-  return {
-    id: element.id || null,
-    dataId:
-      typeof element.getAttribute === "function"
-        ? element.getAttribute("data-id")
-        : null,
-    className: element.className || "",
-    left: typeof rect?.left === "number" ? rect.left : null,
-    width: typeof rect?.width === "number" ? rect.width : null,
-  };
-}
-
-function getBacklinkDocumentTabElementDebugInfo(element) {
-  if (!element) {
-    return null;
-  }
-
-  return {
-    id: element.id || null,
-    dataId:
-      typeof element.getAttribute === "function"
-        ? element.getAttribute("data-id")
-        : null,
-    className: element.className || "",
-    isFocused: Boolean(element.classList?.contains?.("item--focus")),
-  };
-}
-
-function getBacklinkDocumentElementDebugInfo(element) {
-  if (!element) {
-    return null;
-  }
-
-  return {
-    tagName: element.tagName || null,
-    id: element.id || null,
-    className: element.className || "",
-  };
-}
-
 export function getBacklinkDocumentOpenDebugSnapshot({
   currentTab = null,
   documentRef = globalThis.document,

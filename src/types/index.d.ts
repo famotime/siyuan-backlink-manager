@@ -94,8 +94,6 @@ interface IBacklinkData {
     dom: string;
     expand: boolean;
     backlinkBlock: Block;
-    includeChildListItemIdArray: string[];
-    excludeChildListItemIdArray: string[];
     sourceWindow?: {
         rootId: string;
         anchorBlockId: string;

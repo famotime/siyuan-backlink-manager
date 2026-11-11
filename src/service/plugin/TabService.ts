@@ -29,15 +29,7 @@ export class TabService {
             langText: "显示当前文档反链管家页签",
             hotkey: "⌥⇧T",
             editorCallback: () => {
-                let currentDocument: HTMLDivElement = getActiveTab();
-                if (!currentDocument) {
-                    return;
-                }
-
-                const docTitleElement = currentDocument.querySelector(".protyle-title");
-                let docTitle = currentDocument.querySelector("div.protyle-title__input").textContent;
-                let docId = docTitleElement.getAttribute("data-node-id");
-                TabService.ins.openBacklinkTab(docTitle, docId, null);
+                TabService.ins.openBacklinkTabForActiveDocument();
             },
         });
 
@@ -50,7 +42,23 @@ export class TabService {
         //     this.pluginAddTab(docId, null);
         // }
 
-    }    public pluginAddTab(docId: string, focusBlockId: string) {
+    }    /**
+     * 读取当前活动文档页签的标题与文档 ID 并打开对应反链页签；
+     * 顶栏图标（TopBarService）与编辑器命令共用此入口。
+     */
+    public openBacklinkTabForActiveDocument() {
+        let currentDocument: HTMLDivElement = getActiveTab();
+        if (!currentDocument) {
+            return;
+        }
+
+        const docTitleElement = currentDocument.querySelector(".protyle-title");
+        let docTitle = currentDocument.querySelector("div.protyle-title__input").textContent;
+        let docId = docTitleElement.getAttribute("data-node-id");
+        TabService.ins.openBacklinkTab(docTitle, docId, null);
+    }
+
+    public pluginAddTab(docId: string, focusBlockId: string) {
         let tabId = BACKLINK_TAB_PREFIX + docId;
         let backlinkFilterPanelPageSvelte: BacklinkFilterPanelPageSvelte;
         let detachScrollCleanup: () => void;

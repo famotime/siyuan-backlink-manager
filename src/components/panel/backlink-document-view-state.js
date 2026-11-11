@@ -1,9 +1,7 @@
-const BACKLINK_DOCUMENT_VISIBILITY_LEVELS = [
-  "core",
-  "nearby",
-  "extended",
-  "full",
-];
+import {
+  BACKLINK_CONTEXT_VISIBILITY_LEVELS as BACKLINK_DOCUMENT_VISIBILITY_LEVELS,
+} from "../../service/backlink/backlink-context-rules.js";
+
 
 function normalizeBacklinkDocumentVisibilityLevel(level) {
   if (BACKLINK_DOCUMENT_VISIBILITY_LEVELS.includes(level)) {
@@ -72,23 +70,6 @@ export function markBacklinkDocumentVisibilityLevel(
   if (!preserveFoldState) {
     markBacklinkDocumentExpanded(state.documentFoldMap, documentId);
   }
-}
-
-export function advanceBacklinkDocumentVisibilityLevel(state, documentId) {
-  if (!state || !documentId) {
-    return "core";
-  }
-
-  const currentLevel = normalizeBacklinkDocumentVisibilityLevel(
-    state.documentVisibilityLevelMap?.get(documentId),
-  );
-  const nextLevelIndex = Math.min(
-    BACKLINK_DOCUMENT_VISIBILITY_LEVELS.indexOf(currentLevel) + 1,
-    BACKLINK_DOCUMENT_VISIBILITY_LEVELS.length - 1,
-  );
-  const nextLevel = BACKLINK_DOCUMENT_VISIBILITY_LEVELS[nextLevelIndex];
-  markBacklinkDocumentVisibilityLevel(state, documentId, nextLevel);
-  return nextLevel;
 }
 
 export function cycleBacklinkDocumentVisibilityLevel(

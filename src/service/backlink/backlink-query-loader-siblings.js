@@ -1,21 +1,7 @@
-function sortSiblingBlocks(blockArray = []) {
-  blockArray.sort((a, b) => {
-    const sortA = Number(a?.sort ?? 0);
-    const sortB = Number(b?.sort ?? 0);
-    if (sortA !== sortB) {
-      return sortA - sortB;
-    }
-
-    const pathA = String(a?.path ?? "");
-    const pathB = String(b?.path ?? "");
-    const pathResult = pathA.localeCompare(pathB);
-    if (pathResult !== 0) {
-      return pathResult;
-    }
-
-    return 0;
-  });
-}
+import {
+  getSiblingOrderMapByParentId,
+  sortBlocksByParentSiblingOrder,
+} from "./backlink-source-window-ordering.js";
 
 function buildExpandedSiblingBlocks(siblingList = [], currentIndex = -1) {
   if (!Array.isArray(siblingList) || currentIndex < 0) {
@@ -40,56 +26,6 @@ function getSiblingCurrentBlockId(backlinkBlock) {
     return backlinkBlock.parent_id;
   }
   return backlinkBlock?.id;
-}
-
-async function getSiblingOrderMapByParentId(parentSiblingMap = new Map(), deps = {}) {
-  const { getChildBlocks } = deps;
-  if (typeof getChildBlocks !== "function") {
-    return new Map();
-  }
-
-  const siblingOrderMapByParentId = new Map();
-  await Promise.all(
-    Array.from(parentSiblingMap.entries()).map(async ([parentId, siblingList]) => {
-      if (!parentId || !Array.isArray(siblingList) || siblingList.length <= 0) {
-        return;
-      }
-
-      const childBlocks = await getChildBlocks(parentId);
-      if (!Array.isArray(childBlocks) || childBlocks.length <= 0) {
-        return;
-      }
-
-      const siblingOrderMap = new Map();
-      childBlocks.forEach((childBlock, index) => {
-        if (childBlock?.id) {
-          siblingOrderMap.set(childBlock.id, index);
-        }
-      });
-      if (siblingOrderMap.size > 0) {
-        siblingOrderMapByParentId.set(parentId, siblingOrderMap);
-      }
-    }),
-  );
-
-  return siblingOrderMapByParentId;
-}
-
-function sortSiblingBlocksByParent(parentId, blockArray = [], siblingOrderMapByParentId = new Map()) {
-  const siblingOrderMap = siblingOrderMapByParentId.get(parentId);
-  if (!siblingOrderMap || siblingOrderMap.size <= 0) {
-    sortSiblingBlocks(blockArray);
-    return;
-  }
-
-  blockArray.sort((a, b) => {
-    const orderA = siblingOrderMap.has(a?.id) ? siblingOrderMap.get(a.id) : Infinity;
-    const orderB = siblingOrderMap.has(b?.id) ? siblingOrderMap.get(b.id) : Infinity;
-    if (Number.isFinite(orderA) && Number.isFinite(orderB) && orderA !== orderB) {
-      return orderA - orderB;
-    }
-    return 0;
-  });
 }
 
 async function enrichSiblingListItemBlocks(siblingBlockArray = [], deps) {
@@ -147,6 +83,11 @@ async function enrichSiblingListItemBlocks(siblingBlockArray = [], deps) {
     return;
   }
 
+  const siblingBlockById = new Map(
+    siblingBlockArray
+      .filter((item) => item?.id)
+      .map((item) => [item.id, item]),
+  );
   await Promise.all(
     Array.from(listItemIdSet).map(async (listItemId) => {
       const result = await getBlockKramdown(listItemId);
@@ -155,7 +96,7 @@ async function enrichSiblingListItemBlocks(siblingBlockArray = [], deps) {
         return;
       }
 
-      const siblingBlock = siblingBlockArray.find((item) => item?.id === listItemId);
+      const siblingBlock = siblingBlockById.get(listItemId);
       if (siblingBlock) {
         siblingBlock.renderMarkdown = renderMarkdown;
       }
@@ -205,11 +146,15 @@ export async function getSiblingBlockGroupArray(queryParams, deps) {
     siblingList.push(siblingBlock);
   }
 
-  const siblingOrderMapByParentId = await getSiblingOrderMapByParentId(parentSiblingMap, {
+  // 仅对存在多个兄弟的父块查询真实子块顺序
+  const candidateParentIds = Array.from(parentSiblingMap.entries())
+    .filter(([, siblingList]) => siblingList.length > 1)
+    .map(([parentId]) => parentId);
+  const siblingOrderMapByParentId = await getSiblingOrderMapByParentId(candidateParentIds, {
     getChildBlocks,
   });
   for (const [parentId, siblingList] of parentSiblingMap.entries()) {
-    sortSiblingBlocksByParent(parentId, siblingList, siblingOrderMapByParentId);
+    sortBlocksByParentSiblingOrder(parentId, siblingList, siblingOrderMapByParentId);
   }
 
   const backlinkSiblingBlockGroupArray = [];

@@ -4,6 +4,7 @@ import { getBlockAttrs, setBlockAttrs } from "@/utils/api";
 import Instance from "@/utils/Instance";
 import { SettingService } from "./SettingService";
 import { mergeObjects } from "@/utils/object-util";
+import { logError } from "@/utils/logger";
 
 const BACKLINK_FILTER_PANEL_LAST_CRITERIA_ATTRIBUTE_KEY = "custom-backlink-filter-panel-last-criteria";
 export const DOCUMENT_BOTTOM_SHOW_BACKLINK_FILTER_PANEL_ATTRIBUTE_KEY = "custom-document-bottom-show-backlink-filter-panel";
@@ -25,11 +26,16 @@ export class BacklinkFilterPanelAttributeService {
             let attrsMap = await getBlockAttrs(rootId);
             if (attrsMap && Object.keys(attrsMap).includes(BACKLINK_FILTER_PANEL_LAST_CRITERIA_ATTRIBUTE_KEY)) {
                 let json = attrsMap[BACKLINK_FILTER_PANEL_LAST_CRITERIA_ATTRIBUTE_KEY];
-                let parseObject = JSON.parse(json) as BacklinkPanelFilterCriteria;
-                if ("queryParams" in parseObject) {
-                    documentPanelCriteria = parseObject;
-                    parseObject.queryParams.backlinkKeywordStr = "";
-                    queryParams = mergeObjects(documentPanelCriteria.queryParams, defaultQueryParams);
+                // 块属性可能被用户手动改坏，解析失败时按无历史条件处理
+                try {
+                    let parseObject = JSON.parse(json) as BacklinkPanelFilterCriteria;
+                    if ("queryParams" in parseObject) {
+                        documentPanelCriteria = parseObject;
+                        parseObject.queryParams.backlinkKeywordStr = "";
+                        queryParams = mergeObjects(documentPanelCriteria.queryParams, defaultQueryParams);
+                    }
+                } catch (e) {
+                    logError(`反链面板 解析历史筛选条件失败 rootId: ${rootId}`, e);
                 }
             }
             if (!documentPanelCriteria) {
@@ -49,23 +55,19 @@ export class BacklinkFilterPanelAttributeService {
         if (!rootId) {
             return;
         }
+        // 持久化前剥离关键词，避免把临时筛选状态写进块属性
+        const criteriaToPersist: BacklinkPanelFilterCriteria = JSON.parse(JSON.stringify(criteria));
+        criteriaToPersist.queryParams.backlinkKeywordStr = "";
+
         let lastCriteria = await this.getPanelCriteria(rootId);
-        let lastCriteriaJson = "";
-        if (lastCriteria) {
-            lastCriteriaJson = JSON.stringify(lastCriteria);
-        }
-        let criteriaJson = JSON.stringify(criteria);
-        if (criteriaJson == lastCriteriaJson) {
+        if (JSON.stringify(criteriaToPersist) === JSON.stringify(lastCriteria)) {
             return;
         }
 
         CacheManager.ins.setBacklinkFilterPanelLastCriteria(rootId, criteria);
 
-        let criteriaCloned: BacklinkPanelFilterCriteria = JSON.parse(criteriaJson);
-        criteriaCloned.queryParams.backlinkKeywordStr = "";
-        let criteriaClonedJson = JSON.stringify(criteriaCloned);
         let attrs: Record<string, string> = {};
-        attrs[BACKLINK_FILTER_PANEL_LAST_CRITERIA_ATTRIBUTE_KEY] = criteriaClonedJson;
+        attrs[BACKLINK_FILTER_PANEL_LAST_CRITERIA_ATTRIBUTE_KEY] = JSON.stringify(criteriaToPersist);
         setBlockAttrs(rootId, attrs);
     }
 

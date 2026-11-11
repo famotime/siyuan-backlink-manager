@@ -5,61 +5,6 @@ import {
 } from "../../service/backlink/backlink-source-window.js";
 import { getProtyleWysiwygElement } from "./backlink-protyle-dom.js";
 
-export function hideOtherListItemElement(
-  backlinkData,
-  protyleContentElement,
-  queryParams,
-  deps,
-) {
-  const { isSetEmpty, isSetNotEmpty, isArrayNotEmpty } = deps;
-  const includeRelatedDefBlockIds = queryParams.includeRelatedDefBlockIds;
-  const excludeRelatedDefBlockIds = queryParams.excludeRelatedDefBlockIds;
-
-  if (
-    isSetEmpty(includeRelatedDefBlockIds) &&
-    isSetEmpty(excludeRelatedDefBlockIds)
-  ) {
-    return;
-  }
-
-  const targetBlockParentElement = protyleContentElement.querySelector(
-    `div[data-node-id='${backlinkData.backlinkBlock.id}']`,
-  )?.parentElement;
-  if (!targetBlockParentElement?.matches?.('div[data-type="NodeListItem"]')) {
-    return;
-  }
-
-  if (
-    isSetNotEmpty(includeRelatedDefBlockIds) &&
-    isArrayNotEmpty(backlinkData.includeChildListItemIdArray)
-  ) {
-    const allListItemElement = targetBlockParentElement.querySelectorAll(
-      'div[data-type="NodeListItem"]',
-    );
-    for (const itemElement of allListItemElement) {
-      itemElement.classList.add("fn__none");
-    }
-    for (const itemId of backlinkData.includeChildListItemIdArray) {
-      const targetElement = targetBlockParentElement.querySelector(
-        `div[data-type="NodeListItem"][data-node-id="${itemId}"]`,
-      );
-      targetElement?.classList.remove("fn__none");
-    }
-  }
-
-  if (
-    isSetNotEmpty(excludeRelatedDefBlockIds) &&
-    isArrayNotEmpty(backlinkData.excludeChildListItemIdArray)
-  ) {
-    for (const itemId of backlinkData.excludeChildListItemIdArray) {
-      const targetElement = targetBlockParentElement.querySelector(
-        `div[data-type="NodeListItem"][data-node-id="${itemId}"]`,
-      );
-      targetElement?.classList.add("fn__none");
-    }
-  }
-}
-
 function getSourceWindowWindowBlockIds(sourceWindow = null) {
   return getBacklinkSourceWindowBodyRange(sourceWindow)?.windowBlockIds || [];
 }

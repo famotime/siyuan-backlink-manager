@@ -63,7 +63,6 @@ test("backlink panel render bindings pass the local document-group renderer into
     getElementsAtDepth: () => [],
     syHasChildListNode: () => false,
     hideBlocksOutsideBacklinkSourceWindow: () => {},
-    hideOtherListItemElement: () => {},
     isSetEmpty: () => true,
     isSetNotEmpty: () => false,
     isArrayNotEmpty: () => false,

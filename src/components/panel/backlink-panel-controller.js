@@ -5,7 +5,6 @@ import { SettingService } from "@/service/setting/SettingService";
 import {
   getBacklinkPanelData,
   getBacklinkPanelRenderData,
-  getTurnPageBacklinkPanelRenderData,
 } from "@/service/backlink/backlink-data";
 import {
   isArrayEmpty,
@@ -63,7 +62,6 @@ import {
 } from "./backlink-protyle-dom.js";
 import {
   hideBlocksOutsideBacklinkSourceWindow,
-  hideOtherListItemElement,
 } from "./backlink-protyle-visibility.js";
 import {
   applyCreatedBacklinkProtyleState,
@@ -89,7 +87,9 @@ import {
   markBacklinkDocumentVisibilityLevel,
 } from "./backlink-document-view-state.js";
 import { sanitizeBacklinkKeywords } from "./backlink-panel-formatting.js";
-import { mergeTurnPageBacklinkPanelRenderData } from "./backlink-panel-render-data.js";
+import {
+  findBacklinkDocumentRenderTargets,
+} from "./backlink-document-editor-targets.js";
 import {
   buildBacklinkPanelInitStrategy,
   resolveBacklinkPanelFocusRefresh,
@@ -282,6 +282,7 @@ export function createBacklinkPanelController(state) {
 
   const panelRenderBindings = createBacklinkPanelRenderBindings({
     state,
+    i18n: EnvConfig.ins.i18n,
     renderBacklinkDocumentGroupByHelper,
     updateBacklinkDocumentLiNavigation,
     getBacklinkContextControlState: (documentGroup) => {
@@ -316,8 +317,7 @@ export function createBacklinkPanelController(state) {
     getElementsAtDepth,
     syHasChildListNode,
     hideBlocksOutsideBacklinkSourceWindow,
-    hideOtherListItemElement,
-    isSetEmpty,
+      isSetEmpty,
     isSetNotEmpty,
     isArrayNotEmpty,
     sanitizeBacklinkKeywords,
@@ -376,10 +376,6 @@ export function createBacklinkPanelController(state) {
     );
   }
 
-  function getBacklinkContextControlState(documentGroup) {
-    return panelRenderBindings.getBacklinkContextControlState(documentGroup);
-  }
-
   function clearBacklinkProtyleList() {
     const editors = getEditors();
     detachAllDocumentGroupRefreshTracking();
@@ -415,45 +411,12 @@ export function createBacklinkPanelController(state) {
     envConfig: EnvConfig.ins,
   });
 
-  function findBacklinkDocumentRenderTargets(documentId) {
-    if (!documentId || !state.backlinkULElement) {
-      return { documentLiElement: null, editorElement: null };
-    }
-
-    const documentLiElement =
-      (typeof state.backlinkULElement.querySelector === "function"
-        ? state.backlinkULElement.querySelector(
-            `.list-item__document-name[data-node-id="${documentId}"]`,
-          )
-        : null) ||
-      (typeof state.backlinkULElement.querySelectorAll === "function"
-        ? Array.from(
-            state.backlinkULElement.querySelectorAll(".list-item__document-name"),
-          ).find((element) => element.getAttribute?.("data-node-id") === documentId)
-        : null) ||
-      null;
-
-    const editorElement =
-      documentLiElement?.closest?.(".backlink-card")?.querySelector?.(".backlink-document-editor") ||
-      documentLiElement?.nextElementSibling?.querySelector?.(".backlink-document-editor") ||
-      (typeof state.backlinkULElement.querySelector === "function"
-        ? state.backlinkULElement.querySelector(
-            `.backlink-document-editor[data-backlink-root-id="${documentId}"]`,
-          )
-        : null) ||
-      null;
-
-    return {
-      documentLiElement: documentLiElement || null,
-      editorElement: editorElement || null,
-    };
-  }
-
   const previewRenderCoordinator = createBacklinkPreviewRenderCoordinator({
     state,
     clearBacklinkProtyleList,
     batchCreateOfficialBacklinkProtyle,
-    findBacklinkDocumentRenderTargets,
+    findBacklinkDocumentRenderTargets: (documentId) =>
+      findBacklinkDocumentRenderTargets(state.backlinkULElement, documentId),
     renderBacklinkDocumentGroup,
     groupBacklinksByDocument,
   });
@@ -503,7 +466,6 @@ export function createBacklinkPanelController(state) {
     }
 
     state.queryParams = state.queryParams;
-    await refreshFilterDisplayData();
     return refreshBacklinkDocumentGroupById(documentId);
   }
 
@@ -645,21 +607,11 @@ export function createBacklinkPanelController(state) {
   const panelDataCoordinator = createBacklinkPanelDataCoordinator({
     state,
     getBacklinkPanelRenderData,
-    getTurnPageBacklinkPanelRenderData,
-    mergeTurnPageBacklinkPanelRenderData,
     refreshBacklinkPreview,
   });
 
-  async function refreshFilterDisplayData() {
-    return panelDataCoordinator.refreshFilterDisplayData();
-  }
-
   async function updateRenderData() {
     return panelDataCoordinator.updateRenderData();
-  }
-
-  async function pageTurning(pageNumParam) {
-    return panelDataCoordinator.pageTurning(pageNumParam);
   }
 
   function navigateBacklinkDocument(event, direction) {
@@ -671,10 +623,6 @@ export function createBacklinkPanelController(state) {
       documentLiElement,
       blockId,
     );
-  }
-
-  function clearCacheAndRefresh() {
-    return panelInitCoordinator.clearCacheAndRefresh();
   }
 
   function refreshBacklinkPanelToCurrentMainDocument() {
@@ -719,6 +667,7 @@ export function createBacklinkPanelController(state) {
           isShow,
           (event, blockId, rootId, blockType) =>
             panelOpenActions.handleTargetBlockClick(event, blockId, rootId, blockType),
+          EnvConfig.ins.i18n,
         );
       }
     }
@@ -733,11 +682,8 @@ export function createBacklinkPanelController(state) {
       detachDocumentInteractionTracking = null;
     },
     initBaseData,
-    refreshFilterDisplayData,
     clearBacklinkProtyleList,
-    clearCacheAndRefresh,
     updateRenderData,
-    pageTurning,
     expandAllBacklinkDocument,
     expandAllBacklinkListItemNode,
     collapseAllBacklinkDocument,
@@ -746,7 +692,6 @@ export function createBacklinkPanelController(state) {
     stepAllBacklinkDocumentContextVisibilityLevel,
     resetBacklinkQueryParametersToDefault,
     refreshBacklinkPanelToCurrentMainDocument,
-    refreshBacklinkDocumentGroupById,
     handleBacklinkKeywordInput,
     syncAllBacklinkTargetSections,
   };

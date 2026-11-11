@@ -60,11 +60,6 @@ export function createBacklinkPanelInitCoordinator({
     await updateRenderData();
   }
 
-  function clearCacheAndRefresh() {
-    CacheManager.ins.deleteBacklinkPanelAllCache(state.rootId);
-    initBaseData();
-  }
-
   function refreshBacklinkPanelToCurrentMainDocument() {
     const nextRootId = resolveBacklinkPanelRefreshRootId({
       currentTab: state.currentTab,
@@ -84,7 +79,6 @@ export function createBacklinkPanelInitCoordinator({
   return {
     loadBacklinkPanelBaseData,
     initBaseData,
-    clearCacheAndRefresh,
     refreshBacklinkPanelToCurrentMainDocument,
   };
 }

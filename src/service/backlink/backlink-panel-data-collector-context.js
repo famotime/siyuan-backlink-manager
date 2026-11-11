@@ -1,23 +1,7 @@
 import {
   appendMarkdownSegment,
-  prependBlockId,
-  prependMarkdownSegment,
   trackRelatedDefBlockIdWithoutDuplicates,
 } from "./backlink-panel-data-collector-helpers.js";
-
-function getParentRenderMarkdown(parentBlock = {}) {
-  if (parentBlock?.type === "i") {
-    return extractFirstMarkdownLine(parentBlock.markdown || "");
-  }
-  return String(parentBlock?.markdown || "").trim();
-}
-
-function extractFirstMarkdownLine(markdown = "") {
-  return String(markdown || "")
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .find(Boolean) || "";
-}
 
 function buildSiblingMarkdown(siblingBlock = {}) {
   const safeSiblingBlock = siblingBlock || {};
@@ -150,61 +134,6 @@ function applyExpandedSiblingContextToNode({
     backlinkBlockNode[renderMarkdownField],
     expandedSiblingContext.expandedRenderMarkdown,
   );
-}
-
-export function collectParentBlocks({
-  backlinkParentBlockArray = [],
-  relatedDefBlockIdSet = new Set(),
-  getRefBlockId,
-  updateDynamicAnchorMap,
-  updateStaticAnchorMap,
-  updateMapCount,
-  context,
-}) {
-  for (const parentBlock of backlinkParentBlockArray) {
-    let markdown = parentBlock.markdown;
-    if (parentBlock.type === "i" && parentBlock.subMarkdown) {
-      markdown = parentBlock.subMarkdown;
-    }
-    markdown += parentBlock.inAttrConcat;
-
-    const parentDefBlockIdArray = getRefBlockId(markdown);
-    const backlinkBlockId = parentBlock.childIdPath.split("->")[0];
-    const backlinkBlockNode = context.backlinkBlockMap[backlinkBlockId];
-
-    if (!backlinkBlockNode) {
-      continue;
-    }
-
-    for (const parentDefBlockId of parentDefBlockIdArray) {
-      backlinkBlockNode.includeRelatedDefBlockIds.add(parentDefBlockId);
-      backlinkBlockNode.includeParentDefBlockIds.add(parentDefBlockId);
-
-      if (context.curDocDefBlockIdArray.includes(parentDefBlockId)) {
-        backlinkBlockNode.includeDirectDefBlockIds.add(parentDefBlockId);
-      } else if (!relatedDefBlockIdSet.has(parentDefBlockId)) {
-        updateMapCount(context.relatedDefBlockCountMap, parentDefBlockId);
-      }
-    }
-
-    backlinkBlockNode.parentMarkdown = appendMarkdownSegment(
-      backlinkBlockNode.parentMarkdown,
-      markdown,
-    );
-    const parentRenderMarkdown = getParentRenderMarkdown(parentBlock);
-    if (parentRenderMarkdown) {
-      backlinkBlockNode.parentRenderMarkdown = prependMarkdownSegment(
-        backlinkBlockNode.parentRenderMarkdown,
-        parentRenderMarkdown,
-      );
-    }
-    backlinkBlockNode.parentContextBlockIds = prependBlockId(
-      backlinkBlockNode.parentContextBlockIds,
-      parentBlock.id,
-    );
-    updateDynamicAnchorMap(context.relatedDefBlockDynamicAnchorMap, markdown);
-    updateStaticAnchorMap(context.relatedDefBlockStaticAnchorMap, markdown);
-  }
 }
 
 export function collectSiblingBlocks({

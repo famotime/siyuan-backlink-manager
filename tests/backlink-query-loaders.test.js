@@ -3,18 +3,15 @@ import assert from "node:assert/strict";
 
 import {
   getBacklinkBlockArray,
-  getHeadlineChildBlockArray,
-  getListItemChildBlockArray,
-  getParentBlockArray,
   getSiblingBlockGroupArray,
 } from "../src/service/backlink/backlink-query-loaders.js";
+import { isArrayEmpty, isStrNotBlank } from "./helpers/predicates.js";
 
-test("getBacklinkBlockArray chooses list-item SQL when list-item child queries are enabled", async () => {
+test("getBacklinkBlockArray queries blocks with the plain block array SQL", async () => {
   const sqlCalls = [];
   const result = await getBacklinkBlockArray(
-    { querrChildDefBlockForListItem: true },
+    { rootId: "doc-a" },
     {
-      generateGetBacklinkListItemBlockArraySql: () => "LIST_SQL",
       generateGetBacklinkBlockArraySql: () => "BLOCK_SQL",
       sql: async (query) => {
         sqlCalls.push(query);
@@ -24,91 +21,7 @@ test("getBacklinkBlockArray chooses list-item SQL when list-item child queries a
   );
 
   assert.deepEqual(result, [{ id: "block-a" }]);
-  assert.deepEqual(sqlCalls, ["LIST_SQL"]);
-});
-
-test("getHeadlineChildBlockArray keeps only nested child blocks", async () => {
-  const result = await getHeadlineChildBlockArray(
-    {
-      queryChildDefBlockForHeadline: true,
-      backlinkBlocks: [{ id: "headline-1", type: "h" }],
-    },
-    {
-      generateGetHeadlineChildDefBlockArraySql: () => "HEADLINE_SQL",
-      sql: async () => [
-        { parentIdPath: "headline-1" },
-        { parentIdPath: "headline-1->child-1" },
-      ],
-      isArrayEmpty: (value) => !value || value.length === 0,
-    },
-  );
-
-  assert.deepEqual(result, [{ parentIdPath: "headline-1->child-1" }]);
-});
-
-test("getListItemChildBlockArray enriches list items with sub-markdown data", async () => {
-  const result = await getListItemChildBlockArray(
-    {
-      querrChildDefBlockForListItem: true,
-      backlinkBlocks: [{ parentBlockType: "i", parent_id: "list-root" }],
-    },
-    {
-      generateGetListItemChildBlockArraySql: () => "LIST_CHILD_SQL",
-      generateGetListItemSubMarkdownArraySql: () => "SUB_MARKDOWN_SQL",
-      sql: async (query) => {
-        if (query === "LIST_CHILD_SQL") {
-          return [{ id: "list-root", type: "i" }];
-        }
-        return [
-          {
-            parent_id: "list-root",
-            parentInAttrConcat: " parent-attr",
-            subMarkdown: "sub content",
-            subInAttrConcat: " sub-attr",
-          },
-        ];
-      },
-      isSetEmpty: (value) => !value || value.size === 0,
-      isStrNotBlank: (value) => value !== "",
-    },
-  );
-
-  assert.deepEqual(result, [
-    {
-      id: "list-root",
-      type: "i",
-      parentInAttrConcat: " parent-attr",
-      subMarkdown: "sub content",
-      subInAttrConcat: " sub-attr",
-    },
-  ]);
-});
-
-test("getParentBlockArray enriches deep list parents with sub-markdown", async () => {
-  const result = await getParentBlockArray(
-    { queryParentDefBlock: true },
-    {
-      generateGetParentDefBlockArraySql: () => "PARENT_SQL",
-      generateGetParentListItemDefBlockArraySql: () => "PARENT_SUB_SQL",
-      sql: async (query) => {
-        if (query === "PARENT_SQL") {
-          return [{ id: "parent-a", type: "i", childIdPath: "a->b->c->d" }];
-        }
-        return [{ parent_id: "parent-a", subMarkdown: "sub", inAttrConcat: " attr" }];
-      },
-      countOccurrences: (value, sub) => value.split(sub).length - 1,
-      isSetNotEmpty: (value) => value && value.size > 0,
-    },
-  );
-
-  assert.deepEqual(result, [
-    {
-      id: "parent-a",
-      type: "i",
-      childIdPath: "a->b->c->d",
-      subMarkdown: "sub attr",
-    },
-  ]);
+  assert.deepEqual(sqlCalls, ["BLOCK_SQL"]);
 });
 
 test("getSiblingBlockGroupArray groups immediate previous and next siblings by parent block", async () => {
@@ -128,7 +41,7 @@ test("getSiblingBlockGroupArray groups immediate previous and next siblings by p
         { id: "block-d", parent_id: "parent-2", sort: 10, path: "/d" },
         { id: "block-a", parent_id: "parent-1", sort: 10, path: "/a" },
       ],
-      isArrayEmpty: (value) => !value || value.length === 0,
+      isArrayEmpty,
     },
   );
 
@@ -173,8 +86,8 @@ test("getSiblingBlockGroupArray keeps ordinary block neighbors in the actual par
         { id: "block-meta" },
         { id: "block-tail" },
       ],
-      isArrayEmpty: (value) => !value || value.length === 0,
-      isStrNotBlank: (value) => value !== "",
+      isArrayEmpty,
+      isStrNotBlank,
     },
   );
 
@@ -221,8 +134,8 @@ test("getSiblingBlockGroupArray keeps original query order when sibling metadata
         { id: "block-focus", parent_id: "doc-a", sort: 10, path: "/same", type: "p" },
         { id: "block-intro", parent_id: "doc-a", sort: 10, path: "/same", type: "p" },
       ],
-      isArrayEmpty: (value) => !value || value.length === 0,
-      isStrNotBlank: (value) => value !== "",
+      isArrayEmpty,
+      isStrNotBlank,
     },
   );
 
@@ -273,8 +186,8 @@ test("getSiblingBlockGroupArray keeps original relative order when parent child 
         { id: "block-focus" },
         { id: "block-intro" },
       ],
-      isArrayEmpty: (value) => !value || value.length === 0,
-      isStrNotBlank: (value) => value !== "",
+      isArrayEmpty,
+      isStrNotBlank,
     },
   );
 
@@ -340,8 +253,8 @@ test("getSiblingBlockGroupArray uses sibling list items when backlink block is i
         ];
       },
       getBlockKramdown: async (id) => ({ id, kramdown: `* ${id} kramdown` }),
-      isArrayEmpty: (value) => !value || value.length === 0,
-      isStrNotBlank: (value) => value !== "",
+      isArrayEmpty,
+      isStrNotBlank,
     },
   );
 
@@ -415,8 +328,8 @@ test("getSiblingBlockGroupArray queries list item sibling containers instead of 
         sqlCalls.push(query);
         return [];
       },
-      isArrayEmpty: (value) => !value || value.length === 0,
-      isStrNotBlank: (value) => value !== "",
+      isArrayEmpty,
+      isStrNotBlank,
     },
   );
 
@@ -468,8 +381,8 @@ test("getSiblingBlockGroupArray keeps list item neighbors in the actual parent l
         { id: "item-logo" },
         { id: "item-error" },
       ],
-      isArrayEmpty: (value) => !value || value.length === 0,
-      isStrNotBlank: (value) => value !== "",
+      isArrayEmpty,
+      isStrNotBlank,
     },
   );
 

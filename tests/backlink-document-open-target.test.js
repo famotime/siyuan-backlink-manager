@@ -4,7 +4,6 @@ import assert from "node:assert/strict";
 import {
   activateBacklinkDocumentMainArea,
   getActiveBacklinkDocumentMainAreaTabElement,
-  getBacklinkDocumentOpenDebugSnapshot,
   getBacklinkDocumentMainAreaWnd,
   getBacklinkDocumentOpenTarget,
   getBacklinkDocumentPreClickOpenArea,
@@ -347,123 +346,6 @@ test("resolves focus-based open requests using the pre-click active area", () =>
   assert.equal(resolveBacklinkDocumentOpenArea("focus", "right"), "right");
   assert.equal(resolveBacklinkDocumentOpenArea("focus", "focus"), "right");
   assert.equal(resolveBacklinkDocumentOpenArea("main", "right"), "main");
-});
-
-test("builds a debug snapshot for the current and active window state", () => {
-  const currentWndElement = {
-    id: "wnd-right",
-    className: "layout__wnd",
-    getAttribute(name) {
-      return name === "data-id" ? "wnd-right-data" : null;
-    },
-    getBoundingClientRect() {
-      return { left: 800, width: 320 };
-    },
-  };
-  const activeWndElement = {
-    id: "wnd-main",
-    className: "layout__wnd layout__wnd--active",
-    getAttribute(name) {
-      return name === "data-id" ? "wnd-main-data" : null;
-    },
-    getBoundingClientRect() {
-      return { left: 0, width: 780 };
-    },
-  };
-
-  const snapshot = getBacklinkDocumentOpenDebugSnapshot({
-    currentTab: {
-      tab: {
-        headElement: {
-          id: "tab-right",
-          className: "item",
-          classList: {
-            contains() {
-              return false;
-            },
-          },
-          getAttribute(name) {
-            return name === "data-id" ? "tab-right-data" : null;
-          },
-        },
-        parent: {
-          element: currentWndElement,
-        },
-      },
-    },
-    documentRef: {
-      activeElement: {
-        tagName: "DIV",
-        id: "editor-active",
-        className: "protyle-content",
-        closest(selector) {
-          return selector === ".layout__wnd" ? activeWndElement : null;
-        },
-      },
-      querySelector(selector) {
-        if (selector === "div.layout__wnd--active") {
-          return activeWndElement;
-        }
-        if (selector === "li.item--focus") {
-          return {
-            id: "tab-main",
-            className: "item item--focus",
-            classList: {
-              contains(name) {
-                return name === "item--focus";
-              },
-            },
-            getAttribute(name) {
-              return name === "data-id" ? "tab-main-data" : null;
-            },
-          };
-        }
-        return null;
-      },
-    },
-  });
-
-  assert.deepEqual(snapshot, {
-    currentTab: {
-      id: "tab-right",
-      dataId: "tab-right-data",
-      className: "item",
-      isFocused: false,
-    },
-    activeTab: {
-      id: "tab-main",
-      dataId: "tab-main-data",
-      className: "item item--focus",
-      isFocused: true,
-    },
-    activeElement: {
-      tagName: "DIV",
-      id: "editor-active",
-      className: "protyle-content",
-    },
-    focusedWnd: {
-      id: "wnd-main",
-      dataId: "wnd-main-data",
-      className: "layout__wnd layout__wnd--active",
-      left: 0,
-      width: 780,
-    },
-    currentWnd: {
-      id: "wnd-right",
-      dataId: "wnd-right-data",
-      className: "layout__wnd",
-      left: 800,
-      width: 320,
-    },
-    activeWnd: {
-      id: "wnd-main",
-      dataId: "wnd-main-data",
-      className: "layout__wnd layout__wnd--active",
-      left: 0,
-      width: 780,
-    },
-    inferredPreClickOpenArea: "main",
-  });
 });
 
 test("resolves the current window from Custom.tab.parent", () => {

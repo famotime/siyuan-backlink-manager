@@ -211,46 +211,9 @@ test("resolveSettingConfig includes showReferencedTargetBlock default false", ()
 
 import {
   activateOpenedDocumentTab,
-  findOpenedDocumentEditorElement,
   navigateToOpenedDocumentBlock,
 } from "../src/components/panel/backlink-opened-document.js";
 import { createBacklinkPanelOpenActions } from "../src/components/panel/backlink-panel-controller-open-actions.js";
-
-test("findOpenedDocumentEditorElement finds open editor and ignores backlink panel preview protyles", () => {
-  const insidePanelProtyle = {
-    closest(selector) {
-      if (selector === ".protyle") return insidePanelProtyle;
-      if (selector === ".backlink-panel__area") return {};
-      return null;
-    },
-  };
-  const mainWorkspaceProtyle = {
-    closest(selector) {
-      if (selector === ".protyle") return mainWorkspaceProtyle;
-      if (selector === ".backlink-panel__area") return null;
-      return null;
-    },
-  };
-
-  const documentRef = {
-    querySelectorAll(selector) {
-      if (selector.includes('data-node-id="doc-101"')) {
-        return [
-          {
-            closest: (sel) => insidePanelProtyle.closest(sel),
-          },
-          {
-            closest: (sel) => mainWorkspaceProtyle.closest(sel),
-          },
-        ];
-      }
-      return [];
-    },
-  };
-
-  const editor = findOpenedDocumentEditorElement("doc-101", documentRef);
-  assert.equal(editor, mainWorkspaceProtyle);
-});
 
 test("navigateToOpenedDocumentBlock scrolls to top and focuses title input when isDocument is true", () => {
   let scrolledTo = null;

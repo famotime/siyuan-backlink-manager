@@ -118,14 +118,6 @@ export function findOpenedDocumentInfo(
 /**
  * 查找指定 rootId 文档在主工作区中已打开的 Protyle 编辑器容器
  */
-export function findOpenedDocumentEditorElement(
-  rootId,
-  documentRef = globalThis.document,
-  windowRef = globalThis.window,
-) {
-  const docInfo = findOpenedDocumentInfo(rootId, { documentRef, windowRef });
-  return docInfo?.editorElement || null;
-}
 
 /**
  * 激活已打开编辑器的对应页签 Tab

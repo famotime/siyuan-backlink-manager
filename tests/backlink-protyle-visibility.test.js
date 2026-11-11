@@ -4,96 +4,22 @@ import { readFileSync } from "node:fs";
 
 import {
   hideBlocksOutsideBacklinkSourceWindow,
-  hideOtherListItemElement,
 } from "../src/components/panel/backlink-protyle-visibility.js";
-
-test("hideOtherListItemElement hides non-included children and excludes requested ones", () => {
-  const makeItem = (id) => ({
-    id,
-    classList: {
-      added: [],
-      removed: [],
-      add(name) {
-        this.added.push(name);
-      },
-      remove(name) {
-        this.removed.push(name);
-      },
-    },
-  });
-  const items = new Map([
-    ["inc", makeItem("inc")],
-    ["exc", makeItem("exc")],
-    ["other", makeItem("other")],
-  ]);
-  const targetBlockParentElement = {
-    matches: () => true,
-    querySelectorAll() {
-      return Array.from(items.values());
-    },
-    querySelector(selector) {
-      const match = selector.match(/data-node-id="([^"]+)"/);
-      return match ? items.get(match[1]) : null;
-    },
-  };
-  const protyleContentElement = {
-    querySelector() {
-      return { parentElement: targetBlockParentElement };
-    },
-  };
-
-  hideOtherListItemElement(
-    {
-      backlinkBlock: { id: "block-a" },
-      includeChildListItemIdArray: ["inc"],
-      excludeChildListItemIdArray: ["exc"],
-    },
-    protyleContentElement,
-    {
-      includeRelatedDefBlockIds: new Set(["def-a"]),
-      excludeRelatedDefBlockIds: new Set(["def-b"]),
-    },
-    {
-      isSetEmpty: (set) => !set || set.size === 0,
-      isSetNotEmpty: (set) => set && set.size > 0,
-      isArrayNotEmpty: (array) => Array.isArray(array) && array.length > 0,
-    },
-  );
-
-  assert.deepEqual(items.get("other").classList.added, ["fn__none"]);
-  assert.deepEqual(items.get("inc").classList.removed, ["fn__none"]);
-  assert.deepEqual(items.get("exc").classList.added, ["fn__none", "fn__none"]);
-});
+import {
+  makeProtyleBlock,
+  makeProtyleContentElement,
+} from "./helpers/dom-mocks.js";
 
 test("hideBlocksOutsideBacklinkSourceWindow keeps only blocks inside the current visibility window", () => {
-  const makeBlock = (id) => ({
-    id,
-    getAttribute(name) {
-      return name === "data-node-id" ? id : null;
-    },
-    classList: {
-      added: [],
-      removed: [],
-      add(name) {
-        this.added.push(name);
-      },
-      remove(name) {
-        this.removed.push(name);
-      },
-    },
-  });
-  const blockA = makeBlock("block-a");
-  const blockB = makeBlock("block-b");
-  const blockC = makeBlock("block-c");
-  const protyleContentElement = {
-    querySelector() {
-      return {
-        querySelectorAll() {
-          return [blockA, blockB, blockC];
-        },
-      };
+  const blockA = makeProtyleBlock("block-a");
+  const blockB = makeProtyleBlock("block-b");
+  const blockC = makeProtyleBlock("block-c");
+  const protyleWysiwygElement = {
+    querySelectorAll() {
+      return [blockA, blockB, blockC];
     },
   };
+  const protyleContentElement = makeProtyleContentElement(protyleWysiwygElement);
 
   hideBlocksOutsideBacklinkSourceWindow(
     {
@@ -113,28 +39,11 @@ test("hideBlocksOutsideBacklinkSourceWindow keeps only blocks inside the current
 });
 
 test("hideBlocksOutsideBacklinkSourceWindow keeps ancestor list containers visible for nested backlink blocks", () => {
-  const makeBlock = (id) => ({
-    id,
-    parentElement: null,
-    getAttribute(name) {
-      return name === "data-node-id" ? id : null;
-    },
-    classList: {
-      added: [],
-      removed: [],
-      add(name) {
-        this.added.push(name);
-      },
-      remove(name) {
-        this.removed.push(name);
-      },
-    },
-  });
-  const outerItem = makeBlock("item-outer");
-  const nestedList = makeBlock("list-nested");
-  const innerItem = makeBlock("item-inner");
-  const childBlock = makeBlock("block-child");
-  const unrelatedBlock = makeBlock("block-other");
+  const outerItem = makeProtyleBlock("item-outer");
+  const nestedList = makeProtyleBlock("list-nested");
+  const innerItem = makeProtyleBlock("item-inner");
+  const childBlock = makeProtyleBlock("block-child");
+  const unrelatedBlock = makeProtyleBlock("block-other");
   nestedList.parentElement = outerItem;
   innerItem.parentElement = nestedList;
   childBlock.parentElement = innerItem;
@@ -145,11 +54,7 @@ test("hideBlocksOutsideBacklinkSourceWindow keeps ancestor list containers visib
       return [outerItem, nestedList, innerItem, childBlock, unrelatedBlock];
     },
   };
-  const protyleContentElement = {
-    querySelector() {
-      return protyleWysiwygElement;
-    },
-  };
+  const protyleContentElement = makeProtyleContentElement(protyleWysiwygElement);
 
   hideBlocksOutsideBacklinkSourceWindow(
     {
@@ -171,41 +76,10 @@ test("hideBlocksOutsideBacklinkSourceWindow keeps ancestor list containers visib
 });
 
 test("hideBlocksOutsideBacklinkSourceWindow unfolds folded ancestor list items for visible nested blocks", () => {
-  const makeBlock = (id, dataType = "", folded = false) => ({
-    id,
-    parentElement: null,
-    getAttribute(name) {
-      if (name === "data-node-id") {
-        return id;
-      }
-      if (name === "data-type") {
-        return dataType;
-      }
-      if (name === "fold") {
-        return folded ? "1" : null;
-      }
-      return null;
-    },
-    classList: {
-      added: [],
-      removed: [],
-      add(name) {
-        this.added.push(name);
-      },
-      remove(name) {
-        this.removed.push(name);
-      },
-    },
-    removedAttributes: [],
-    removeAttribute(name) {
-      this.removedAttributes.push(name);
-    },
-  });
-
-  const outerItem = makeBlock("item-outer", "NodeListItem", true);
-  const nestedList = makeBlock("list-nested", "NodeList", false);
-  const innerItem = makeBlock("item-inner", "NodeListItem", true);
-  const childBlock = makeBlock("block-child", "NodeParagraph", false);
+  const outerItem = makeProtyleBlock("item-outer", { dataType: "NodeListItem", folded: true });
+  const nestedList = makeProtyleBlock("list-nested", { dataType: "NodeList" });
+  const innerItem = makeProtyleBlock("item-inner", { dataType: "NodeListItem", folded: true });
+  const childBlock = makeProtyleBlock("block-child", { dataType: "NodeParagraph" });
   nestedList.parentElement = outerItem;
   innerItem.parentElement = nestedList;
   childBlock.parentElement = innerItem;
@@ -215,11 +89,7 @@ test("hideBlocksOutsideBacklinkSourceWindow unfolds folded ancestor list items f
       return [outerItem, nestedList, innerItem, childBlock];
     },
   };
-  const protyleContentElement = {
-    querySelector() {
-      return protyleWysiwygElement;
-    },
-  };
+  const protyleContentElement = makeProtyleContentElement(protyleWysiwygElement);
 
   hideBlocksOutsideBacklinkSourceWindow(
     {
@@ -238,36 +108,9 @@ test("hideBlocksOutsideBacklinkSourceWindow unfolds folded ancestor list items f
 });
 
 test("hideBlocksOutsideBacklinkSourceWindow keeps descendant blocks visible only when they are part of the source window", () => {
-  const makeBlock = (id, dataType = "") => ({
-    id,
-    parentElement: null,
-    getAttribute(name) {
-      if (name === "data-node-id") {
-        return id;
-      }
-      if (name === "data-type") {
-        return dataType;
-      }
-      return null;
-    },
-    querySelectorAll() {
-      return [];
-    },
-    classList: {
-      added: [],
-      removed: [],
-      add(name) {
-        this.added.push(name);
-      },
-      remove(name) {
-        this.removed.push(name);
-      },
-    },
-  });
-
-  const itemBlock = makeBlock("item-a", "NodeListItem");
-  const textBlock = makeBlock("block-a", "NodeParagraph");
-  const otherBlock = makeBlock("block-b", "NodeParagraph");
+  const textBlock = makeProtyleBlock("block-a", { dataType: "NodeParagraph" });
+  const itemBlock = makeProtyleBlock("item-a", { dataType: "NodeListItem" });
+  const otherBlock = makeProtyleBlock("block-b", { dataType: "NodeParagraph" });
   itemBlock.querySelectorAll = () => [textBlock];
   textBlock.parentElement = itemBlock;
 
@@ -276,11 +119,7 @@ test("hideBlocksOutsideBacklinkSourceWindow keeps descendant blocks visible only
       return [itemBlock, textBlock, otherBlock];
     },
   };
-  const protyleContentElement = {
-    querySelector() {
-      return protyleWysiwygElement;
-    },
-  };
+  const protyleContentElement = makeProtyleContentElement(protyleWysiwygElement);
 
   hideBlocksOutsideBacklinkSourceWindow(
     {
@@ -300,36 +139,9 @@ test("hideBlocksOutsideBacklinkSourceWindow keeps descendant blocks visible only
 });
 
 test("hideBlocksOutsideBacklinkSourceWindow does not bring back list descendants that are outside the source window", () => {
-  const makeBlock = (id, dataType = "") => ({
-    id,
-    parentElement: null,
-    getAttribute(name) {
-      if (name === "data-node-id") {
-        return id;
-      }
-      if (name === "data-type") {
-        return dataType;
-      }
-      return null;
-    },
-    querySelectorAll() {
-      return [];
-    },
-    classList: {
-      added: [],
-      removed: [],
-      add(name) {
-        this.added.push(name);
-      },
-      remove(name) {
-        this.removed.push(name);
-      },
-    },
-  });
-
-  const itemBlock = makeBlock("item-a", "NodeListItem");
-  const textBlock = makeBlock("block-a", "NodeParagraph");
-  const nestedTextBlock = makeBlock("block-b", "NodeParagraph");
+  const textBlock = makeProtyleBlock("block-a", { dataType: "NodeParagraph" });
+  const nestedTextBlock = makeProtyleBlock("block-b", { dataType: "NodeParagraph" });
+  const itemBlock = makeProtyleBlock("item-a", { dataType: "NodeListItem" });
   itemBlock.querySelectorAll = () => [textBlock, nestedTextBlock];
   textBlock.parentElement = itemBlock;
   nestedTextBlock.parentElement = itemBlock;
@@ -339,11 +151,7 @@ test("hideBlocksOutsideBacklinkSourceWindow does not bring back list descendants
       return [itemBlock, textBlock, nestedTextBlock];
     },
   };
-  const protyleContentElement = {
-    querySelector() {
-      return protyleWysiwygElement;
-    },
-  };
+  const protyleContentElement = makeProtyleContentElement(protyleWysiwygElement);
 
   hideBlocksOutsideBacklinkSourceWindow(
     {
@@ -363,32 +171,11 @@ test("hideBlocksOutsideBacklinkSourceWindow does not bring back list descendants
 });
 
 test("hideBlocksOutsideBacklinkSourceWindow keeps the full continuous window visible even when legacy visibleBlockIds are narrower", () => {
-  const makeBlock = (id) => ({
-    id,
-    parentElement: null,
-    getAttribute(name) {
-      return name === "data-node-id" ? id : null;
-    },
-    querySelectorAll() {
-      return [];
-    },
-    classList: {
-      added: [],
-      removed: [],
-      add(name) {
-        this.added.push(name);
-      },
-      remove(name) {
-        this.removed.push(name);
-      },
-    },
-  });
-
-  const itemShell = makeBlock("item-shell");
-  const focusBlock = makeBlock("block-focus");
-  const nestedList = makeBlock("list-nested");
-  const nestedItem = makeBlock("item-nested");
-  const nestedText = makeBlock("block-nested");
+  const itemShell = makeProtyleBlock("item-shell");
+  const focusBlock = makeProtyleBlock("block-focus");
+  const nestedList = makeProtyleBlock("list-nested");
+  const nestedItem = makeProtyleBlock("item-nested");
+  const nestedText = makeProtyleBlock("block-nested");
   focusBlock.parentElement = itemShell;
   nestedList.parentElement = itemShell;
   nestedItem.parentElement = nestedList;
@@ -400,11 +187,7 @@ test("hideBlocksOutsideBacklinkSourceWindow keeps the full continuous window vis
       return [itemShell, focusBlock, nestedList, nestedItem, nestedText];
     },
   };
-  const protyleContentElement = {
-    querySelector() {
-      return protyleWysiwygElement;
-    },
-  };
+  const protyleContentElement = makeProtyleContentElement(protyleWysiwygElement);
 
   hideBlocksOutsideBacklinkSourceWindow(
     {
@@ -427,40 +210,15 @@ test("hideBlocksOutsideBacklinkSourceWindow keeps the full continuous window vis
 });
 
 test("hideBlocksOutsideBacklinkSourceWindow keeps all blocks in the bodyRange visible even when orderedVisibleBlockIds are narrower", () => {
-  const makeBlock = (id) => ({
-    id,
-    parentElement: null,
-    getAttribute(name) {
-      return name === "data-node-id" ? id : null;
-    },
-    querySelectorAll() {
-      return [];
-    },
-    classList: {
-      added: [],
-      removed: [],
-      add(name) {
-        this.added.push(name);
-      },
-      remove(name) {
-        this.removed.push(name);
-      },
-    },
-  });
-
-  const blockA = makeBlock("block-a");
-  const blockB = makeBlock("block-b");
-  const blockC = makeBlock("block-c");
+  const blockA = makeProtyleBlock("block-a");
+  const blockB = makeProtyleBlock("block-b");
+  const blockC = makeProtyleBlock("block-c");
   const protyleWysiwygElement = {
     querySelectorAll() {
       return [blockA, blockB, blockC];
     },
   };
-  const protyleContentElement = {
-    querySelector() {
-      return protyleWysiwygElement;
-    },
-  };
+  const protyleContentElement = makeProtyleContentElement(protyleWysiwygElement);
 
   hideBlocksOutsideBacklinkSourceWindow(
     {
@@ -482,40 +240,15 @@ test("hideBlocksOutsideBacklinkSourceWindow keeps all blocks in the bodyRange vi
 });
 
 test("hideBlocksOutsideBacklinkSourceWindow reads the full bodyRange from contextPlan without hiding middle blocks", () => {
-  const makeBlock = (id) => ({
-    id,
-    parentElement: null,
-    getAttribute(name) {
-      return name === "data-node-id" ? id : null;
-    },
-    querySelectorAll() {
-      return [];
-    },
-    classList: {
-      added: [],
-      removed: [],
-      add(name) {
-        this.added.push(name);
-      },
-      remove(name) {
-        this.removed.push(name);
-      },
-    },
-  });
-
-  const blockA = makeBlock("block-a");
-  const blockB = makeBlock("block-b");
-  const blockC = makeBlock("block-c");
+  const blockA = makeProtyleBlock("block-a");
+  const blockB = makeProtyleBlock("block-b");
+  const blockC = makeProtyleBlock("block-c");
   const protyleWysiwygElement = {
     querySelectorAll() {
       return [blockA, blockB, blockC];
     },
   };
-  const protyleContentElement = {
-    querySelector() {
-      return protyleWysiwygElement;
-    },
-  };
+  const protyleContentElement = makeProtyleContentElement(protyleWysiwygElement);
 
   hideBlocksOutsideBacklinkSourceWindow(
     {
@@ -540,32 +273,11 @@ test("hideBlocksOutsideBacklinkSourceWindow reads the full bodyRange from contex
 });
 
 test("hideBlocksOutsideBacklinkSourceWindow does not hide continuous window blocks even when collapsedBlockIds are present in legacy data", () => {
-  const makeBlock = (id) => ({
-    id,
-    parentElement: null,
-    getAttribute(name) {
-      return name === "data-node-id" ? id : null;
-    },
-    querySelectorAll() {
-      return [];
-    },
-    classList: {
-      added: [],
-      removed: [],
-      add(name) {
-        this.added.push(name);
-      },
-      remove(name) {
-        this.removed.push(name);
-      },
-    },
-  });
-
-  const itemShell = makeBlock("item-shell");
-  const focusBlock = makeBlock("block-focus");
-  const nestedList = makeBlock("list-nested");
-  const nestedItem = makeBlock("item-nested");
-  const nestedText = makeBlock("block-nested");
+  const itemShell = makeProtyleBlock("item-shell");
+  const focusBlock = makeProtyleBlock("block-focus");
+  const nestedList = makeProtyleBlock("list-nested");
+  const nestedItem = makeProtyleBlock("item-nested");
+  const nestedText = makeProtyleBlock("block-nested");
   focusBlock.parentElement = itemShell;
   nestedList.parentElement = itemShell;
   nestedItem.parentElement = nestedList;
@@ -577,11 +289,7 @@ test("hideBlocksOutsideBacklinkSourceWindow does not hide continuous window bloc
       return [itemShell, focusBlock, nestedList, nestedItem, nestedText];
     },
   };
-  const protyleContentElement = {
-    querySelector() {
-      return protyleWysiwygElement;
-    },
-  };
+  const protyleContentElement = makeProtyleContentElement(protyleWysiwygElement);
 
   hideBlocksOutsideBacklinkSourceWindow(
     {
@@ -615,41 +323,11 @@ test("hideBlocksOutsideBacklinkSourceWindow does not hide continuous window bloc
 });
 
 test("hideBlocksOutsideBacklinkSourceWindow keeps descendant child lists visible when a visible list item shell is unfolded", () => {
-  const makeBlock = (id, dataType = "", folded = false) => ({
-    id,
-    parentElement: null,
-    getAttribute(name) {
-      if (name === "data-node-id") {
-        return id;
-      }
-      if (name === "data-type") {
-        return dataType;
-      }
-      if (name === "fold") {
-        return folded ? "1" : null;
-      }
-      return null;
-    },
-    querySelectorAll() {
-      return [];
-    },
-    classList: {
-      added: [],
-      removed: [],
-      add(name) {
-        this.added.push(name);
-      },
-      remove(name) {
-        this.removed.push(name);
-      },
-    },
-  });
-
-  const itemShell = makeBlock("item-shell", "NodeListItem", false);
-  const focusBlock = makeBlock("block-focus", "NodeParagraph", false);
-  const nestedList = makeBlock("list-nested", "NodeList", false);
-  const nestedItem = makeBlock("item-nested", "NodeListItem", false);
-  const nestedText = makeBlock("block-nested", "NodeParagraph", false);
+  const itemShell = makeProtyleBlock("item-shell", { dataType: "NodeListItem" });
+  const focusBlock = makeProtyleBlock("block-focus", { dataType: "NodeParagraph" });
+  const nestedList = makeProtyleBlock("list-nested", { dataType: "NodeList" });
+  const nestedItem = makeProtyleBlock("item-nested", { dataType: "NodeListItem" });
+  const nestedText = makeProtyleBlock("block-nested", { dataType: "NodeParagraph" });
   focusBlock.parentElement = itemShell;
   nestedList.parentElement = itemShell;
   nestedItem.parentElement = nestedList;
@@ -661,11 +339,7 @@ test("hideBlocksOutsideBacklinkSourceWindow keeps descendant child lists visible
       return [itemShell, focusBlock, nestedList, nestedItem, nestedText];
     },
   };
-  const protyleContentElement = {
-    querySelector() {
-      return protyleWysiwygElement;
-    },
-  };
+  const protyleContentElement = makeProtyleContentElement(protyleWysiwygElement);
 
   hideBlocksOutsideBacklinkSourceWindow(
     {
@@ -688,51 +362,11 @@ test("hideBlocksOutsideBacklinkSourceWindow keeps descendant child lists visible
 });
 
 test("hideBlocksOutsideBacklinkSourceWindow reveals descendants after unfolding a folded visible list item shell", () => {
-  const makeBlock = (id, dataType = "", folded = false) => {
-    let isFolded = folded;
-    return {
-      id,
-      parentElement: null,
-      getAttribute(name) {
-        if (name === "data-node-id") {
-          return id;
-        }
-        if (name === "data-type") {
-          return dataType;
-        }
-        if (name === "fold") {
-          return isFolded ? "1" : null;
-        }
-        return null;
-      },
-      querySelectorAll() {
-        return [];
-      },
-      classList: {
-        added: [],
-        removed: [],
-        add(name) {
-          this.added.push(name);
-        },
-        remove(name) {
-          this.removed.push(name);
-        },
-      },
-      removedAttributes: [],
-      removeAttribute(name) {
-        this.removedAttributes.push(name);
-        if (name === "fold") {
-          isFolded = false;
-        }
-      },
-    };
-  };
-
-  const itemShell = makeBlock("item-shell", "NodeListItem", true);
-  const focusBlock = makeBlock("block-focus", "NodeParagraph", false);
-  const nestedList = makeBlock("list-nested", "NodeList", false);
-  const nestedItem = makeBlock("item-nested", "NodeListItem", false);
-  const nestedText = makeBlock("block-nested", "NodeParagraph", false);
+  const itemShell = makeProtyleBlock("item-shell", { dataType: "NodeListItem", folded: true });
+  const focusBlock = makeProtyleBlock("block-focus", { dataType: "NodeParagraph" });
+  const nestedList = makeProtyleBlock("list-nested", { dataType: "NodeList" });
+  const nestedItem = makeProtyleBlock("item-nested", { dataType: "NodeListItem" });
+  const nestedText = makeProtyleBlock("block-nested", { dataType: "NodeParagraph" });
   focusBlock.parentElement = itemShell;
   nestedList.parentElement = itemShell;
   nestedItem.parentElement = nestedList;
@@ -744,11 +378,7 @@ test("hideBlocksOutsideBacklinkSourceWindow reveals descendants after unfolding 
       return [itemShell, focusBlock, nestedList, nestedItem, nestedText];
     },
   };
-  const protyleContentElement = {
-    querySelector() {
-      return protyleWysiwygElement;
-    },
-  };
+  const protyleContentElement = makeProtyleContentElement(protyleWysiwygElement);
 
   hideBlocksOutsideBacklinkSourceWindow(
     {
@@ -772,48 +402,10 @@ test("hideBlocksOutsideBacklinkSourceWindow reveals descendants after unfolding 
 });
 
 test("hideBlocksOutsideBacklinkSourceWindow refreshes the DOM block snapshot after unfolding a folded visible shell", () => {
-  const makeBlock = (id, dataType = "", folded = false) => {
-    let isFolded = folded;
-    return {
-      id,
-      parentElement: null,
-      getAttribute(name) {
-        if (name === "data-node-id") {
-          return id;
-        }
-        if (name === "data-type") {
-          return dataType;
-        }
-        if (name === "fold") {
-          return isFolded ? "1" : null;
-        }
-        return null;
-      },
-      querySelectorAll() {
-        return [];
-      },
-      classList: {
-        added: [],
-        removed: [],
-        add(name) {
-          this.added.push(name);
-        },
-        remove(name) {
-          this.removed.push(name);
-        },
-      },
-      removeAttribute(name) {
-        if (name === "fold") {
-          isFolded = false;
-        }
-      },
-    };
-  };
-
-  const itemShell = makeBlock("item-shell", "NodeListItem", true);
-  const focusBlock = makeBlock("block-focus", "NodeParagraph", false);
-  const neighborShell = makeBlock("item-neighbor", "NodeListItem", true);
-  const neighborText = makeBlock("block-neighbor", "NodeParagraph", false);
+  const focusBlock = makeProtyleBlock("block-focus", { dataType: "NodeParagraph", folded: true });
+  const itemShell = makeProtyleBlock("item-shell", { dataType: "NodeListItem", folded: true });
+  const neighborText = makeProtyleBlock("block-neighbor", { dataType: "NodeParagraph" });
+  const neighborShell = makeProtyleBlock("item-neighbor", { dataType: "NodeListItem", folded: true });
   focusBlock.parentElement = itemShell;
   neighborText.parentElement = neighborShell;
   itemShell.querySelectorAll = () => (itemShell.getAttribute("fold") ? [] : [focusBlock]);
@@ -832,11 +424,7 @@ test("hideBlocksOutsideBacklinkSourceWindow refreshes the DOM block snapshot aft
       return visibleBlocks;
     },
   };
-  const protyleContentElement = {
-    querySelector() {
-      return protyleWysiwygElement;
-    },
-  };
+  const protyleContentElement = makeProtyleContentElement(protyleWysiwygElement);
 
   hideBlocksOutsideBacklinkSourceWindow(
     {
@@ -856,39 +444,9 @@ test("hideBlocksOutsideBacklinkSourceWindow refreshes the DOM block snapshot aft
 });
 
 test("hideBlocksOutsideBacklinkSourceWindow does not keep inline text descendants when their ids are outside the source window", () => {
-  const makeBlock = (id, dataType = "") => ({
-    id,
-    parentElement: null,
-    getAttribute(name) {
-      if (name === "data-node-id") {
-        return id;
-      }
-      if (name === "data-type") {
-        return dataType;
-      }
-      if (name === "fold") {
-        return null;
-      }
-      return null;
-    },
-    querySelectorAll() {
-      return [];
-    },
-    classList: {
-      added: [],
-      removed: [],
-      add(name) {
-        this.added.push(name);
-      },
-      remove(name) {
-        this.removed.push(name);
-      },
-    },
-  });
-
-  const itemShell = makeBlock("item-shell", "NodeListItem");
-  const inlineText = makeBlock("inline-text", "NodeParagraph");
-  const otherBlock = makeBlock("block-other", "NodeParagraph");
+  const inlineText = makeProtyleBlock("inline-text", { dataType: "NodeParagraph" });
+  const itemShell = makeProtyleBlock("item-shell", { dataType: "NodeListItem" });
+  const otherBlock = makeProtyleBlock("block-other", { dataType: "NodeParagraph" });
   inlineText.parentElement = itemShell;
   itemShell.querySelectorAll = () => [inlineText];
 
@@ -897,11 +455,7 @@ test("hideBlocksOutsideBacklinkSourceWindow does not keep inline text descendant
       return [itemShell, inlineText, otherBlock];
     },
   };
-  const protyleContentElement = {
-    querySelector() {
-      return protyleWysiwygElement;
-    },
-  };
+  const protyleContentElement = makeProtyleContentElement(protyleWysiwygElement);
 
   hideBlocksOutsideBacklinkSourceWindow(
     {

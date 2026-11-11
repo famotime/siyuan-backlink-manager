@@ -17,20 +17,13 @@ test("sanitizeBacklinkRenderQueryParams removes invalid document ids and initial
     includeDocumentIds: new Set(["keep-doc", "drop-doc"]),
     excludeDocumentIds: null,
   };
-  const parentListItemTreeNode = {
-    includeChildIdArray: ["a"],
-    excludeChildIdArray: ["b"],
-  };
-
   sanitizeBacklinkRenderQueryParams(queryParams, {
     backlinkDocumentArray: [{ id: "keep-doc" }],
-    backlinkBlockNodeArray: [{ parentListItemTreeNode }],
+    backlinkBlockNodeArray: [],
   });
 
   assert.deepEqual([...queryParams.includeDocumentIds], ["keep-doc"]);
   assert.ok(queryParams.excludeDocumentIds instanceof Set);
-  assert.equal(parentListItemTreeNode.includeChildIdArray, null);
-  assert.equal(parentListItemTreeNode.excludeChildIdArray, null);
 });
 
 test("filterBacklinkDocumentBlocks counts backlinks per document and preserves selected and excluded docs", () => {

@@ -1,13 +1,7 @@
 import { getBacklink2, getBacklinkDoc, getBatchBlockIdIndex, getBlockKramdown, getChildBlocks, sql } from "@/utils/api";
 import {
     generateGetBacklinkBlockArraySql,
-    generateGetBacklinkListItemBlockArraySql,
-    generateGetChildBlockArraySql,
-    generateGetHeadlineChildDefBlockArraySql,
-    generateGetListItemChildBlockArraySql,
     generateGetListItemSubMarkdownArraySql,
-    generateGetParentListItemDefBlockArraySql,
-    generateGetParentDefBlockArraySql,
     generateGetBacklinkSiblingBlockArraySql,
     generateGetBlockArraySql,
 } from "./backlink-sql";
@@ -18,16 +12,14 @@ import {
     IBacklinkFilterPanelDataQueryParams,
     IBacklinkPanelRenderData,
     IPanelRenderBacklinkQueryParams,
-    ListItemTreeNode,
 } from "@/models/backlink-model";
 import {
-    countOccurrences,
     isStrBlank,
     isStrNotBlank,
     longestCommonSubstring,
     matchKeywords,
 } from "@/utils/string-util";
-import { intersectionSet, isArrayEmpty, isArrayNotEmpty, isSetEmpty, isSetNotEmpty } from "@/utils/array-util";
+import { intersectionSet, isArrayEmpty, isArrayNotEmpty, isSetNotEmpty } from "@/utils/array-util";
 import { CacheManager } from "@/config/CacheManager";
 import { SettingService } from "../setting/SettingService";
 import { stringToDom } from "@/utils/html-util";
@@ -56,9 +48,6 @@ import {
 } from "./backlink-panel-base-data-builder.js";
 import {
     collectBacklinkBlocks,
-    collectHeadlineChildBlocks,
-    collectListItemTreeNodes,
-    collectParentBlocks,
     collectSiblingBlocks,
 } from "./backlink-panel-data-collectors.js";
 import { buildBacklinkPanelData } from "./backlink-panel-data-assembly.js";
@@ -71,11 +60,7 @@ import {
 } from "./backlink-render-data.js";
 import {
     getBacklinkBlockArray,
-    getBacklinkEmbedBlockInfo,
     getBlockInfoMap,
-    getHeadlineChildBlockArray,
-    getListItemChildBlockArray,
-    getParentBlockArray,
     getSiblingBlockGroupArray,
 } from "./backlink-query-loaders.js";
 import {
@@ -109,7 +94,7 @@ function logBacklinkDebug(...args: any[]) {
 
 /**
  * 组装 fetch 阶段（反链文档批量拉取 + 源窗口加载/挂载）的共享依赖装配。
- * 首次渲染（getBacklinkPanelRenderData）与翻页（getTurnPageBacklinkPanelRenderData）
+ * 首次渲染（getBacklinkPanelRenderData）
  * 复用同一份装配，避免两处闭包各自演化导致行为漂移。
  */
 function createBacklinkFetchStageDeps(
@@ -243,8 +228,6 @@ export async function getBacklinkPanelRenderData(
         backlinkDataArray,
         pagination,
         validBacklinkBlockNodeArray,
-        filterCurDocDefBlockArray: [],
-        filterRelatedDefBlockArray: [],
         filterBacklinkDocumentArray,
         pageSize,
         usedCache,
@@ -253,43 +236,6 @@ export async function getBacklinkPanelRenderData(
     const endTime = performance.now();
     const executionTime = endTime - startTime;
     logBacklinkDebug(`反链面板 生成渲染数据 消耗时间 : ${executionTime} ms `);
-
-    return backlinkPanelRenderDataResult;
-}
-
-export async function getTurnPageBacklinkPanelRenderData(
-    rootId: string,
-    validBacklinkBlockNodeArray: IBacklinkBlockNode[],
-    queryParams: IPanelRenderBacklinkQueryParams,
-): Promise<IBacklinkPanelRenderData> {
-    const startTime = performance.now();
-    let pageSize = SettingService.ins.SettingConfig.pageSize;
-    backlinkBlockNodeArraySort(
-        validBacklinkBlockNodeArray,
-        queryParams.backlinkBlockSortMethod,
-    );
-    let pagination = buildBacklinkDocumentRenderState(validBacklinkBlockNodeArray);
-    const fetchStageResult = await buildBacklinkFetchStageResult({
-        rootId,
-        pageBacklinkBlockArray: validBacklinkBlockNodeArray,
-        deps: createBacklinkFetchStageDeps(rootId, validBacklinkBlockNodeArray),
-    });
-    const backlinkDataArray = fetchStageResult.backlinkDataArray;
-    const usedCache = fetchStageResult.usedCache;
-    const backlinkPanelRenderDataResult: IBacklinkPanelRenderData = buildBacklinkPanelRenderDataResult({
-        rootId,
-        backlinkDataArray,
-        pagination,
-        validBacklinkBlockNodeArray: null,
-        filterCurDocDefBlockArray: null,
-        filterRelatedDefBlockArray: null,
-        filterBacklinkDocumentArray: null,
-        pageSize,
-        usedCache,
-    });
-    const endTime = performance.now();
-    const executionTime = endTime - startTime;
-    logBacklinkDebug(`反链面板 翻页 消耗时间 : ${executionTime} ms `);
 
     return backlinkPanelRenderDataResult;
 }
@@ -308,15 +254,12 @@ export async function getBacklinkPanelData(
 
     let backlinkBlockQueryParams: IBacklinkBlockQueryParams = {
         rootId: rootId,
-        queryParentDefBlock: queryParams.queryParentDefBlock,
-        querrChildDefBlockForListItem: queryParams.querrChildDefBlockForListItem,
-        queryChildDefBlockForHeadline: queryParams.queryChildDefBlockForHeadline,
+        // 旧版三个 query flag（queryParentDefBlock 等）管线已下线删除，仅保留 rootId
     };
 
     let backlinkBlockArray: BacklinkBlock[] = await getBacklinkBlockArray(
         backlinkBlockQueryParams,
         {
-            generateGetBacklinkListItemBlockArraySql,
             generateGetBacklinkBlockArraySql,
             sql,
         },
@@ -336,33 +279,6 @@ export async function getBacklinkPanelData(
     backlinkBlockQueryParams.backlinkBlocks = backlinkBlockArray;
     backlinkBlockQueryParams.backlinkBlockIds = getBlockIds(backlinkBlockArray);
 
-    let backlinkParentBlockArray: BacklinkParentBlock[] = await getParentBlockArray(
-        backlinkBlockQueryParams,
-        {
-            generateGetParentDefBlockArraySql,
-            generateGetParentListItemDefBlockArraySql,
-            sql,
-            countOccurrences,
-            isSetNotEmpty,
-        },
-    );
-
-    let headlineBacklinkChildBlockArray: BacklinkChildBlock[] =
-        await getHeadlineChildBlockArray(backlinkBlockQueryParams, {
-            generateGetHeadlineChildDefBlockArraySql,
-            sql,
-            isArrayEmpty,
-        });
-
-    let listItemBacklinkChildBlockArray: BacklinkChildBlock[] =
-        await getListItemChildBlockArray(backlinkBlockQueryParams, {
-            generateGetListItemChildBlockArraySql,
-            generateGetListItemSubMarkdownArraySql,
-            sql,
-            isSetEmpty,
-            isStrNotBlank,
-        });
-
     let backlinkSiblingBlockGroupArray = await getSiblingBlockGroupArray(
         backlinkBlockQueryParams,
         {
@@ -381,33 +297,18 @@ export async function getBacklinkPanelData(
             rootId,
             curDocDefBlockArray: [],
             backlinkBlockArray,
-            headlineBacklinkChildBlockArray,
-            listItemBacklinkChildBlockArray,
-            backlinkParentBlockArray,
             backlinkSiblingBlockGroupArray,
         },
         {
             getBlockIds,
             collectBacklinkBlocks,
-            collectHeadlineChildBlocks,
-            collectListItemTreeNodes,
-            collectParentBlocks,
             collectSiblingBlocks,
-            getBacklinkEmbedBlockInfo: (backlinkBlock, curDocDefBlockArrayArg) =>
-                getBacklinkEmbedBlockInfo(backlinkBlock, curDocDefBlockArrayArg, {
-                    sql,
-                    generateGetChildBlockArraySql,
-                    getQueryStrByBlock,
-                    isArrayNotEmpty,
-                    isStrNotBlank,
-                }),
             createBacklinkBlockNode,
             updateDynamicAnchorMap,
             updateStaticAnchorMap,
             getRefBlockId,
             updateMaxValueMap,
             updateMapCount,
-            ListItemTreeNode,
             isArrayNotEmpty,
             getBlockInfoMap,
             generateGetBlockArraySql,

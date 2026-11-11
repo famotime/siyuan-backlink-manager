@@ -7,6 +7,8 @@ import {
   renderBacklinkDocumentGroup,
   syncBacklinkDocumentProtyleState,
 } from "../src/components/panel/backlink-protyle-rendering.js";
+import { makeApplyCreatedProtyleDeps } from "./helpers/deps-factories.js";
+import { isArrayEmpty } from "./helpers/predicates.js";
 
 test("syncBacklinkDocumentProtyleState stores folded items and heading expansion", () => {
   const backlinkDocumentFoldMap = new Map();
@@ -52,7 +54,7 @@ test("batchRenderBacklinkDocumentGroups renders empty content hint when there ar
     },
     deps: {
       groupBacklinksByDocument: () => [],
-      isArrayEmpty: (array) => !array || array.length === 0,
+      isArrayEmpty,
       emptyContentText: "empty",
       documentRef: {
         createElement(tag) {
@@ -272,32 +274,9 @@ test("applyCreatedBacklinkProtyleState expands full document mode and skips item
       },
     },
     showFullDocument: true,
-    deps: {
-      emitLoadedProtyleStatic: () => calls.push("emit"),
-      getBacklinkDocumentRenderState: () => ({ isFolded: false }),
-      backlinkDocumentViewState: {},
-      expandBacklinkDocument: () => calls.push("expand-document"),
-      collapseBacklinkDocument: () => calls.push("collapse-document"),
-      expandAllListItemNode: () => calls.push("expand-all-items"),
-      expandBacklinkHeadingMore: () => calls.push("expand-heading"),
-      backlinkProtyleItemFoldMap: new Map(),
-      foldListItemNodeByIdSet: () => calls.push("fold-by-id-set"),
+    deps: makeApplyCreatedProtyleDeps(calls, {
       defaultExpandedListItemLevel: 2,
-      expandListItemNodeByDepth: () => calls.push("expand-by-depth"),
-      getElementsBeforeDepth: () => [],
-      getElementsAtDepth: () => [],
-      syHasChildListNode: () => false,
-      backlinkProtyleHeadingExpandMap: new Map(),
-      hideOtherListItemElement: () => calls.push("hide-items"),
-      queryParams: { backlinkKeywordStr: "" },
-      isSetEmpty: () => true,
-      isSetNotEmpty: () => false,
-      isArrayNotEmpty: () => false,
-      sanitizeBacklinkKeywords: () => [],
-      splitKeywordStringToArray: () => [],
-      highlightElementTextByCss: () => calls.push("highlight"),
-      delayedTwiceRefresh: (callback) => callback(),
-    },
+    }),
   });
 
   assert.deepEqual(calls, [
@@ -337,36 +316,15 @@ test("applyCreatedBacklinkProtyleState keeps the document collapsed in full mode
       },
     },
     showFullDocument: true,
-    deps: {
-      emitLoadedProtyleStatic: () => calls.push("emit"),
+    deps: makeApplyCreatedProtyleDeps(calls, {
       getBacklinkDocumentRenderState: () => ({
         isFolded: true,
         contextVisibilityLevel: "full",
         showFullDocument: true,
       }),
       backlinkDocumentViewState,
-      expandBacklinkDocument: () => calls.push("expand-document"),
-      collapseBacklinkDocument: () => calls.push("collapse-document"),
-      expandAllListItemNode: () => calls.push("expand-all-items"),
-      expandBacklinkHeadingMore: () => calls.push("expand-heading"),
-      backlinkProtyleItemFoldMap: new Map(),
-      foldListItemNodeByIdSet: () => calls.push("fold-by-id-set"),
       defaultExpandedListItemLevel: 2,
-      expandListItemNodeByDepth: () => calls.push("expand-by-depth"),
-      getElementsBeforeDepth: () => [],
-      getElementsAtDepth: () => [],
-      syHasChildListNode: () => false,
-      backlinkProtyleHeadingExpandMap: new Map(),
-      hideOtherListItemElement: () => calls.push("hide-items"),
-      queryParams: { backlinkKeywordStr: "" },
-      isSetEmpty: () => true,
-      isSetNotEmpty: () => false,
-      isArrayNotEmpty: () => false,
-      sanitizeBacklinkKeywords: () => [],
-      splitKeywordStringToArray: () => [],
-      highlightElementTextByCss: () => calls.push("highlight"),
-      delayedTwiceRefresh: (callback) => callback(),
-    },
+    }),
   });
 
   assert.deepEqual(calls, [
@@ -404,34 +362,7 @@ test("applyCreatedBacklinkProtyleState expands one more local layer in nearby mo
       },
     },
     contextVisibilityLevel: "nearby",
-    deps: {
-      emitLoadedProtyleStatic: () => calls.push("emit"),
-      getBacklinkDocumentRenderState: () => ({ isFolded: false }),
-      backlinkDocumentViewState: {},
-      expandBacklinkDocument: () => calls.push("expand-document"),
-      collapseBacklinkDocument: () => calls.push("collapse-document"),
-      expandAllListItemNode: () => calls.push("expand-all-items"),
-      expandBacklinkHeadingMore: () => calls.push("expand-heading"),
-      backlinkProtyleItemFoldMap: new Map(),
-      foldListItemNodeByIdSet: () => calls.push("fold-by-id-set"),
-      hideBlocksOutsideBacklinkSourceWindow: () => calls.push("hide-window"),
-      defaultExpandedListItemLevel: 1,
-      expandListItemNodeByDepth: (_element, depth) =>
-        calls.push(`expand-by-depth:${depth}`),
-      getElementsBeforeDepth: () => [],
-      getElementsAtDepth: () => [],
-      syHasChildListNode: () => false,
-      backlinkProtyleHeadingExpandMap: new Map(),
-      hideOtherListItemElement: () => calls.push("hide-items"),
-      queryParams: { backlinkKeywordStr: "" },
-      isSetEmpty: () => true,
-      isSetNotEmpty: () => false,
-      isArrayNotEmpty: () => false,
-      sanitizeBacklinkKeywords: () => [],
-      splitKeywordStringToArray: () => [],
-      highlightElementTextByCss: () => calls.push("highlight"),
-      delayedTwiceRefresh: (callback) => callback(),
-    },
+    deps: makeApplyCreatedProtyleDeps(calls),
   });
 
   assert.deepEqual(calls, [
@@ -470,34 +401,7 @@ test("applyCreatedBacklinkProtyleState fully expands the local preview in extend
       },
     },
     contextVisibilityLevel: "extended",
-    deps: {
-      emitLoadedProtyleStatic: () => calls.push("emit"),
-      getBacklinkDocumentRenderState: () => ({ isFolded: false }),
-      backlinkDocumentViewState: {},
-      expandBacklinkDocument: () => calls.push("expand-document"),
-      collapseBacklinkDocument: () => calls.push("collapse-document"),
-      expandAllListItemNode: () => calls.push("expand-all-items"),
-      expandBacklinkHeadingMore: () => calls.push("expand-heading"),
-      backlinkProtyleItemFoldMap: new Map(),
-      foldListItemNodeByIdSet: () => calls.push("fold-by-id-set"),
-      hideBlocksOutsideBacklinkSourceWindow: () => calls.push("hide-window"),
-      defaultExpandedListItemLevel: 1,
-      expandListItemNodeByDepth: (_element, depth) =>
-        calls.push(`expand-by-depth:${depth}`),
-      getElementsBeforeDepth: () => [],
-      getElementsAtDepth: () => [],
-      syHasChildListNode: () => false,
-      backlinkProtyleHeadingExpandMap: new Map(),
-      hideOtherListItemElement: () => calls.push("hide-items"),
-      queryParams: { backlinkKeywordStr: "" },
-      isSetEmpty: () => true,
-      isSetNotEmpty: () => false,
-      isArrayNotEmpty: () => false,
-      sanitizeBacklinkKeywords: () => [],
-      splitKeywordStringToArray: () => [],
-      highlightElementTextByCss: () => calls.push("highlight"),
-      delayedTwiceRefresh: (callback) => callback(),
-    },
+    deps: makeApplyCreatedProtyleDeps(calls),
   });
 
   assert.deepEqual(calls, [
@@ -549,31 +453,10 @@ test("applyCreatedBacklinkProtyleState folds planner-collapsed list items before
       },
     },
     contextVisibilityLevel: "core",
-    deps: {
-      emitLoadedProtyleStatic: () => calls.push("emit"),
-      getBacklinkDocumentRenderState: () => ({ isFolded: false }),
-      backlinkDocumentViewState: {},
-      expandBacklinkDocument: () => calls.push("expand-document"),
-      collapseBacklinkDocument: () => calls.push("collapse-document"),
-      expandAllListItemNode: () => calls.push("expand-all-items"),
-      expandBacklinkHeadingMore: () => calls.push("expand-heading"),
-      backlinkProtyleItemFoldMap: new Map(),
+    deps: makeApplyCreatedProtyleDeps(calls, {
       foldListItemNodeByIdSet: (_element, idSet) =>
         calls.push(`fold-by-id-set:${Array.from(idSet).join(",")}`),
-      hideBlocksOutsideBacklinkSourceWindow: () => calls.push("hide-window"),
-      defaultExpandedListItemLevel: 1,
-      expandListItemNodeByDepth: () => calls.push("expand-by-depth"),
-      getElementsBeforeDepth: () => [],
-      getElementsAtDepth: () => [],
-      syHasChildListNode: () => false,
-      backlinkProtyleHeadingExpandMap: new Map(),
-      hideOtherListItemElement: () => calls.push("hide-items"),
-      queryParams: { backlinkKeywordStr: "" },
-      sanitizeBacklinkKeywords: () => [],
-      splitKeywordStringToArray: () => [],
-      highlightElementTextByCss: () => calls.push("highlight"),
-      delayedTwiceRefresh: (callback) => callback(),
-    },
+    }),
   });
 
   assert.deepEqual(calls, [
@@ -645,34 +528,12 @@ test("applyCreatedBacklinkProtyleState still applies nearby depth expansion when
       },
     },
     contextVisibilityLevel: "nearby",
-    deps: {
-      emitLoadedProtyleStatic: () => calls.push("emit"),
-      getBacklinkDocumentRenderState: () => ({ isFolded: false }),
-      backlinkDocumentViewState: {},
-      expandBacklinkDocument: () => calls.push("expand-document"),
-      collapseBacklinkDocument: () => calls.push("collapse-document"),
-      expandAllListItemNode: () => calls.push("expand-all-items"),
-      expandBacklinkHeadingMore: () => calls.push("expand-heading"),
-      backlinkProtyleItemFoldMap: new Map(),
+    deps: makeApplyCreatedProtyleDeps(calls, {
       foldListItemNodeByIdSet: (_element, idSet) => {
         calls.push(`fold-by-id-set:${Array.from(idSet).join(",")}`);
         return false;
       },
-      hideBlocksOutsideBacklinkSourceWindow: () => calls.push("hide-window"),
-      defaultExpandedListItemLevel: 1,
-      expandListItemNodeByDepth: (_element, depth) =>
-        calls.push(`expand-by-depth:${depth}`),
-      getElementsBeforeDepth: () => [],
-      getElementsAtDepth: () => [],
-      syHasChildListNode: () => false,
-      backlinkProtyleHeadingExpandMap: new Map(),
-      hideOtherListItemElement: () => calls.push("hide-items"),
-      queryParams: { backlinkKeywordStr: "" },
-      sanitizeBacklinkKeywords: () => [],
-      splitKeywordStringToArray: () => [],
-      highlightElementTextByCss: () => calls.push("highlight"),
-      delayedTwiceRefresh: (callback) => callback(),
-    },
+    }),
   });
 
   assert.deepEqual(calls, [
@@ -716,34 +577,7 @@ test("applyCreatedBacklinkProtyleState skips source window hiding when preview d
       },
     },
     contextVisibilityLevel: "nearby",
-    deps: {
-      emitLoadedProtyleStatic: () => calls.push("emit"),
-      getBacklinkDocumentRenderState: () => ({ isFolded: false }),
-      backlinkDocumentViewState: {},
-      expandBacklinkDocument: () => calls.push("expand-document"),
-      collapseBacklinkDocument: () => calls.push("collapse-document"),
-      expandAllListItemNode: () => calls.push("expand-all-items"),
-      expandBacklinkHeadingMore: () => calls.push("expand-heading"),
-      backlinkProtyleItemFoldMap: new Map(),
-      foldListItemNodeByIdSet: () => calls.push("fold-by-id-set"),
-      hideBlocksOutsideBacklinkSourceWindow: () => calls.push("hide-window"),
-      defaultExpandedListItemLevel: 1,
-      expandListItemNodeByDepth: (_element, depth) =>
-        calls.push(`expand-by-depth:${depth}`),
-      getElementsBeforeDepth: () => [],
-      getElementsAtDepth: () => [],
-      syHasChildListNode: () => false,
-      backlinkProtyleHeadingExpandMap: new Map(),
-      hideOtherListItemElement: () => calls.push("hide-items"),
-      queryParams: { backlinkKeywordStr: "" },
-      isSetEmpty: () => true,
-      isSetNotEmpty: () => false,
-      isArrayNotEmpty: () => false,
-      sanitizeBacklinkKeywords: () => [],
-      splitKeywordStringToArray: () => [],
-      highlightElementTextByCss: () => calls.push("highlight"),
-      delayedTwiceRefresh: (callback) => callback(),
-    },
+    deps: makeApplyCreatedProtyleDeps(calls),
   });
 
   assert.deepEqual(calls, [
@@ -794,34 +628,7 @@ test("applyCreatedBacklinkProtyleState still applies nearby source window hiding
       },
     },
     contextVisibilityLevel: "nearby",
-    deps: {
-      emitLoadedProtyleStatic: () => calls.push("emit"),
-      getBacklinkDocumentRenderState: () => ({ isFolded: false }),
-      backlinkDocumentViewState: {},
-      expandBacklinkDocument: () => calls.push("expand-document"),
-      collapseBacklinkDocument: () => calls.push("collapse-document"),
-      expandAllListItemNode: () => calls.push("expand-all-items"),
-      expandBacklinkHeadingMore: () => calls.push("expand-heading"),
-      backlinkProtyleItemFoldMap: new Map(),
-      foldListItemNodeByIdSet: () => calls.push("fold-by-id-set"),
-      hideBlocksOutsideBacklinkSourceWindow: () => calls.push("hide-window"),
-      defaultExpandedListItemLevel: 1,
-      expandListItemNodeByDepth: (_element, depth) =>
-        calls.push(`expand-by-depth:${depth}`),
-      getElementsBeforeDepth: () => [],
-      getElementsAtDepth: () => [],
-      syHasChildListNode: () => false,
-      backlinkProtyleHeadingExpandMap: new Map(),
-      hideOtherListItemElement: () => calls.push("hide-items"),
-      queryParams: { backlinkKeywordStr: "" },
-      isSetEmpty: () => true,
-      isSetNotEmpty: () => false,
-      isArrayNotEmpty: () => false,
-      sanitizeBacklinkKeywords: () => [],
-      splitKeywordStringToArray: () => [],
-      highlightElementTextByCss: () => calls.push("highlight"),
-      delayedTwiceRefresh: (callback) => callback(),
-    },
+    deps: makeApplyCreatedProtyleDeps(calls),
   });
 
   assert.deepEqual(calls, [
@@ -873,30 +680,10 @@ test("applyCreatedBacklinkProtyleState applies source window hiding when only co
       },
     },
     contextVisibilityLevel: "nearby",
-    deps: {
-      emitLoadedProtyleStatic: () => calls.push("emit"),
-      getBacklinkDocumentRenderState: () => ({ isFolded: false }),
-      backlinkDocumentViewState: {},
-      expandBacklinkDocument: () => calls.push("expand-document"),
-      collapseBacklinkDocument: () => calls.push("collapse-document"),
-      expandAllListItemNode: () => calls.push("expand-all-items"),
-      expandBacklinkHeadingMore: () => calls.push("expand-heading"),
-      backlinkProtyleItemFoldMap: new Map(),
-      foldListItemNodeByIdSet: () => calls.push("fold-by-id-set"),
-      hideBlocksOutsideBacklinkSourceWindow: () => calls.push("hide-window"),
+    deps: makeApplyCreatedProtyleDeps(calls, {
       defaultExpandedListItemLevel: 0,
       expandListItemNodeByDepth: () => calls.push("expand-by-depth"),
-      getElementsBeforeDepth: () => [],
-      getElementsAtDepth: () => [],
-      syHasChildListNode: () => false,
-      backlinkProtyleHeadingExpandMap: new Map(),
-      hideOtherListItemElement: () => calls.push("hide-items"),
-      queryParams: { backlinkKeywordStr: "" },
-      sanitizeBacklinkKeywords: () => [],
-      splitKeywordStringToArray: () => [],
-      highlightElementTextByCss: () => calls.push("highlight"),
-      delayedTwiceRefresh: (callback) => callback(),
-    },
+    }),
   });
 
   assert.deepEqual(calls, [
@@ -957,31 +744,7 @@ test("applyCreatedBacklinkProtyleState still applies source window hiding when o
       },
     },
     contextVisibilityLevel: "nearby",
-    deps: {
-      emitLoadedProtyleStatic: () => calls.push("emit"),
-      getBacklinkDocumentRenderState: () => ({ isFolded: false }),
-      backlinkDocumentViewState: {},
-      expandBacklinkDocument: () => calls.push("expand-document"),
-      collapseBacklinkDocument: () => calls.push("collapse-document"),
-      expandAllListItemNode: () => calls.push("expand-all-items"),
-      expandBacklinkHeadingMore: () => calls.push("expand-heading"),
-      backlinkProtyleItemFoldMap: new Map(),
-      foldListItemNodeByIdSet: () => calls.push("fold-by-id-set"),
-      hideBlocksOutsideBacklinkSourceWindow: () => calls.push("hide-window"),
-      defaultExpandedListItemLevel: 1,
-      expandListItemNodeByDepth: (_element, depth) =>
-        calls.push(`expand-by-depth:${depth}`),
-      getElementsBeforeDepth: () => [],
-      getElementsAtDepth: () => [],
-      syHasChildListNode: () => false,
-      backlinkProtyleHeadingExpandMap: new Map(),
-      hideOtherListItemElement: () => calls.push("hide-items"),
-      queryParams: { backlinkKeywordStr: "" },
-      sanitizeBacklinkKeywords: () => [],
-      splitKeywordStringToArray: () => [],
-      highlightElementTextByCss: () => calls.push("highlight"),
-      delayedTwiceRefresh: (callback) => callback(),
-    },
+    deps: makeApplyCreatedProtyleDeps(calls),
   });
 
   assert.deepEqual(calls, [
@@ -1025,37 +788,12 @@ test("applyCreatedBacklinkProtyleState retries source window hiding after the or
       },
     },
     contextVisibilityLevel: "nearby",
-    deps: {
-      emitLoadedProtyleStatic: () => calls.push("emit"),
-      getBacklinkDocumentRenderState: () => ({ isFolded: false }),
-      backlinkDocumentViewState: {},
-      expandBacklinkDocument: () => calls.push("expand-document"),
-      collapseBacklinkDocument: () => calls.push("collapse-document"),
-      expandAllListItemNode: () => calls.push("expand-all-items"),
-      expandBacklinkHeadingMore: () => calls.push("expand-heading"),
-      backlinkProtyleItemFoldMap: new Map(),
-      foldListItemNodeByIdSet: () => calls.push("fold-by-id-set"),
-      hideBlocksOutsideBacklinkSourceWindow: () => calls.push("hide-window"),
-      defaultExpandedListItemLevel: 1,
-      expandListItemNodeByDepth: (_element, depth) =>
-        calls.push(`expand-by-depth:${depth}`),
-      getElementsBeforeDepth: () => [],
-      getElementsAtDepth: () => [],
-      syHasChildListNode: () => false,
-      backlinkProtyleHeadingExpandMap: new Map(),
-      hideOtherListItemElement: () => calls.push("hide-items"),
-      queryParams: { backlinkKeywordStr: "" },
-      isSetEmpty: () => true,
-      isSetNotEmpty: () => false,
-      isArrayNotEmpty: () => false,
-      sanitizeBacklinkKeywords: () => [],
-      splitKeywordStringToArray: () => [],
-      highlightElementTextByCss: () => calls.push("highlight"),
+    deps: makeApplyCreatedProtyleDeps(calls, {
       delayedTwiceRefresh: (callback) => {
         backlinkBlockVisible = true;
         callback();
       },
-    },
+    }),
   });
 
   assert.deepEqual(calls, [
@@ -1099,34 +837,9 @@ test("applyCreatedBacklinkProtyleState skips related list filtering for nearby l
       },
     },
     contextVisibilityLevel: "nearby",
-    deps: {
-      emitLoadedProtyleStatic: () => calls.push("emit"),
-      getBacklinkDocumentRenderState: () => ({ isFolded: false }),
-      backlinkDocumentViewState: {},
-      expandBacklinkDocument: () => calls.push("expand-document"),
-      collapseBacklinkDocument: () => calls.push("collapse-document"),
-      expandAllListItemNode: () => calls.push("expand-all-items"),
-      expandBacklinkHeadingMore: () => calls.push("expand-heading"),
-      backlinkProtyleItemFoldMap: new Map(),
-      foldListItemNodeByIdSet: () => calls.push("fold-by-id-set"),
-      hideBlocksOutsideBacklinkSourceWindow: () => calls.push("hide-window"),
-      defaultExpandedListItemLevel: 1,
-      expandListItemNodeByDepth: (_element, depth) =>
-        calls.push(`expand-by-depth:${depth}`),
-      getElementsBeforeDepth: () => [],
-      getElementsAtDepth: () => [],
-      syHasChildListNode: () => false,
-      backlinkProtyleHeadingExpandMap: new Map(),
-      hideOtherListItemElement: () => calls.push("hide-items"),
+    deps: makeApplyCreatedProtyleDeps(calls, {
       queryParams: { backlinkKeywordStr: "", includeRelatedDefBlockIds: new Set(["def-a"]) },
-      isSetEmpty: (set) => !set || set.size === 0,
-      isSetNotEmpty: (set) => set && set.size > 0,
-      isArrayNotEmpty: (array) => Array.isArray(array) && array.length > 0,
-      sanitizeBacklinkKeywords: () => [],
-      splitKeywordStringToArray: () => [],
-      highlightElementTextByCss: () => calls.push("highlight"),
-      delayedTwiceRefresh: (callback) => callback(),
-    },
+    }),
   });
 
   assert.deepEqual(calls, [

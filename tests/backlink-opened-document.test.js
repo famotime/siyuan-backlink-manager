@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 
 import {
   activateOpenedDocumentTab,
-  findOpenedDocumentEditorElement,
   findOpenedDocumentInfo,
   navigateToOpenedDocumentBlock,
 } from "../src/components/panel/backlink-opened-document.js";
@@ -73,25 +72,6 @@ test("findOpenedDocumentInfo returns null for missing rootId or unmatched docume
       documentRef: { querySelectorAll: () => [] },
       windowRef: {},
     }),
-    null,
-  );
-});
-
-test("findOpenedDocumentEditorElement returns the editor element or null", () => {
-  const editorEl = { closest: () => null };
-  const titleEl = { closest: () => editorEl };
-  const documentRef = {
-    querySelectorAll: (selector) =>
-      selector.startsWith(".protyle-title") ? [titleEl] : [],
-    querySelector: () => null,
-  };
-
-  assert.equal(
-    findOpenedDocumentEditorElement("doc-dom", documentRef, {}),
-    editorEl,
-  );
-  assert.equal(
-    findOpenedDocumentEditorElement("doc-x", { querySelectorAll: () => [] }, {}),
     null,
   );
 });

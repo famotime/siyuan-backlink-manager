@@ -3,11 +3,9 @@ import assert from "node:assert/strict";
 
 import {
   collectBacklinkBlocks,
-  collectHeadlineChildBlocks,
-  collectListItemTreeNodes,
-  collectParentBlocks,
   collectSiblingBlocks,
 } from "../src/service/backlink/backlink-panel-data-collectors.js";
+import { updateMapCount, updateMaxValueMap } from "./helpers/predicates.js";
 
 function createCollectorContext() {
   return {
@@ -67,9 +65,8 @@ test("collectBacklinkBlocks builds backlink nodes and updates related/document c
       markdown.includes("20240101010101-abcdefg")
         ? ["20240101010101-abcdefg", "20240101010102-bcdefgh"]
         : [],
-    updateMaxValueMap: (map, key, value) => map.set(key, value),
-    updateMapCount: (map, key, initialValue = 1) =>
-      map.set(key, map.has(key) ? map.get(key) + 1 : initialValue),
+    updateMaxValueMap,
+    updateMapCount,
     context,
   });
 
@@ -81,214 +78,6 @@ test("collectBacklinkBlocks builds backlink nodes and updates related/document c
     [...context.backlinkBlockMap["block-a"].includeCurBlockDefBlockIds],
     ["20240101010101-abcdefg", "20240101010102-bcdefgh"],
   );
-});
-
-test("collectHeadlineChildBlocks appends markdown and only counts new related ids", () => {
-  const context = createCollectorContext();
-  context.backlinkBlockMap["block-a"] = {
-    block: {
-      id: "block-a",
-      root_id: "doc-a",
-      created: "11",
-      updated: "22",
-    },
-    includeRelatedDefBlockIds: new Set(),
-    includeDirectDefBlockIds: new Set(),
-    includeParentDefBlockIds: new Set(),
-    headlineChildMarkdown: "",
-  };
-
-  collectHeadlineChildBlocks({
-    headlineBacklinkChildBlockArray: [
-      {
-        markdown: "headline ((def-current 'current')) ((def-new 'new'))",
-        subInAttrConcat: " extra",
-        parentIdPath: "block-a->headline",
-      },
-    ],
-    relatedDefBlockIdSet: new Set(["def-existing"]),
-    getRefBlockId: () => ["def-current", "def-new"],
-    updateDynamicAnchorMap: () => {},
-    updateStaticAnchorMap: () => {},
-    updateMaxValueMap: (map, key, value) => map.set(key, value),
-    updateMapCount: (map, key, initialValue = 1) =>
-      map.set(key, map.has(key) ? map.get(key) + 1 : initialValue),
-    context,
-  });
-
-  assert.equal(
-    context.backlinkBlockMap["block-a"].headlineChildMarkdown,
-    "headline ((def-current 'current')) ((def-new 'new')) extra",
-  );
-  assert.ok(context.backlinkBlockMap["block-a"].includeDirectDefBlockIds.has("def-current"));
-  assert.equal(context.relatedDefBlockCountMap.get("def-new"), 1);
-});
-
-test("collectListItemTreeNodes attaches tree nodes and updates related/document counters", () => {
-  const context = createCollectorContext();
-  context.backlinkBlockMap["block-a"] = {
-    block: {
-      id: "block-a",
-      parent_id: "list-a",
-      root_id: "doc-a",
-      markdown: "root markdown",
-      created: "11",
-      updated: "22",
-    },
-    includeRelatedDefBlockIds: new Set(),
-    includeDirectDefBlockIds: new Set(),
-  };
-  const treeNode = {
-    id: "list-a",
-    getAllMarkdown() {
-      return "root markdown ((def-new 'new'))";
-    },
-  };
-
-  collectListItemTreeNodes({
-    listItemTreeNodeArray: [treeNode],
-    getRefBlockId: () => ["def-new"],
-    updateDynamicAnchorMap: () => {},
-    updateStaticAnchorMap: () => {},
-    updateMaxValueMap: (map, key, value) => map.set(key, value),
-    updateMapCount: (map, key, initialValue = 1) =>
-      map.set(key, map.has(key) ? map.get(key) + 1 : initialValue),
-    context,
-  });
-
-  assert.strictEqual(context.backlinkBlockMap["block-a"].parentListItemTreeNode, treeNode);
-  assert.ok(context.backlinkBlockMap["block-a"].includeRelatedDefBlockIds.has("def-new"));
-  assert.equal(context.relatedDefBlockCountMap.get("def-new"), 1);
-  assert.equal(context.backlinkDocumentCountMap.get("doc-a"), 1);
-});
-
-test("collectParentBlocks appends parent markdown and tracks parent def block ids", () => {
-  const context = createCollectorContext();
-  context.backlinkBlockMap["block-a"] = {
-    block: { id: "block-a", root_id: "doc-a" },
-    includeRelatedDefBlockIds: new Set(),
-    includeParentDefBlockIds: new Set(),
-    includeDirectDefBlockIds: new Set(),
-    parentMarkdown: "",
-    parentRenderMarkdown: "",
-  };
-
-  collectParentBlocks({
-    backlinkParentBlockArray: [
-      {
-        id: "item-parent",
-        markdown: "- 父节点",
-        inAttrConcat: "",
-        type: "i",
-        childIdPath: "block-a->item-parent",
-      },
-      {
-        markdown: "parent ((def-current 'current')) ((def-parent 'parent'))",
-        inAttrConcat: " extra",
-        type: "h",
-        childIdPath: "block-a->child->heading",
-      },
-    ],
-    relatedDefBlockIdSet: new Set(),
-    getRefBlockId: (markdown) =>
-      markdown.includes("def-parent") ? ["def-current", "def-parent"] : [],
-    updateDynamicAnchorMap: () => {},
-    updateStaticAnchorMap: () => {},
-    updateMapCount: (map, key, initialValue = 1) =>
-      map.set(key, map.has(key) ? map.get(key) + 1 : initialValue),
-    context,
-  });
-
-  assert.equal(
-    context.backlinkBlockMap["block-a"].parentMarkdown,
-    "- 父节点\n\nparent ((def-current 'current')) ((def-parent 'parent')) extra",
-  );
-  assert.equal(
-    context.backlinkBlockMap["block-a"].parentRenderMarkdown,
-    "parent ((def-current 'current')) ((def-parent 'parent'))\n\n- 父节点",
-  );
-  assert.ok(context.backlinkBlockMap["block-a"].includeDirectDefBlockIds.has("def-current"));
-  assert.ok(context.backlinkBlockMap["block-a"].includeParentDefBlockIds.has("def-parent"));
-  assert.equal(context.relatedDefBlockCountMap.get("def-parent"), 1);
-});
-
-test("collectParentBlocks renders heading parents from outer to inner order", () => {
-  const context = createCollectorContext();
-  context.backlinkBlockMap["block-a"] = {
-    block: { id: "block-a", root_id: "doc-a" },
-    includeRelatedDefBlockIds: new Set(),
-    includeParentDefBlockIds: new Set(),
-    includeDirectDefBlockIds: new Set(),
-    parentMarkdown: "",
-    parentRenderMarkdown: "",
-  };
-
-  collectParentBlocks({
-    backlinkParentBlockArray: [
-      {
-        id: "heading-inner",
-        markdown: "### 1. Skills 是什么？",
-        inAttrConcat: "",
-        type: "h",
-        childIdPath: "block-a->heading-inner",
-      },
-      {
-        id: "heading-outer",
-        markdown: "## 二、Skills：让 Claude 真正「学会干活」",
-        inAttrConcat: "",
-        type: "h",
-        childIdPath: "block-a->heading-inner->heading-outer",
-      },
-    ],
-    relatedDefBlockIdSet: new Set(),
-    getRefBlockId: () => [],
-    updateDynamicAnchorMap: () => {},
-    updateStaticAnchorMap: () => {},
-    updateMapCount: () => {},
-    context,
-  });
-
-  assert.equal(
-    context.backlinkBlockMap["block-a"].parentRenderMarkdown,
-    "## 二、Skills：让 Claude 真正「学会干活」\n\n### 1. Skills 是什么？",
-  );
-  assert.deepEqual(
-    context.backlinkBlockMap["block-a"].parentContextBlockIds,
-    ["heading-outer", "heading-inner"],
-  );
-});
-
-test("collectParentBlocks keeps the parent list item title in render markdown without appending its subtree", () => {
-  const context = createCollectorContext();
-  context.backlinkBlockMap["block-a"] = {
-    block: { id: "block-a", root_id: "doc-a" },
-    includeRelatedDefBlockIds: new Set(),
-    includeParentDefBlockIds: new Set(),
-    includeDirectDefBlockIds: new Set(),
-    parentMarkdown: "",
-    parentRenderMarkdown: "",
-  };
-
-  collectParentBlocks({
-    backlinkParentBlockArray: [
-      {
-        id: "item-parent",
-        markdown: "- 上层节点\n\n  - 扩展\n  - 近邻",
-        subMarkdown: "- 扩展\n- 近邻\n- 标题字体",
-        inAttrConcat: "",
-        type: "i",
-        childIdPath: "block-a->item-parent",
-      },
-    ],
-    relatedDefBlockIdSet: new Set(),
-    getRefBlockId: () => [],
-    updateDynamicAnchorMap: () => {},
-    updateStaticAnchorMap: () => {},
-    updateMapCount: () => {},
-    context,
-  });
-
-  assert.equal(context.backlinkBlockMap["block-a"].parentRenderMarkdown, "- 上层节点");
 });
 
 test("collectSiblingBlocks appends previous and next sibling markdown and tracks sibling def block ids", () => {
@@ -332,9 +121,8 @@ test("collectSiblingBlocks appends previous and next sibling markdown and tracks
     },
     updateDynamicAnchorMap: () => {},
     updateStaticAnchorMap: () => {},
-    updateMaxValueMap: (map, key, value) => map.set(key, value),
-    updateMapCount: (map, key, initialValue = 1) =>
-      map.set(key, map.has(key) ? map.get(key) + 1 : initialValue),
+    updateMaxValueMap,
+    updateMapCount,
     context,
   });
 
@@ -380,9 +168,8 @@ test("collectSiblingBlocks ignores null sibling blocks", () => {
         markdown.includes("def-next") ? ["def-next"] : [],
       updateDynamicAnchorMap: () => {},
       updateStaticAnchorMap: () => {},
-      updateMaxValueMap: (map, key, value) => map.set(key, value),
-      updateMapCount: (map, key, initialValue = 1) =>
-        map.set(key, map.has(key) ? map.get(key) + 1 : initialValue),
+      updateMaxValueMap,
+      updateMapCount,
       context,
     });
   });
@@ -443,9 +230,8 @@ test("collectSiblingBlocks uses list item subtree markdown for sibling list item
     },
     updateDynamicAnchorMap: () => {},
     updateStaticAnchorMap: () => {},
-    updateMaxValueMap: (map, key, value) => map.set(key, value),
-    updateMapCount: (map, key, initialValue = 1) =>
-      map.set(key, map.has(key) ? map.get(key) + 1 : initialValue),
+    updateMaxValueMap,
+    updateMapCount,
     context,
   });
 

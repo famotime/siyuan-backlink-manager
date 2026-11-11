@@ -149,25 +149,6 @@ function createMarkdownFragment({
   });
 }
 
-function getListChildFragment(backlinkBlockNode, deps, order) {
-  const treeNode = backlinkBlockNode.parentListItemTreeNode;
-  if (!treeNode?.getFilterMarkdown) {
-    return null;
-  }
-
-  const text = treeNode.getFilterMarkdown(
-    treeNode.includeChildIdArray,
-    treeNode.excludeChildIdArray,
-  );
-  return createMarkdownFragment({
-    backlinkBlockNode,
-    sourceType: "child_list",
-    order,
-    text,
-    deps,
-  });
-}
-
 export function buildBacklinkContextBundle(backlinkBlockNode, deps) {
   const fragments = [];
   let order = 0;
@@ -210,7 +191,6 @@ export function buildBacklinkContextBundle(backlinkBlockNode, deps) {
       deps,
     }),
   );
-  pushFragment(fragments, getListChildFragment(backlinkBlockNode, deps, order++));
   pushFragment(
     fragments,
     createMarkdownFragment({

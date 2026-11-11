@@ -1,6 +1,5 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import {
   appendMarkdownSegment,
   prependMarkdownSegment,
@@ -8,26 +7,7 @@ import {
   trackRelatedDefBlockId,
   trackRelatedDefBlockIdWithoutDuplicates,
 } from "../src/service/backlink/backlink-panel-data-collector-helpers.js";
-
-test("panel data collectors delegate shared helper logic to a dedicated helper module", () => {
-  const coreSource = readFileSync(
-    new URL("../src/service/backlink/backlink-panel-data-collector-core.js", import.meta.url),
-    "utf8",
-  );
-  const contextSource = readFileSync(
-    new URL("../src/service/backlink/backlink-panel-data-collector-context.js", import.meta.url),
-    "utf8",
-  );
-
-  assert.match(
-    coreSource,
-    /import\s*\{[\s\S]*trackRelatedDefBlockId,[\s\S]*trackRelatedDefBlockIdWithoutDuplicates[\s\S]*\}\s*from "\.\/backlink-panel-data-collector-helpers\.js";/,
-  );
-  assert.match(
-    contextSource,
-    /import\s*\{[\s\S]*appendMarkdownSegment,[\s\S]*trackRelatedDefBlockIdWithoutDuplicates[\s\S]*\}\s*from "\.\/backlink-panel-data-collector-helpers\.js";/,
-  );
-});
+import { updateMapCount, updateMaxValueMap } from "./helpers/predicates.js";
 
 test("appendMarkdownSegment and prependMarkdownSegment keep blank-safe newline separation", () => {
   assert.equal(appendMarkdownSegment("", "alpha"), "alpha");
@@ -60,9 +40,8 @@ test("trackRelatedDefBlockId updates direct and related counters by document own
     relatedDefBlockCountMap: countMap,
     backlinkBlockCreatedMap: createdMap,
     backlinkBlockUpdatedMap: updatedMap,
-    updateMaxValueMap: (map, key, value) => map.set(key, value),
-    updateMapCount: (map, key, initialValue = 1) =>
-      map.set(key, map.has(key) ? map.get(key) + 1 : initialValue),
+    updateMaxValueMap,
+    updateMapCount,
   });
 
   assert.ok(backlinkBlockNode.includeRelatedDefBlockIds.has("def-related"));
@@ -90,8 +69,7 @@ test("trackRelatedDefBlockIdWithoutDuplicates skips counter updates for already-
     backlinkBlockCreatedMap: new Map(),
     backlinkBlockUpdatedMap: new Map(),
     updateMaxValueMap: () => {},
-    updateMapCount: (map, key, initialValue = 1) =>
-      map.set(key, map.has(key) ? map.get(key) + 1 : initialValue),
+    updateMapCount,
   });
 
   assert.ok(backlinkBlockNode.includeRelatedDefBlockIds.has("def-related"));

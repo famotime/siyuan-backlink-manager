@@ -8,6 +8,24 @@ import {
   getBatchBacklinkDoc,
   isBacklinkBlockValid,
 } from "../src/service/backlink/backlink-render-data.js";
+import { isSetNotEmpty, matchKeywords } from "./helpers/predicates.js";
+
+// isBacklinkBlockValid 两个用例的 deps 对象完全一致，抽为本地工厂避免逐字重复
+function createIsValidDeps() {
+  return {
+    isSetNotEmpty,
+    parseSearchSyntax: (value) => ({
+      includeText: [value],
+      excludeText: [],
+      includeAnchor: [],
+      excludeAnchor: [],
+    }),
+    getQueryStrByBlock: (block) => block?.markdown || "",
+    getMarkdownAnchorTextArray: () => [],
+    removeMarkdownRefBlockStyle: (markdown) => markdown,
+    matchKeywords,
+  };
+}
 
 test("buildLegacyBacklinkSearchText counts document markdown only once", () => {
   const result = buildLegacyBacklinkSearchText({
@@ -17,10 +35,10 @@ test("buildLegacyBacklinkSearchText counts document markdown only once", () => {
     headlineChildMarkdown: "headline",
     previousSiblingMarkdown: "prev",
     nextSiblingMarkdown: "next",
-    listItemChildMarkdown: "list",
   });
 
-  assert.equal(result, "selfdocumentparentheadlineprevnextlist");
+  // 列表子块 Markdown（listItemChildMarkdown）已随 ListItemTreeNode 管线下线
+  assert.equal(result, "selfdocumentparentheadlineprevnext");
   assert.equal(result.includes("documentdocument"), false);
 });
 
@@ -223,8 +241,6 @@ test("getBatchBacklinkDoc deduplicates backlink dom results without reordering a
   );
   assert.equal(result.backlinks[1].contextBundle.primaryMatchSourceType, "parent");
   assert.equal(result.backlinks[0].contextBundle.matchSummaryList[0], "前相邻块：Beta");
-  assert.deepEqual(result.backlinks[0].includeChildListItemIdArray, ["child-1"]);
-  assert.deepEqual(result.backlinks[0].excludeChildListItemIdArray, ["child-2"]);
 });
 
 test("getBatchBacklinkDoc maps list item container dom back to the nested backlink block", async () => {
@@ -241,10 +257,6 @@ test("getBatchBacklinkDoc maps list item container dom back to the nested backli
       contextBundle: {
         primaryMatchSourceType: "sibling_prev",
         matchSummaryList: ["前相邻块：近邻"],
-      },
-      parentListItemTreeNode: {
-        includeChildIdArray: ["item-nearby", "item-brand", "item-title"],
-        excludeChildIdArray: [],
       },
     },
   ];
@@ -281,11 +293,6 @@ test("getBatchBacklinkDoc maps list item container dom back to the nested backli
     "<div data-node-id='block-brand-text'>品牌主色、辅色、渐变怎么用 skill</div>",
   );
   assert.equal(result.backlinks[0].contextBundle.primaryMatchSourceType, "sibling_prev");
-  assert.deepEqual(result.backlinks[0].includeChildListItemIdArray, [
-    "item-nearby",
-    "item-brand",
-    "item-title",
-  ]);
 });
 
 test("isBacklinkBlockValid matches keywords from sibling markdown", () => {
@@ -312,21 +319,7 @@ test("isBacklinkBlockValid matches keywords from sibling markdown", () => {
       previousSiblingMarkdown: "sibling-hit",
       nextSiblingMarkdown: "",
     },
-    {
-      isSetNotEmpty: (value) => value && value.size > 0,
-      parseSearchSyntax: (value) => ({
-        includeText: [value],
-        excludeText: [],
-        includeAnchor: [],
-        excludeAnchor: [],
-      }),
-      getQueryStrByBlock: (block) => block?.markdown || "",
-      getMarkdownAnchorTextArray: () => [],
-      removeMarkdownRefBlockStyle: (markdown) => markdown,
-      matchKeywords: (content, includeText, excludeText) =>
-        includeText.every((keyword) => content.includes(keyword)) &&
-        excludeText.every((keyword) => !content.includes(keyword)),
-    },
+    createIsValidDeps(),
   );
 
   assert.equal(result, true);
@@ -373,21 +366,7 @@ test("isBacklinkBlockValid matches keywords from context fragments when availabl
       backlinkCurDocDefBlockType: "",
     },
     backlinkBlockNode,
-    {
-      isSetNotEmpty: (value) => value && value.size > 0,
-      parseSearchSyntax: (value) => ({
-        includeText: [value],
-        excludeText: [],
-        includeAnchor: [],
-        excludeAnchor: [],
-      }),
-      getQueryStrByBlock: (block) => block?.markdown || "",
-      getMarkdownAnchorTextArray: () => [],
-      removeMarkdownRefBlockStyle: (markdown) => markdown,
-      matchKeywords: (content, includeText, excludeText) =>
-        includeText.every((keyword) => content.includes(keyword)) &&
-        excludeText.every((keyword) => !content.includes(keyword)),
-    },
+    createIsValidDeps(),
   );
 
   assert.equal(result, true);
